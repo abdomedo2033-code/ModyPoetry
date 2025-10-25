@@ -185,10 +185,12 @@
       box-shadow:0 4px 20px var(--shadow);
       border:1px solid var(--border);
       transition:all 0.3s ease;
-      cursor:pointer;
+      cursor:grab; /* changed to grab for dragging */
+      user-select:none;
       position:relative;
       overflow:hidden;
     }
+    .card:active{cursor:grabbing}
     .card::before{
       content:'';
       position:absolute;
@@ -254,6 +256,13 @@
       font-weight:600;
       background:rgba(139,94,60,0.15);
       color:var(--brown);
+    }
+
+    /* Drag ghost style */
+    .card-ghost {
+      opacity: 0.55 !important;
+      transform: scale(0.98) !important;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12) !important;
     }
     
     /* Modal */
@@ -493,11 +502,15 @@
     © <span id="year"></span> مَجْنُونُ الشِّعر — All rights reserved
   </footer>
 
+  <!-- Sortable.js -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
   <script>
     const STORAGE_KEY = 'mody_poems_v2';
     let poems = [];
     let currentFilter = '';
     let activeTag = null;
+    let isDragging = false; // flag to prevent click opening modal immediately after drag
 
     // DOM Elements
     const poemGrid = document.getElementById('poemGrid');
@@ -512,6 +525,7 @@
     function init() {
       loadPoems();
       setupEventListeners();
+      initSortable(); // init sortable once (it will work even if items are re-rendered)
       document.getElementById('year').textContent = new Date().getFullYear();
     }
 
@@ -595,7 +609,7 @@
     function createPoemCard(poem) {
       const card = document.createElement('div');
       card.className = 'card';
-      
+      card.dataset.id = poem.id; // important for reordering
       const excerpt = poem.excerpt || poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '');
       const tags = (poem.tags || []).map(t => `<span class="card-tag">${escapeHtml(t)}</span>`).join('');
       
@@ -610,7 +624,12 @@
         </div>
       `;
       
-      card.addEventListener('click', () => openModal(poem));
+      // Open modal on click unless user was dragging
+      card.addEventListener('click', (e) => {
+        if (isDragging) return;
+        openModal(poem);
+      });
+
       return card;
     }
 
@@ -679,6 +698,7 @@
 
     // Get audio HTML
     function getAudioHtml(audio) {
+      if (!audio) return '';
       if (audio.includes('soundcloud.com') && !audio.includes('<iframe')) {
         return `<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(audio)}&color=%238b5e3c&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false"></iframe>`;
       } else if (audio.includes('<iframe')) {
@@ -802,6 +822,33 @@
       const div = document.createElement('div');
       div.textContent = text || '';
       return div.innerHTML;
+    }
+
+    // Initialize Sortable with drag flags and order saving
+    function initSortable() {
+      // ensure container exists
+      if (!poemGrid) return;
+      new Sortable(poemGrid, {
+        animation: 150,
+        ghostClass: 'card-ghost',
+        handle: '.card', // whole card draggable
+        onStart: () => { isDragging = true; },
+        onEnd: () => {
+          // update poems array to new order (by data-id)
+          const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
+          const newOrder = [];
+          ids.forEach(id => {
+            const found = poems.find(p => p.id === id);
+            if (found) newOrder.push(found);
+          });
+          // append missing poems (if any) to keep them
+          const missing = poems.filter(p => !ids.includes(p.id));
+          poems = [...newOrder, ...missing];
+          savePoems();
+          // small timeout to avoid immediately opening modal after drop
+          setTimeout(() => { isDragging = false; }, 60);
+        }
+      });
     }
 
     // Start app
