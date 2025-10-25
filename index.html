@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mody Poetry</title>
+  <title>🪶 Mody Poetry 📜</title>
   <meta name="description" content="مجنون الشِعر — مجموعتي الذهبية" />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -58,7 +58,6 @@
     .btn:hover{background:#f5ebe0;border-color:var(--brown-hover)}
     .small{padding:6px 10px;font-size:13px}
     
-    /* Menu styles */
     .menu-container{position:relative}
     .menu-toggle{position:relative}
     .dropdown-menu{
@@ -74,9 +73,7 @@
       z-index:200;
       padding:6px;
     }
-    .dropdown-menu.show{
-      display:block;
-    }
+    .dropdown-menu.show{display:block}
     .menu-item{
       display:flex;
       align-items:center;
@@ -93,14 +90,8 @@
       width:100%;
       text-align:right;
     }
-    .menu-item:hover{
-      background:#f5ebe0;
-    }
-    .menu-divider{
-      height:1px;
-      background:var(--border);
-      margin:6px 0;
-    }
+    .menu-item:hover{background:#f5ebe0}
+    .menu-divider{height:1px;background:var(--border);margin:6px 0}
 
     .hero{background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,251,245,0.92) 100%);backdrop-filter:blur(8px);border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
     .search-wrapper{display:flex;gap:8px;flex-wrap:wrap}
@@ -113,16 +104,18 @@
 
     .muted{color:var(--muted);font-size:13px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:18px}
-    .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,0.04);border:1px solid var(--border);transition:all .16s ease;display:flex;gap:10px;align-items:flex-start;user-select:none}
-    .card:hover{transform:translateY(-4px)}
+    .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,0.04);border:1px solid var(--border);transition:all .22s cubic-bezier(0.4, 0, 0.2, 1);display:flex;gap:10px;align-items:flex-start;user-select:none;position:relative;overflow:hidden}
+    .card::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(139,94,60,0.15),transparent);transition:left .5s ease;pointer-events:none}
+    .card:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,0.08)}
+    .card:hover::before{left:100%}
     .card .drag-handle{flex:0 0 36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:grab;font-size:17px;color:var(--brown);user-select:none}
     .card .drag-handle:active{cursor:grabbing}
     .card .content{flex:1}
-    .card h3{font-family:'Amiri',serif;margin:0 0 6px 0;color:var(--accent);font-size:18px}
-    .excerpt{font-family:'Amiri',serif;color:var(--muted);line-height:1.9;font-size:15px;min-height:56px}
+    .card h3{font-family:'Amiri',serif;margin:0 0 6px 0;color:var(--accent);font-size:19px;font-weight:700}
+    .excerpt{font-family:'Amiri',serif;color:var(--muted);line-height:1.9;font-size:16px;min-height:56px}
     .card-footer{margin-top:8px;display:flex;justify-content:space-between;gap:8px;align-items:center}
     .card-tag{padding:4px 8px;border-radius:12px;font-size:12px;background:rgba(139,94,60,0.12);color:var(--brown);font-weight:700}
-    .card-ghost{opacity:.55 !important;transform:scale(.995) !important;box-shadow:0 30px 60px rgba(0,0,0,.12) !important}
+    .card-ghost{opacity:.4 !important;transform:scale(.98) rotate(2deg) !important;box-shadow:0 20px 40px rgba(0,0,0,.15) !important;transition:all .2s cubic-bezier(0.4, 0, 0.2, 1) !important}
     .card-placeholder{background:var(--placeholder);border:2px dashed rgba(139,94,60,0.18);min-height:72px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 
     .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200}
@@ -164,8 +157,7 @@
           <div class="dropdown-menu" id="dropdownMenu">
             <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
             <div class="menu-divider"></div>
-            <button class="menu-item" id="btnReloadJSON">📂 استعادة القصائد الأساسية</button>
-            <button class="menu-item" id="btnRestoreOriginal">🔄 الترتيب الأصلي</button>
+            <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي + ترتيب</button>
             <div class="menu-divider"></div>
             <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
           </div>
@@ -179,14 +171,11 @@
       <div class="search-wrapper">
         <input id="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص..." />
       </div>
-
       <div id="tagsWrapper" class="tags-wrapper" aria-label="وسوم القصائد"></div>
-
     </section>
 
     <section id="listSection">
       <div id="poemGrid" class="grid" aria-live="polite"></div>
-
       <div id="emptyState" style="display:none;margin-top:18px;padding:18px;border-radius:12px;border:2px dashed var(--border);text-align:center">
         <div style="font-size:28px">📜</div>
         <div style="font-weight:700;margin-top:8px">لا توجد قصائد</div>
@@ -214,14 +203,12 @@
       </div>
     </div>
 
-    <!-- Confirm/Alert Modal -->
     <div id="confirmModal" class="confirm-modal">
       <div class="confirm-box">
         <div id="confirmMessage" class="confirm-message"></div>
         <div class="confirm-buttons" id="confirmButtons"></div>
       </div>
     </div>
-
   </div>
 
   <footer>
@@ -229,7 +216,6 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
   <script>
     const STORAGE_KEY = 'mody_poems_v_full_v1';
     let poems = [];
@@ -243,8 +229,7 @@
     const tagsWrapper = document.getElementById('tagsWrapper');
     const year = document.getElementById('year');
     const btnDownload = document.getElementById('btnDownload');
-    const btnReloadJSON = document.getElementById('btnReloadJSON');
-    const btnRestoreOriginal = document.getElementById('btnRestoreOriginal');
+    const btnReloadAndSort = document.getElementById('btnReloadAndSort');
     const btnImportJSON = document.getElementById('btnImportJSON');
     const btnAdd = document.getElementById('btnAdd');
     const addModal = document.getElementById('addModal');
@@ -258,7 +243,6 @@
 
     year.textContent = new Date().getFullYear();
     
-    // Custom confirm/alert functions
     function showAlert(message) {
       confirmMessage.textContent = message;
       confirmButtons.innerHTML = '<button class="btn" onclick="document.getElementById(\'confirmModal\').classList.remove(\'show\')">حسناً</button>';
@@ -289,7 +273,6 @@
       confirmModal.classList.add('show');
     }
 
-    // Menu functionality
     menuToggle.addEventListener('click', function(e) {
       e.stopPropagation();
       dropdownMenu.classList.toggle('show');
@@ -334,7 +317,6 @@
     }
 
     function loadFromJSON(forcePopulate) {
-      // Try jsDelivr CDN first (best for CORS), then GitHub raw, then local
       const urls = [
         'https://cdn.jsdelivr.net/gh/abdomedo2033-code/ModyPoetry@main/poems.json',
         'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
@@ -374,13 +356,9 @@
     
     function useFallbackData() {
       if (!localStorage.getItem(STORAGE_KEY) && poems.length === 0) {
-        originalPoems = [
-          { id: 'p-1', title: 'أنين السحر', author: 'مودي', text: 'أيمرُّ السحاب أم أني أُسابقه .:.', excerpt: 'أيمرُّ السحاب أم أني أُسابقه .:.', audio: '', tags: ['حزن','ليل'] },
-          { id: 'p-2', title: 'ذكرى مؤلمة', author: 'مودي', text: 'ذكرى مؤلمة تمرّ بي بلا رحمة', excerpt: 'ذكرى مؤلمة تمرّ بي بلا رحمة', audio: '', tags: ['حزن'] },
-          { id: 'p-3', title: 'أمل ينتحر', author: 'مودي', text: 'أمل ينتحر ثم يعود الحياة', excerpt: 'أمل ينتحر ثم يعود الحياة', audio: '', tags: ['أمل'] }
-        ];
-        poems = originalPoems.map(function(p) { return {...p}; });
-        savePoems();
+        poems = [];
+        originalPoems = [];
+        renderPoems();
       }
     }
 
@@ -558,11 +536,15 @@
         try { sortableInstance.destroy(); } catch(e){}
       }
       sortableInstance = new Sortable(poemGrid, {
-        animation: 160,
+        animation: 200,
+        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
         ghostClass: 'card-ghost',
+        chosenClass: 'card-chosen',
+        dragClass: 'card-drag',
         handle: '.drag-handle',
         fallbackOnBody: true,
-        swapThreshold: 0.6,
+        swapThreshold: 0.65,
+        forceFallback: false,
         dataIdAttr: 'data-id',
         onStart: function() { isDragging = true; },
         onEnd: function() {
@@ -574,8 +556,7 @@
           });
           const missing = poems.filter(function(p) { return !ids.includes(p.id); });
           poems = newOrder.concat(missing);
-          savePoems();
-          setTimeout(function() { isDragging = false; }, 80);
+          savePoems();setTimeout(function() { isDragging = false; }, 80);
         }
       });
     }
@@ -596,8 +577,8 @@
         a.remove();
       });
 
-      btnReloadJSON.addEventListener('click', function() {
-        showConfirm('هل تريد جلب آخر نسخة من poems.json من GitHub؟', function() {
+      btnReloadAndSort.addEventListener('click', function() {
+        showConfirm('هل تريد جلب آخر قصائد مودي من GitHub وترتيب القصائد؟', function() {
           const urls = [
             'https://cdn.jsdelivr.net/gh/abdomedo2033-code/ModyPoetry@main/poems.json',
             'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
@@ -621,8 +602,34 @@
               .then(function(data) {
                 if (!Array.isArray(data)) throw new Error('البيانات ليست مصفوفة');
                 originalPoems = data.map(function(p) { return {...p}; });
-                showAlert('✅ تم التحميل بنجاح!\n\nعدد القصائد: ' + data.length + '\n\nلإضافة القصائد الجديدة اضغط "الترتيب الأصلي"');
+                
+                // Merge and sort logic
+                const currentMap = new Map(poems.map(function(p) { return [p.id, p]; }));
+                let added = 0;
+                originalPoems.forEach(function(orig) {
+                  if (!currentMap.has(orig.id)) {
+                    poems.push({...orig});
+                    added++;
+                  }
+                });
+                
+                const ordered = [];
+                const seen = new Set();
+                originalPoems.forEach(function(orig) {
+                  const found = poems.find(function(p) { return p.id === orig.id; });
+                  if (found) {
+                    ordered.push(found);
+                    seen.add(found.id);
+                  }
+                });
+                poems.forEach(function(p) {
+                  if (!seen.has(p.id)) ordered.push(p);
+                });
+                poems = ordered;
+                
+                savePoems();
                 renderPoems();
+                showAlert('✅ تم بنجاح!\n\n🎉 أُضيف: ' + added + ' قصيدة جديدة\n📋 عدد القصائد الكلي: ' + poems.length + '\n✨ تم ترتيب القصائد حسب الأساسي');
               })
               .catch(function(err) {
                 console.error('❌ Failed from ' + urls[urlIndex] + ':', err);
@@ -632,37 +639,6 @@
           
           tryFetchReload(0);
         });
-      });
-
-      btnRestoreOriginal.addEventListener('click', function() {
-        if (!originalPoems) {
-          showAlert('لا توجد نسخة أصلية محفوظة (poems.json لم تُحمّل). حاول الضغط على "استعادة القصائد الأساسية" أولاً.');
-          return;
-        }
-        const currentMap = new Map(poems.map(function(p) { return [p.id, p]; }));
-        let added = 0;
-        originalPoems.forEach(function(orig) {
-          if (!currentMap.has(orig.id)) {
-            poems.push({...orig});
-            added++;
-          }
-        });
-        const ordered = [];
-        const seen = new Set();
-        originalPoems.forEach(function(orig) {
-          const found = poems.find(function(p) { return p.id === orig.id; });
-          if (found) {
-            ordered.push(found);
-            seen.add(found.id);
-          }
-        });
-        poems.forEach(function(p) {
-          if (!seen.has(p.id)) ordered.push(p);
-        });
-        poems = ordered;
-        savePoems();
-        renderPoems();
-        showAlert('تمت إضافة ' + added + ' قصيدة جديدة من النسخة الأساسية (إن وُجدت) وتم ترتيب القصائد وفق المِلف الأساسي.');
       });
 
       btnImportJSON.addEventListener('click', function() {
