@@ -79,31 +79,31 @@
       font-size:14px;
       font-weight:500;
       cursor:pointer;
-      border:1.5px solid #d4b896;
+      border:1.5px solid #c4a778;
       transition:all 0.3s ease;
       display:inline-flex;
       align-items:center;
       gap:6px;
       background:#fff;
-      color:#6b5744;
+      color:#5a4a3a;
     }
     .btn-primary{
       background:#fff;
-      color:#6b5744;
-      border:1.5px solid #d4b896;
+      color:#5a4a3a;
+      border:1.5px solid #c4a778;
     }
     .btn-primary:hover{
-      background:#faf7f3;
-      border-color:#c9a882;
+      background:#f8f4ef;
+      border-color:#b89968;
     }
     .btn-secondary{
       background:#fff;
-      color:#6b5744;
-      border:1.5px solid #d4b896;
+      color:#5a4a3a;
+      border:1.5px solid #c4a778;
     }
     .btn-secondary:hover{
-      background:#faf7f3;
-      border-color:#c9a882;
+      background:#f8f4ef;
+      border-color:#b89968;
     }
     
     /* Hero Search */
@@ -158,13 +158,13 @@
       font-weight:500;
       cursor:pointer;
       transition:all 0.3s ease;
-      border:1.5px solid #e8dcc8;
+      border:1.5px solid #d4c4b0;
       background:#fff;
-      color:#6b5744;
+      color:#5a4a3a;
     }
     .tag:hover,.tag.active{
-      background:#faf7f3;
-      border-color:#c9a882;
+      background:#f8f4ef;
+      border-color:#c4a778;
     }
     
     /* Grid */
@@ -518,7 +518,22 @@
     function loadPoems() {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        poems = stored ? JSON.parse(stored) : [];
+        if (stored) {
+          poems = JSON.parse(stored);
+        } else {
+          // Try to load from poems.json file
+          fetch('poems.json')
+            .then(r => r.ok ? r.json() : [])
+            .then(data => {
+              poems = data;
+              savePoems();
+              renderPoems();
+              renderTags();
+            })
+            .catch(() => {
+              poems = [];
+            });
+        }
       } catch (e) {
         poems = [];
       }
