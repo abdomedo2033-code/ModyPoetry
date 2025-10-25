@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mody Poetry</title>
-  <meta name="description" content="مجموعة الشعر الذهبية" />
+  <title>Mody Poetry - مَجْنُونُ الشِّعر</title>
+  <meta name="description" content="مَجْنُونُ الشِّعر — مجموعتي الذهبية" />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{ 
+    :root{
       --bg-gradient-1:#fff8f0;
       --bg-gradient-2:#fef3e8;
       --card:#ffffff;
@@ -308,7 +308,7 @@
     .poem-text{
       font-family:'Amiri',serif;
       white-space:pre-line;
-      font-size:18px;
+      font-size:20px;
       line-height:2.5;
       margin-bottom:24px;
       color:var(--text);
@@ -630,7 +630,10 @@
                 ${tags ? `<span>• ${escapeHtml(tags)}</span>` : ''}
               </div>
             </div>
-            <button class="btn btn-secondary" id="closeModal">✖️ إغلاق</button>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-secondary" id="deletePoem" style="background:#fff0f0;border-color:#d9534f;color:#d9534f">🗑️ حذف</button>
+              <button class="btn btn-secondary" id="closeModal">✖️ إغلاق</button>
+            </div>
           </div>
           <div class="poem-text">${escapeHtml(poem.text)}</div>
           ${audioHtml}
@@ -638,6 +641,17 @@
       `;
       
       document.body.appendChild(modal);
+      
+      modal.querySelector('#deletePoem').addEventListener('click', () => {
+        if (confirm('هل أنت متأكد من حذف هذه القصيدة؟')) {
+          poems = poems.filter(p => p.id !== poem.id);
+          savePoems();
+          modal.remove();
+          document.removeEventListener('keydown', escapeHandler);
+          renderPoems();
+          renderTags();
+        }
+      });
       
       modal.querySelector('#closeModal').addEventListener('click', () => {
         modal.remove();
