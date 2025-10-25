@@ -21,7 +21,7 @@
       --shadow-lg:rgba(58,31,11,0.12);
       --border:#e8dcc8;
       --placeholder:rgba(139,94,60,0.08);
-      --header-dark:#e8d2bf; /* darker header base */
+      --header-dark:#e8d2bf;
       --header-dark-2:#d9c0a6;
     }
     *{box-sizing:border-box;margin:0;padding:0}
@@ -37,8 +37,6 @@
       padding:0;
     }
     .container{max-width:1100px;margin:0 auto;padding:20px}
-
-    /* Header - darker now */
     header{
       background:linear-gradient(180deg,var(--header-dark) 0%, var(--header-dark-2) 100%);
       backdrop-filter:blur(6px);
@@ -50,117 +48,29 @@
       animation:slideDown 0.35s ease;
     }
     @keyframes slideDown{from{transform:translateY(-100%)}to{transform:translateY(0)}}
-    .header-content{
-      max-width:1100px;
-      margin:0 auto;
-      padding:14px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-    }
+    .header-content{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .brand{display:flex;align-items:center;gap:12px}
-    .brand-icon{
-      width:48px;
-      height:48px;
-      border-radius:12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:28px;
-      background:rgba(58,31,11,0.06);
-      color:var(--brown);
-      box-shadow:0 4px 12px rgba(0,0,0,0.06);
-    }
+    .brand-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;background:rgba(58,31,11,0.06);color:var(--brown);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
     .brand h1{font-size:20px;font-weight:700;color:var(--accent)}
     .brand p{font-size:13px;color:rgba(0,0,0,0.45);margin-top:2px}
-
-    nav{display:flex;gap:8px;align-items:center}
-
-    .btn{
-      padding:8px 12px;
-      border-radius:8px;
-      font-size:14px;
-      font-weight:600;
-      cursor:pointer;
-      border:1.4px solid var(--brown);
-      background:#fff;
-      color:#5a3f2a;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      transition:all .18s ease;
-    }
+    nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:1.4px solid var(--brown);background:#fff;color:#5a3f2a;display:inline-flex;align-items:center;gap:8px;transition:all .18s ease}
     .btn:hover{background:#f5ebe0;border-color:var(--brown-hover)}
     .small{padding:6px 10px;font-size:13px}
-
-    .hero{
-      background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,251,245,0.92) 100%);
-      backdrop-filter:blur(8px);
-      border-radius:14px;
-      padding:16px;
-      margin:18px 0;
-      box-shadow:0 8px 32px var(--shadow-lg);
-      border:1px solid var(--border);
-    }
+    .hero{background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,251,245,0.92) 100%);backdrop-filter:blur(8px);border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
     .search-wrapper{display:flex;gap:8px;flex-wrap:wrap}
     input[type="search"]{flex:1;min-width:200px;padding:10px 12px;border-radius:8px;border:1.5px solid #e8dcc8;font-size:15px;background:#fff}
 
-    /* Tags bar */
-    .tags-wrapper{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:12px;
-      align-items:center;
-    }
-    .tag{
-      padding:7px 12px;
-      border-radius:10px;
-      font-size:13px;
-      font-weight:700;
-      cursor:pointer;
-      border:1.2px solid #d4c4b0;
-      background:#fff;
-      color:#5a3f2a;
-      transition:all .18s ease;
-    }
+    .tags-wrapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+    .tag{padding:7px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.2px solid #d4c4b0;background:#fff;color:#5a3f2a;transition:all .18s ease}
     .tag:hover{background:#f5ebe0;border-color:var(--brown)}
     .tag.active{background:#f5ebe0;border-color:var(--brown);box-shadow:0 6px 14px rgba(58,31,11,0.06)}
 
     .muted{color:var(--muted);font-size:13px}
-
-    .grid{
-      display:grid;
-      grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
-      gap:16px;
-      margin-top:18px;
-    }
-
-    .card{
-      background:var(--card);
-      border-radius:12px;
-      padding:12px;
-      box-shadow:0 8px 20px rgba(0,0,0,0.04);
-      border:1px solid var(--border);
-      transition:all .16s ease;
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      user-select:none;
-    }
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:18px}
+    .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,0.04);border:1px solid var(--border);transition:all .16s ease;display:flex;gap:10px;align-items:flex-start;user-select:none}
     .card:hover{transform:translateY(-4px)}
-    .card .drag-handle{
-      flex:0 0 36px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius:8px;
-      cursor:grab;
-      font-size:17px;
-      color:var(--brown);
-      user-select:none;
-    }
+    .card .drag-handle{flex:0 0 36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:grab;font-size:17px;color:var(--brown);user-select:none}
     .card .drag-handle:active{cursor:grabbing}
     .card .content{flex:1}
     .card h3{font-family:'Amiri',serif;margin:0 0 6px 0;color:var(--accent);font-size:18px}
@@ -180,6 +90,7 @@
     @media (max-width:768px){
       .grid{grid-template-columns:1fr}
       .header-content{padding:12px}
+      nav{gap:6px}
     }
   </style>
 </head>
@@ -198,7 +109,8 @@
         <button class="btn small" id="btnAdd">✍️ أضف</button>
         <button class="btn small" id="btnDownload">💾 تحميل</button>
         <button class="btn small" id="btnReloadJSON" title="جلب آخر نسخة من poems.json">📂 استعادة القصائد الأساسية</button>
-        <button class="btn small" id="btnRestoreOriginal" title="استعادة الترتيب الأصلي">🔄 الترتيب الأصلي</button>
+        <button class="btn small" id="btnRestoreOriginal" title="إضافة وترتيب وفق poems.json">🔄 الترتيب الأصلي</button>
+        <button class="btn small" id="btnImportJSON" title="استيراد ملف JSON من جهازك">📥 استيراد JSON</button>
       </nav>
     </div>
   </header>
@@ -209,7 +121,6 @@
         <input id="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص..." />
       </div>
 
-      <!-- TAGS BAR (added) -->
       <div id="tagsWrapper" class="tags-wrapper" aria-label="وسوم القصائد"></div>
 
     </section>
@@ -251,7 +162,6 @@
     © <span id="year"></span> مجنون الشِعر — All rights reserved
   </footer>
 
-  <!-- Sortable.js -->
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
   <script>
@@ -270,6 +180,7 @@
     const btnDownload = document.getElementById('btnDownload');
     const btnReloadJSON = document.getElementById('btnReloadJSON');
     const btnRestoreOriginal = document.getElementById('btnRestoreOriginal');
+    const btnImportJSON = document.getElementById('btnImportJSON');
     const btnAdd = document.getElementById('btnAdd');
     const addModal = document.getElementById('addModal');
     const poemForm = document.getElementById('poemForm');
@@ -288,7 +199,7 @@
       if (stored) {
         try {
           poems = JSON.parse(stored);
-          fetchJSONIntoOriginal(); // update original in background
+          fetchJSONIntoOriginal(); // refresh original in background (won't overwrite)
         } catch (e) {
           console.error('failed parse localStorage, clearing', e);
           localStorage.removeItem(STORAGE_KEY);
@@ -303,20 +214,24 @@
       attachListeners();
     }
 
-    async function loadFromJSON(force = false) {
+    // loadFromJSON: fetch poems.json and set originalPoems.
+    // If local storage empty, populate poems from original; otherwise only update originalPoems (do not overwrite user's poems).
+    async function loadFromJSON(forcePopulate = false) {
       try {
         const res = await fetch('poems.json?_=' + Date.now(), {cache: 'no-store'});
-        if (!res.ok) throw new Error('not ok');
+        if (!res.ok) throw new Error('fetch failed');
         const data = await res.json();
         if (!Array.isArray(data)) throw new Error('poems.json must be an array');
         originalPoems = data.map(p => ({...p}));
-        if (force || !localStorage.getItem(STORAGE_KEY)) {
+        // If no saved poems or forcePopulate==true and no saved poems, populate; otherwise keep user's poems
+        if (!localStorage.getItem(STORAGE_KEY) || (forcePopulate && !localStorage.getItem(STORAGE_KEY))) {
           poems = originalPoems.map(p => ({...p}));
           savePoems();
         }
         console.log('poems.json loaded, items:', originalPoems.length);
       } catch (err) {
         console.warn('Could not load poems.json:', err);
+        // fallback default (only if there's nothing saved)
         if (!localStorage.getItem(STORAGE_KEY) && poems.length === 0) {
           originalPoems = [
             { id: 'p-1', title: 'أنين السحر', author: 'مودي', text: 'أيمرُّ السحاب أم أني أُسابقه .:.', excerpt: 'أيمرُّ السحاب أم أني أُسابقه .:.', audio: '', tags: ['حزن','ليل'] },
@@ -329,6 +244,7 @@
       }
     }
 
+    // Refresh originalPoems in background (no overwriting)
     async function fetchJSONIntoOriginal() {
       try {
         const res = await fetch('poems.json?_=' + Date.now(), {cache:'no-store'});
@@ -345,11 +261,9 @@
     }
 
     function renderTags() {
-      // Build unique tag set from poems
       const tagSet = new Set();
       poems.forEach(p => (p.tags || []).forEach(t => tagSet.add(t)));
       tagsWrapper.innerHTML = '';
-      // "All" button
       const allBtn = document.createElement('button');
       allBtn.className = 'tag';
       allBtn.textContent = 'الكل';
@@ -360,7 +274,6 @@
         renderPoems();
       });
       tagsWrapper.appendChild(allBtn);
-      // individual tags
       Array.from(tagSet).sort().forEach(tag => {
         const btn = document.createElement('button');
         btn.className = 'tag';
@@ -381,10 +294,8 @@
 
       let filtered;
       if (activeTag) {
-        // If a tag is active, ignore text search and filter by tag only (per request)
         filtered = poems.filter(p => (p.tags || []).includes(activeTag));
       } else {
-        // Normal search behavior
         filtered = poems.filter(p => {
           if (!q) return true;
           const s = `${p.title} ${p.text} ${p.excerpt || ''} ${(p.tags||[]).join(' ')}`.toLowerCase();
@@ -394,7 +305,7 @@
 
       if (filtered.length === 0) {
         emptyState.style.display = 'block';
-        renderTags(); // still update tags bar
+        renderTags();
         return;
       } else {
         emptyState.style.display = 'none';
@@ -425,7 +336,6 @@
         poemGrid.appendChild(card);
       });
 
-      // Update tags UI every time (keeps active state)
       renderTags();
     }
 
@@ -519,26 +429,86 @@
         a.remove();
       });
 
+      // Fetch poems.json into originalPoems (does NOT overwrite user's poems)
       btnReloadJSON.addEventListener('click', async () => {
-        if (!confirm('هل تريد استعادة القصائد الأساسية من poems.json؟ (ستحدّث النسخة الأصلية ولن تُستبدل بياناتك إلا إذا استخدمت "استعادة الترتيب الأصلي")')) return;
-        await loadFromJSON(true);
-        alert('تم تحديث النسخة الأساسية (original). استخدم "استعادة الترتيب الأصلي" لإعادة الترتيب حسب الملف الجديد.');
-        renderPoems();
+        if (!confirm('هل تريد جلب آخر نسخة من poems.json إلى التطبيق؟ (لن يتم حذف قصائدك، سيتم تحديث نسخة المصدر فقط)')) return;
+        try {
+          await loadFromJSON(false); // load originalPoems only; do not overwrite existing poems
+          alert('تم جلب النسخة الأساسية (poems.json). لإضافة القصائد الجديدة وترتيبها اضغط "الترتيب الأصلي".');
+          renderPoems();
+        } catch (e) {
+          alert('فشل في جلب poems.json: ' + (e.message || e));
+        }
       });
 
+      // Merge + reorder based on originalPoems: add missing poems then reorder to match original order first
       btnRestoreOriginal.addEventListener('click', () => {
         if (!originalPoems) {
           alert('لا توجد نسخة أصلية محفوظة (poems.json لم تُحمّل). حاول الضغط على "استعادة القصائد الأساسية" أولاً.');
           return;
         }
-        const idMap = new Map(originalPoems.map((p, idx)=>[p.id || p.title, idx]));
-        poems.sort((a,b) => {
-          const ia = idMap.has(a.id) ? idMap.get(a.id) : (idMap.has(a.title)?idMap.get(a.title):999999);
-          const ib = idMap.has(b.id) ? idMap.get(b.id) : (idMap.has(b.title)?idMap.get(b.title):999999);
-          return ia - ib;
+        const currentMap = new Map(poems.map(p => [p.id, p]));
+        // Add missing originals
+        let added = 0;
+        originalPoems.forEach(orig => {
+          if (!currentMap.has(orig.id)) {
+            poems.push({...orig});
+            added++;
+          }
         });
+        // Re-order: put originalPoems (that exist) in original order, then append other poems
+        const ordered = [];
+        const seen = new Set();
+        originalPoems.forEach(orig => {
+          const found = poems.find(p => p.id === orig.id);
+          if (found) {
+            ordered.push(found);
+            seen.add(found.id);
+          }
+        });
+        poems.forEach(p => {
+          if (!seen.has(p.id)) ordered.push(p);
+        });
+        poems = ordered;
         savePoems();
         renderPoems();
+        alert(`تمت إضافة ${added} قصيدة جديدة من النسخة الأساسية (إن وُجدت) وتم ترتيب القصائد وفق المِلف الأساسي.`);
+      });
+
+      // Import JSON from user's file and merge (do not overwrite existing IDs)
+      btnImportJSON.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            if (!Array.isArray(data)) throw new Error('الملف يجب أن يحتوي على مصفوفة من القصائد');
+            const currentIds = new Set(poems.map(p => p.id));
+            let addedCount = 0;
+            data.forEach(p => {
+              if (!p.id) {
+                p.id = 'p-' + Date.now() + (Math.random()*1e6|0);
+              }
+              if (!currentIds.has(p.id)) {
+                poems.push({...p});
+                currentIds.add(p.id);
+                addedCount++;
+              }
+            });
+            if (addedCount > 0) {
+              savePoems();
+              renderPoems();
+            }
+            alert(`تمت إضافة ${addedCount} قصيدة جديدة من الملف.`);
+          } catch (err) {
+            alert('حدث خطأ عند قراءة الملف: ' + (err.message || err));
+          }
+        };
+        input.click();
       });
 
       // Add modal
