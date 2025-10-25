@@ -6,73 +6,64 @@
   <title>Mody Poetry</title>
   <meta name="description" content="مَجْنُونُ الشِّعر — مجموعتي الذهبية" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
- <style>
-:root{
-  --bg: #f5efe6;        /* light parchment background */
-  --card: #fdf6f0;      /* cream card */
-  --muted: #5b4636;     /* soft brown for meta / secondary text */
-  --accent: #3b2f2f;    /* dark brown for titles and buttons */
-  --tag-bg: #e3d5c3;    /* light brown for tags */
-  --tag-border: #cbb79a;/* darker outline for tags */
-}
-
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0; font-family:'Cairo',system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
-  background:linear-gradient(180deg,var(--bg) 0%,#f5efe6 100%);
-  color:var(--accent);
-  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-  line-height:1.6; padding:24px;
-}
-
-.container{max-width:980px;margin:0 auto}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-.brand h1{margin:0;font-size:20px;letter-spacing:0.2px;color:var(--accent)}
-.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
-nav .btn{border:1px solid var(--tag-border);padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--accent);font-size:13px}
-
-.hero{background:var(--card);padding:16px;border-radius:14px;box-shadow:0 6px 18px rgba(59,47,47,0.06);margin-bottom:18px}
-.searchbar{display:flex;gap:8px;align-items:center}
-input[type="search"]{flex:1;padding:10px;border-radius:10px;border:1px solid var(--tag-border)}
-.tags{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
-.tag{padding:6px 10px;border-radius:999px;border:1px solid var(--tag-border);font-size:13px;background:var(--tag-bg);color:var(--accent)}
-
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
-.card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04)}
-.card h3{margin:0 0 6px;font-size:17px;color:var(--accent)}
-.card p.excerpt{color:var(--muted);margin:0 0 8px}
-.card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
-
-.smallbtn{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--tag-border);background:var(--tag-bg);text-decoration:none;color:var(--accent)}
-.modal{position:fixed;inset:0;background:rgba(59,47,47,0.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-.modal .inner{background:var(--card);max-width:800px;width:100%;border-radius:12px;padding:18px;max-height:90vh;overflow:auto}
-.poem{white-space:pre-line;font-size:16px;line-height:1.8}
-footer{text-align:center;color:var(--muted);margin-top:24px;font-size:13px}
-
-@media (max-width:800px){
-  .grid{grid-template-columns:1fr}
-  header{flex-direction:column;align-items:flex-start;gap:8px}
-}
-
-form.add{display:grid;gap:8px;margin-top:12px}
-input[type="text"], textarea{padding:10px;border-radius:10px;border:1px solid var(--tag-border)}
-textarea{min-height:120px;resize:vertical}
-.row{display:flex;gap:8px}
-.row .col{flex:1}
-.controls{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-.primary{background:var(--accent);color:var(--card);border-radius:10px;padding:9px 14px;border:none}
-.muted{background:var(--tag-bg);color:var(--accent);border-radius:10px;padding:9px 14px;border:none}
-.download-json{font-size:13px;text-decoration:underline;color:var(--accent);background:none;border:none;padding:6px}
-.note{color:var(--muted);font-size:13px;margin-top:6px}
-
-.featured-player{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04);display:flex;gap:12px;align-items:center;margin-bottom:16px}
-.featured-player .meta{flex:1}
-.featured-player h4{margin:0;color:var(--accent)}
-.featured-player p{margin:4px 0 0;color:var(--muted);font-size:13px}
-.empty-note{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px;background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.03)}
-</style>
-
+  <style>
+    :root{
+      --bg: #f5efe6;
+      --card: #fdf6f0;
+      --muted: #5b4636;
+      --accent: #3b2f2f;
+      --tag-bg: #e3d5c3;
+      --tag-border: #cbb79a;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:'Cairo',system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background:linear-gradient(180deg,var(--bg) 0%,#f5efe6 100%);
+      color:var(--accent);
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      line-height:1.6; padding:24px;
+    }
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .brand h1{margin:0;font-size:20px;letter-spacing:0.2px;color:var(--accent)}
+    .brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+    nav .btn{border:1px solid var(--tag-border);padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--accent);font-size:13px}
+    .hero{background:var(--card);padding:16px;border-radius:14px;box-shadow:0 6px 18px rgba(59,47,47,0.06);margin-bottom:18px}
+    .searchbar{display:flex;gap:8px;align-items:center}
+    input[type="search"]{flex:1;padding:10px;border-radius:10px;border:1px solid var(--tag-border)}
+    .tags{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+    .tag{padding:6px 10px;border-radius:999px;border:1px solid var(--tag-border);font-size:13px;background:var(--tag-bg);color:var(--accent);cursor:pointer}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04)}
+    .card h3{margin:0 0 6px;font-size:17px;color:var(--accent)}
+    .card p.excerpt{color:var(--muted);margin:0 0 8px}
+    .card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .smallbtn{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--tag-border);background:var(--tag-bg);text-decoration:none;color:var(--accent);cursor:pointer}
+    .modal{position:fixed;inset:0;background:rgba(59,47,47,0.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+    .modal .inner{background:var(--card);max-width:800px;width:100%;border-radius:12px;padding:18px;max-height:90vh;overflow:auto}
+    .poem{white-space:pre-line;font-size:16px;line-height:1.8}
+    footer{text-align:center;color:var(--muted);margin-top:24px;font-size:13px}
+    @media (max-width:800px){
+      .grid{grid-template-columns:1fr}
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+    }
+    form.add{display:grid;gap:8px;margin-top:12px}
+    input[type="text"], textarea{padding:10px;border-radius:10px;border:1px solid var(--tag-border)}
+    textarea{min-height:120px;resize:vertical}
+    .row{display:flex;gap:8px}
+    .row .col{flex:1}
+    .controls{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+    .primary{background:var(--accent);color:var(--card);border-radius:10px;padding:9px 14px;border:none}
+    .muted{background:var(--tag-bg);color:var(--accent);border-radius:10px;padding:9px 14px;border:none}
+    .download-json{font-size:13px;text-decoration:underline;color:var(--accent);background:none;border:none;padding:6px}
+    .note{color:var(--muted);font-size:13px;margin-top:6px}
+    .featured-player{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04);display:flex;gap:12px;align-items:center;margin-bottom:16px}
+    .featured-player .meta{flex:1}
+    .featured-player h4{margin:0;color:var(--accent)}
+    .featured-player p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .empty-note{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px;background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.03)}
+  </style>
 </head>
 <body>
   <header>
@@ -93,7 +84,8 @@ textarea{min-height:120px;resize:vertical}
         <button class="smallbtn" id="clearSearch">مسح</button>
         <button class="smallbtn" id="downloadAll">تحميل JSON</button>
       </div>
-     
+      <div class="tags" id="tagsContainer"></div>
+    </div>
   </section>
 
   <main>
@@ -148,17 +140,8 @@ const $all = sel => Array.from(document.querySelectorAll(sel));
 const saveKey = 'mody_poems_v1';
 let poems;
 
-function loadPoems(){
-  try{
-    const raw = localStorage.getItem(saveKey);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
-}
-
-function savePoems(arr){
-  localStorage.setItem(saveKey, JSON.stringify(arr));
-  renderList();
-}
+function loadPoems(){ try{ const raw = localStorage.getItem(saveKey); return raw ? JSON.parse(raw) : []; }catch(e){ return []; } }
+function savePoems(arr){ localStorage.setItem(saveKey, JSON.stringify(arr)); renderList(); }
 
 function renderList(filter=''){
   if(!poems) return;
@@ -179,138 +162,4 @@ function renderList(filter=''){
   }
 
   if(filtered.length===0){
-    listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد قصائد مطابقة للبحث</div>';
-    return;
-  }
-
-  filtered.forEach(p=>{
-    const card = document.createElement('article');
-    card.className = 'card';
-    card.innerHTML = `
-      <h3>${escapeHtml(p.title)}</h3>
-      <p class="excerpt">${escapeHtml(p.excerpt || (p.text.slice(0,120)+'...'))}</p>
-      <div class="meta">
-        <div style="display:flex;gap:8px;align-items:center">
-          <small style="color:var(--muted)">${escapeHtml(p.author||'')}</small>
-          ${(p.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}
-        </div>
-        <div>
-          <button class="smallbtn view" data-id="${p.id}">عرض</button>
-          ${p.audio? `<a class="smallbtn" href="${p.audio}" target="_blank" rel="noreferrer">فتح صوت</a>` : ''}
-        </div>
-      </div>
-    `;
-    listEl.appendChild(card);
-  });
-
-  $all('.view').forEach(b=>{
-    b.onclick = ()=>{ const id=b.dataset.id; openModal(poems.find(x=>x.id===id)) };
-  });
-
-  renderTags();
-}
-
-function renderTags(){
-  const set = new Set();
-  poems.forEach(p=> (p.tags||[]).forEach(t=> set.add(t)));
-  tagsContainer.innerHTML = '';
-  const allBtn = document.createElement('button');
-  allBtn.className='tag';
-  allBtn.textContent='الكل';
-  allBtn.onclick = ()=>{ searchInput.value=''; renderList(''); };
-  tagsContainer.appendChild(allBtn);
-  Array.from(set).forEach(t=>{
-    const btn = document.createElement('button');
-    btn.className='tag'; btn.textContent=t;
-    btn.onclick = ()=>{ searchInput.value=t; renderList(t); };
-    tagsContainer.appendChild(btn);
-  });
-}
-
-function openModal(p){
-  const tpl = document.getElementById('modalTpl');
-  const node = tpl.content.cloneNode(true);
-  node.getElementById('mTitle').textContent = p.title;
-  node.getElementById('mMeta').textContent = `${p.author || ''} — ${ (p.tags||[]).join(' · ') }`;
-  node.getElementById('mText').textContent = p.text;
-  const mAudio = node.getElementById('mAudio');
-  if(p.audio){
-    if(p.audio.includes('soundcloud.com') && !p.audio.includes('<iframe')) {
-      mAudio.innerHTML = `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(p.audio)}"></iframe>`;
-    } else if(p.audio.includes('<iframe')) {
-      mAudio.innerHTML = p.audio;
-    } else {
-      mAudio.innerHTML = `<audio controls preload="none" style="width:100%"><source src="${p.audio}"></audio>`;
-    }
-  }
-  const modal = document.createElement('div');
-  modal.appendChild(node);
-  document.body.appendChild(modal);
-  modal.querySelector('#closeModal').onclick = ()=> modal.remove();
-}
-
-// DOM refs
-const listEl = $('#list');
-const tagsContainer = $('#tagsContainer');
-const searchInput = $('#search');
-const addSection = $('#add');
-const addForm = $('#addForm');
-const emptyNote = $('#emptyNote');
-
-$('#goAdd').addEventListener('click', ()=>{ showAdd(); window.scrollTo({top:0,behavior:'smooth'}) });
-$('#goList').addEventListener('click', ()=>{ showList(); window.scrollTo({top:0,behavior:'smooth'}) });
-
-addForm.onsubmit = (e)=>{
-  e.preventDefault();
-  const title = $('#title').value.trim() || 'بدون عنوان';
-  const author = $('#author').value.trim();
-  const text = $('#text').value.trim() || '';
-  const excerpt = $('#excerpt').value.trim();
-  const audio = $('#audio').value.trim();
-  const tags = $('#tags').value.split(',').map(t=>t.trim()).filter(Boolean);
-  const id = 'p-'+Date.now();
-  const newP = { id, title, author, text, excerpt, audio, tags };
-  poems.unshift(newP);
-  savePoems(poems);
-  addForm.reset();
-  showList();
-  window.scrollTo({top:0,behavior:'smooth'});
-};
-
-$('#resetForm').onclick = ()=> addForm.reset();
-$('#clearSearch').onclick = ()=>{ searchInput.value=''; renderList(''); };
-searchInput.oninput = ()=> renderList(searchInput.value);
-$('#downloadAll').addEventListener('click', ()=>{
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(poems, null, 2));
-  const a = document.createElement('a');
-  a.setAttribute('href', dataStr);
-  a.setAttribute('download', 'mody_poems.json');
-  document.body.appendChild(a); a.click(); a.remove();
-});
-
-function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
-function showAdd(){ addSection.style.display='block'; listEl.style.display='none'; $('#home').scrollIntoView(); }
-function showList(){ addSection.style.display='none'; listEl.style.display='grid'; renderList(searchInput.value); }
-
-document.getElementById('yr').textContent = new Date().getFullYear();
-
-// load poems from localStorage or fetch
-if(!localStorage.getItem(saveKey)){
-  fetch('poems.json')
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data=>{
-      localStorage.setItem(saveKey, JSON.stringify(data));
-      poems = loadPoems();
-      showList();
-    })
-    .catch(()=>{ poems = loadPoems(); showList(); });
-} else {
-  poems = loadPoems();
-  showList();
-}
-
-// expose for debugging
-window.__mody = { poems, savePoems };
-</script>
-</body>
-</html>
+    listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--mut
