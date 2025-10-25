@@ -58,10 +58,6 @@
     .muted{background:var(--tag-bg);color:var(--accent);border-radius:10px;padding:9px 14px;border:none}
     .download-json{font-size:13px;text-decoration:underline;color:var(--accent);background:none;border:none;padding:6px}
     .note{color:var(--muted);font-size:13px;margin-top:6px}
-    .featured-player{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04);display:flex;gap:12px;align-items:center;margin-bottom:16px}
-    .featured-player .meta{flex:1}
-    .featured-player h4{margin:0;color:var(--accent)}
-    .featured-player p{margin:4px 0 0;color:var(--muted);font-size:13px}
     .empty-note{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px;background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.03)}
   </style>
 </head>
@@ -162,4 +158,124 @@ function renderList(filter=''){
   }
 
   if(filtered.length===0){
-    listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--mut
+    listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد قصائد مطابقة للبحث</div>';
+    return;
+  }
+
+  filtered.forEach(p=>{
+    const card = document.createElement('article');
+    card.className='card';
+    card.innerHTML=`
+      <h3>${escapeHtml(p.title)}</h3>
+      <p class="excerpt">${escapeHtml(p.excerpt || (p.text.slice(0,120)+'...'))}</p>
+      <div class="meta">
+        <div style="display:flex;gap:8px;align-items:center">
+          <small style="color:var(--muted)">${escapeHtml(p.author||'')}</small>
+          ${(p.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}
+        </div>
+        <div>
+          <button class="smallbtn view" data-id="${p.id}">عرض</button>
+        </div>
+      </div>
+    `;
+    listEl.appendChild(card);
+  });
+
+  $all('.view').forEach(b=>{ b.onclick=()=>{ const id=b.dataset.id; openModal(poems.find(x=>x.id===id)) } });
+  renderTags();
+}
+
+function renderTags(){
+  const set = new Set();
+  poems.forEach(p=> (p.tags||[]).forEach(t=> set.add(t)));
+  tagsContainer.innerHTML='';
+  const allBtn=document.createElement('button'); allBtn.className='tag'; allBtn.textContent='الكل';
+  allBtn.onclick=()=>{ searchInput.value=''; renderList(''); };
+  tagsContainer.appendChild(allBtn);
+  Array.from(set).forEach(t=>{
+    const btn=document.createElement('button'); btn.className='tag'; btn.textContent=t;
+    btn.onclick=()=>{ searchInput.value=t; renderList(t); };
+    tagsContainer.appendChild(btn);
+  });
+}
+
+function openModal(p){
+  const tpl = document.getElementById('modalTpl');
+  const node = tpl.content.cloneNode(true);
+  node.getElementById('mTitle').textContent = p.title;
+  node.getElementById('mMeta').textContent = `${p.author || ''} — ${(p.tags||[]).join(' · ')}`;
+  node.getElementById('mText').textContent = p.text;
+  const mAudio = node.getElementById('mAudio');
+  if(p.audio){
+    if(p.audio.includes('soundcloud.com') && !p.audio.includes('<iframe')) {
+      mAudio.innerHTML = `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(p.audio)}"></iframe>`;
+    } else if(p.audio.includes('<iframe')) {
+      mAudio.innerHTML = p.audio;
+    } else {
+      mAudio.innerHTML = `<audio controls preload="none" style="width:100%"><source src="${p.audio}"></audio>`;
+    }
+  }
+  const modal = document.createElement('div');
+  modal.appendChild(node);
+  document.body.appendChild(modal);
+  modal.querySelector('#closeModal').onclick = ()=> modal.remove();
+}
+
+const listEl = $('#list');
+const tagsContainer = $('#tagsContainer');
+const searchInput = $('#search');
+const addSection = $('#add');
+const addForm = $('#addForm');
+const emptyNote = $('#emptyNote');
+
+$('#goAdd').addEventListener('click',()=>{ showAdd(); window.scrollTo({top:0,behavior:'smooth'}) });
+$('#goList').addEventListener('click',()=>{ showList(); window.scrollTo({top:0,behavior:'smooth'}) });
+
+addForm.onsubmit=(e)=>{
+  e.preventDefault();
+  const title=$('#title').value.trim() || 'بدون عنوان';
+  const author=$('#author').value.trim();
+  const text=$('#text').value.trim() || '';
+  const excerpt=$('#excerpt').value.trim();
+  const audio=$('#audio').value.trim();
+  const tags=$('#tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const id='p-'+Date.now();
+  const newP={ id, title, author, text, excerpt, audio, tags };
+  poems.unshift(newP);
+  savePoems(poems);
+  addForm.reset();
+  showList();
+  window.scrollTo({top:0,behavior:'smooth'});
+};
+
+$('#resetForm').onclick=()=>addForm.reset();
+$('#clearSearch').onclick=()=>{ searchInput.value=''; renderList(''); };
+searchInput.oninput=()=>renderList(searchInput.value);
+$('#downloadAll').addEventListener('click',()=>{
+  const dataStr="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(poems,null,2));
+  const a=document.createElement('a');
+  a.setAttribute('href',dataStr);
+  a.setAttribute('download','mody_poems.json');
+  document.body.appendChild(a); a.click(); a.remove();
+});
+
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
+function showAdd(){ addSection.style.display='block'; listEl.style.display='none'; $('#home').scrollIntoView(); }
+function showList(){ addSection.style.display='none'; listEl.style.display='grid'; renderList(searchInput.value); }
+
+document.getElementById('yr').textContent=new Date().getFullYear();
+
+if(!localStorage.getItem(saveKey)){
+  fetch('poems.json')
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data=>{ localStorage.setItem(saveKey,JSON.stringify(data)); poems=loadPoems(); showList(); })
+    .catch(()=>{ poems=loadPoems(); showList(); });
+} else {
+  poems=loadPoems();
+  showList();
+}
+
+window.__mody={ poems, savePoems };
+</script>
+</body>
+</html>
