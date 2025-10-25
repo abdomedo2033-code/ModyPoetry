@@ -61,36 +61,8 @@
   </style>
 </head>
 <body>
+ 
  <div id="playerContainer"></div>
-
-<script>
-  (function(){
-    const fileId = '1HLV-69H-7X36s8mb7Ev5lCdkCz1xcEW4';
-    const downloadUrl = `https://docs.google.com/uc?export=download&id=${fileId}`;
-    const previewUrl = `https://drive.google.com/file/d/${fileId}/preview`; // iframe fallback
-
-    const container = document.getElementById('playerContainer');
-
-    // create audio element
-    const audio = document.createElement('audio');
-    audio.controls = true;
-    audio.preload = 'none';
-    audio.style.width = '100%';
-    audio.src = downloadUrl;
-
-    // if loads fine, append; otherwise fallback to iframe
-    let fallbackDone = false;
-    function doFallback(){
-      if(fallbackDone) return;
-      fallbackDone = true;
-      container.innerHTML = `<iframe src="${previewUrl}" width="100%" height="120" frameborder="0" allow="autoplay; encrypted-media"></iframe>`;
-    }
-
-    // listen for network / loading errors
-    audio.addEventListener('error', (e) => {
-      console.warn('Audio error, using iframe fallback', e);
-      doFallback();
-    });
 
     // Some browsers block autoplay or CORS; try to fetch HEAD to test CORS quickly
     fetch(downloadUrl, { method: 'HEAD', mode: 'no-cors' })
@@ -177,27 +149,7 @@
   </template>
 
 <script>
-  // Sample initial poems (replace or edit using the Add form)
-  const SAMPLE = [
-    {
-      id: 'p-1',
-      title: 'أنين السَّحَر',
-      author: 'مودي',
-      excerpt: 'أتسلل بين نسمات الليل لأبحث عن كلماتٍ تراكض في قلبي...',
-      text: 'أنظرُ في السما وأُدرك أنك : إليّ تنظرُ\\nوأني هاهنا أتذلل\\nتقول أنك لا تُسأل عما تفعل : فأنّى ليَ الرضا وإياي تُثقّل',
-      audio: '',
-      tags: ['إيماني','ليل']
-    },
-    {
-      id: 'p-2',
-      title: 'عودةُ الأمل',
-      author: 'مودي',
-      excerpt: 'وردة في منتصف الشتاء...',
-      text: 'في وجهِكِ تشرقُ الغيماتُ\\nوتغدو السماءُ أقلُّ عُمقاً...',
-      audio: '',
-      tags: ['حب','أمل']
-    }
-  ];
+
 
   // Utilities
   const $ = sel => document.querySelector(sel);
