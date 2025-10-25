@@ -1,0 +1,310 @@
+ <!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mody Poetry — مجنون الشعر</title>
+  <meta name="description" content="مَجْنُونُ الشِّعر — مجموعتي من القصائد المُرتَّلة والمكتوبة" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#fbfbfb; --card:#fff; --muted:#6b7280; --accent:#111827;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:'Cairo',system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+      background:linear-gradient(180deg,#ffffff 0%,#fbfbfb 100%); color:#0b1220;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+      line-height:1.6; padding:24px;
+    }
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .brand h1{margin:0;font-size:20px;letter-spacing:0.2px}
+    .brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+    nav .btn{border:1px solid #e5e7eb;padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;font-size:13px}
+    .hero{background:var(--card);padding:16px;border-radius:14px;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-bottom:18px}
+    .searchbar{display:flex;gap:8px;align-items:center}
+    input[type="search"]{flex:1;padding:10px;border-radius:10px;border:1px solid #e6e6e6}
+    .tags{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+    .tag{padding:6px 10px;border-radius:999px;border:1px solid #eee;font-size:13px;background:#fff}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04)}
+    .card h3{margin:0 0 6px;font-size:17px}
+    .card p.excerpt{color:var(--muted);margin:0 0 8px}
+    .card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .smallbtn{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid #e6e6e6;background:#fff;text-decoration:none;color:inherit}
+    .modal{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+    .modal .inner{background:var(--card);max-width:800px;width:100%;border-radius:12px;padding:18px;max-height:90vh;overflow:auto}
+    .poem{white-space:pre-line;font-size:16px;line-height:1.8}
+    footer{text-align:center;color:var(--muted);margin-top:24px;font-size:13px}
+    /* responsive */
+    @media (max-width:800px){
+      .grid{grid-template-columns:1fr}
+      header{flex-direction:column;align-items:flex-start;gap:8px}
+    }
+    /* small form style */
+    form.add{display:grid;gap:8px;margin-top:12px}
+    input[type="text"], textarea{padding:10px;border-radius:10px;border:1px solid #eee}
+    textarea{min-height:120px;resize:vertical}
+    .row{display:flex;gap:8px}
+    .row .col{flex:1}
+    .controls{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+    .primary{background:#0b1220;color:#fff;border-radius:10px;padding:9px 14px;border:none}
+    .muted{background:#f3f4f6;border-radius:10px;padding:9px 14px;border:none}
+    .download-json{font-size:13px;text-decoration:underline;color:#0b1220;background:none;border:none;padding:6px}
+    .note{color:var(--muted);font-size:13px;margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <h1>مَجْنُونُ الشِّعر — Mody Poetry</h1>
+        <p>قصائدي المكتوبة والمُرتَّلة — اضف وشارك واستمع</p>
+      </div>
+      <nav>
+        <a class="btn" id="goAdd">أضف قصيدة</a>
+        <a class="btn" id="goList">عرض القصائد</a>
+      </nav>
+    </header>
+
+    <section class="hero" id="home">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="searchbar">
+          <input id="search" type="search" placeholder="ابحث في العناوين أو النص..." />
+          <button class="smallbtn" id="clearSearch">مسح</button>
+          <button class="smallbtn" id="downloadAll">تحميل JSON</button>
+        </div>
+        <div class="tags" id="tagsContainer"></div>
+        <div class="note">ملاحظة: لتحميل ملف صوتي استخدم رابط عام (SoundCloud/Direct MP3/Google Drive مباشر). إذا لم يكن لديك رابط، يمكن رفع الملفات إلى Cloudinary أو SoundCloud ثم نسخ الرابط.</div>
+      </div>
+    </section>
+
+    <main>
+      <section id="list" class="grid"></section>
+
+      <!-- add form -->
+      <section id="add" style="display:none;margin-top:16px" class="card">
+        <h3>أضف قصيدة / تسجيل</h3>
+        <form class="add" id="addForm">
+          <input id="title" type="text" placeholder="عنوان القصيدة (مثال: أنين السَّحَر)" />
+          <input id="author" type="text" placeholder="المؤلف/الراوي (مثال: مودي)" />
+          <textarea id="text" placeholder="نص القصيدة (سطر جديد = سطر جديد)"></textarea>
+          <input id="excerpt" type="text" placeholder="مقتطف (اختياري)" />
+          <input id="audio" type="text" placeholder="رابط الملف الصوتي العام (مثال: https://.../poem1.mp3 أو رابط SoundCloud embed)" />
+          <input id="tags" type="text" placeholder="وسوم مفصولة بفواصل (مثال: حب, إيماني)" />
+          <div class="controls">
+            <button type="button" class="muted" id="resetForm">مسح الحقول</button>
+            <button type="submit" class="primary">نشر محلياً</button>
+          </div>
+        </form>
+        <div class="note">التغييرات تُخزن محلياً في متصفحك (localStorage). لتحفظ الموقع على GitHub بصيغة دائمة، حمّل الملف JSON المستخرج وادمجه في الريبو أو استبدل المحتوى داخل index.html.</div>
+      </section>
+    </main>
+
+    <footer>
+      © <span id="yr"></span> مَجْنُونُ الشِّعر — All rights reserved
+    </footer>
+  </div>
+
+  <!-- Modal template -->
+  <template id="modalTpl">
+    <div class="modal" role="dialog">
+      <div class="inner">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <h2 id="mTitle"></h2>
+            <div id="mMeta" style="color:var(--muted);margin-top:6px"></div>
+          </div>
+          <button id="closeModal" class="smallbtn">إغلاق</button>
+        </div>
+        <div style="margin-top:12px" id="mText" class="poem"></div>
+        <div id="mAudio" style="margin-top:14px"></div>
+      </div>
+    </div>
+  </template>
+
+<script>
+  // Sample initial poems (replace or edit using the Add form)
+  const SAMPLE = [
+    {
+      id: 'p-1',
+      title: 'أنين السَّحَر',
+      author: 'مودي',
+      excerpt: 'أتسلل بين نسمات الليل لأبحث عن كلماتٍ تراكض في قلبي...',
+      text: 'أنظرُ في السما وأُدرك أنك : إليّ تنظرُ\\nوأني هاهنا أتذلل\\nتقول أنك لا تُسأل عما تفعل : فأنّى ليَ الرضا وإياي تُثقّل',
+      audio: '',
+      tags: ['إيماني','ليل']
+    },
+    {
+      id: 'p-2',
+      title: 'عودةُ الأمل',
+      author: 'مودي',
+      excerpt: 'وردة في منتصف الشتاء...',
+      text: 'في وجهِكِ تشرقُ الغيماتُ\\nوتغدو السماءُ أقلُّ عُمقاً...',
+      audio: '',
+      tags: ['حب','أمل']
+    }
+  ];
+
+  // Utilities
+  const $ = sel => document.querySelector(sel);
+  const $all = sel => Array.from(document.querySelectorAll(sel));
+  const saveKey = 'mody_poems_v1';
+
+  function loadPoems(){
+    try{
+      const raw = localStorage.getItem(saveKey);
+      if(!raw) return SAMPLE.slice();
+      return JSON.parse(raw);
+    }catch(e){
+      return SAMPLE.slice();
+    }
+  }
+  function savePoems(arr){
+    localStorage.setItem(saveKey, JSON.stringify(arr));
+    renderList();
+  }
+
+  let poems = loadPoems();
+
+  // DOM refs
+  const listEl = $('#list');
+  const tagsContainer = $('#tagsContainer');
+  const searchInput = $('#search');
+  const addSection = $('#add');
+  const addForm = $('#addForm');
+
+  // read URL for path-based navigation (simple)
+  $('#goAdd').addEventListener('click', ()=>{ showAdd(); window.scrollTo({top:0,behavior:'smooth'}) });
+  $('#goList').addEventListener('click', ()=>{ showList(); window.scrollTo({top:0,behavior:'smooth'}) });
+
+  function renderList(filter=''){
+    listEl.innerHTML = '';
+    const q = filter.trim().toLowerCase();
+    const filtered = poems.filter(p=>{
+      const hay = (p.title+' '+p.text+' '+(p.excerpt||'')).toLowerCase();
+      return hay.includes(q);
+    });
+    if(filtered.length===0){
+      listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد قصائد</div>';
+      return;
+    }
+    filtered.forEach(p=>{
+      const card = document.createElement('article');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${escapeHtml(p.title)}</h3>
+        <p class="excerpt">${escapeHtml(p.excerpt || (p.text.slice(0,120)+'...'))}</p>
+        <div class="meta">
+          <div style="display:flex;gap:8px;align-items:center">
+            <small style="color:var(--muted)">${escapeHtml(p.author||'')}</small>
+            ${ (p.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('') }
+          </div>
+          <div>
+            <button class="smallbtn view" data-id="${p.id}">عرض</button>
+            ${p.audio? `<a class="smallbtn" href="${p.audio}" target="_blank" rel="noreferrer">فتح صوت</a>` : ''}
+          </div>
+        </div>
+      `;
+      listEl.appendChild(card);
+    });
+
+    // attach view buttons
+    $all('.view').forEach(b=>{
+      b.onclick = ()=>{ const id=b.dataset.id; openModal(poems.find(x=>x.id===id)) };
+    });
+    renderTags();
+  }
+
+  function renderTags(){
+    const set = new Set();
+    poems.forEach(p=> (p.tags||[]).forEach(t=> set.add(t)));
+    tagsContainer.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className='tag';
+    allBtn.textContent='الكل';
+    allBtn.onclick = ()=>{ searchInput.value=''; renderList(''); };
+    tagsContainer.appendChild(allBtn);
+    Array.from(set).forEach(t=>{
+      const btn = document.createElement('button');
+      btn.className='tag'; btn.textContent=t;
+      btn.onclick = ()=>{ searchInput.value=t; renderList(t); };
+      tagsContainer.appendChild(btn);
+    });
+  }
+
+  function openModal(p){
+    const tpl = document.getElementById('modalTpl');
+    const node = tpl.content.cloneNode(true);
+    node.getElementById('mTitle').textContent = p.title;
+    node.getElementById('mMeta').textContent = `${p.author || ''} — ${ (p.tags||[]).join(' · ') }`;
+    node.getElementById('mText').textContent = p.text;
+    const mAudio = node.getElementById('mAudio');
+    if(p.audio){
+      // if SoundCloud embed (iframe) or direct mp3
+      if(p.audio.includes('soundcloud.com') && !p.audio.includes('<iframe')) {
+        // use iframe embed pattern (simple)
+        mAudio.innerHTML = `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(p.audio)}"></iframe>`;
+      } else if(p.audio.includes('<iframe')) {
+        mAudio.innerHTML = p.audio;
+      } else {
+        mAudio.innerHTML = `<audio controls preload="none" style="width:100%"><source src="${p.audio}"></audio>`;
+      }
+    }
+    const modal = document.createElement('div');
+    modal.appendChild(node);
+    document.body.appendChild(modal);
+    modal.querySelector('#closeModal').onclick = ()=> modal.remove();
+  }
+
+  // Add form handling
+  addForm.onsubmit = (e)=>{
+    e.preventDefault();
+    const title = $('#title').value.trim() || 'بدون عنوان';
+    const author = $('#author').value.trim();
+    const text = $('#text').value.trim() || '';
+    const excerpt = $('#excerpt').value.trim();
+    const audio = $('#audio').value.trim();
+    const tags = $('#tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+    const id = 'p-'+Date.now();
+    const newP = { id, title, author, text, excerpt, audio, tags };
+    poems.unshift(newP);
+    savePoems(poems);
+    addForm.reset();
+    showList();
+    window.scrollTo({top:0,behavior:'smooth'});
+  };
+
+  $('#resetForm').onclick = ()=> addForm.reset();
+  $('#clearSearch').onclick = ()=>{ searchInput.value=''; renderList(''); };
+  searchInput.oninput = ()=> renderList(searchInput.value);
+
+  // download JSON of all poems
+  $('#downloadAll').addEventListener('click', ()=>{
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(poems, null, 2));
+    const a = document.createElement('a');
+    a.setAttribute('href', dataStr);
+    a.setAttribute('download', 'mody_poems.json');
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  // helper escape
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, function(m){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
+
+  // show/hide helpers
+  function showAdd(){ addSection.style.display='block'; $('#list').style.display='none'; $('#home').scrollIntoView(); }
+  function showList(){ addSection.style.display='none'; $('#list').style.display='grid'; renderList(searchInput.value); }
+
+  // init
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  renderList();
+  showList();
+
+  // expose for debugging (optional)
+  window.__mody = { poems, savePoems };
+</script>
+</body>
+</html>
