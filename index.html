@@ -6,58 +6,73 @@
   <title>Mody Poetry</title>
   <meta name="description" content="مَجْنُونُ الشِّعر — مجموعتي الذهبية" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <style>
-    :root{
-      --bg:#fbfbfb; --card:#fff; --muted:#6b7280; --accent:#111827;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:'Cairo',system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
-      background:linear-gradient(180deg,#ffffff 0%,#fbfbfb 100%); color:#0b1220;
-      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-      line-height:1.6; padding:24px;
-    }
-    .container{max-width:980px;margin:0 auto}
-    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-    .brand h1{margin:0;font-size:20px;letter-spacing:0.2px}
-    .brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
-    nav .btn{border:1px solid #e5e7eb;padding:8px 12px;border-radius:10px;text-decoration:none;color:inherit;font-size:13px}
-    .hero{background:var(--card);padding:16px;border-radius:14px;box-shadow:0 6px 18px rgba(2,6,23,0.06);margin-bottom:18px}
-    .searchbar{display:flex;gap:8px;align-items:center}
-    input[type="search"]{flex:1;padding:10px;border-radius:10px;border:1px solid #e6e6e6}
-    .tags{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
-    .tag{padding:6px 10px;border-radius:999px;border:1px solid #eee;font-size:13px;background:#fff}
-    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
-    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04)}
-    .card h3{margin:0 0 6px;font-size:17px}
-    .card p.excerpt{color:var(--muted);margin:0 0 8px}
-    .card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
-    .smallbtn{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid #e6e6e6;background:#fff;text-decoration:none;color:inherit}
-    .modal{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
-    .modal .inner{background:var(--card);max-width:800px;width:100%;border-radius:12px;padding:18px;max-height:90vh;overflow:auto}
-    .poem{white-space:pre-line;font-size:16px;line-height:1.8}
-    footer{text-align:center;color:var(--muted);margin-top:24px;font-size:13px}
-    @media (max-width:800px){
-      .grid{grid-template-columns:1fr}
-      header{flex-direction:column;align-items:flex-start;gap:8px}
-    }
-    form.add{display:grid;gap:8px;margin-top:12px}
-    input[type="text"], textarea{padding:10px;border-radius:10px;border:1px solid #eee}
-    textarea{min-height:120px;resize:vertical}
-    .row{display:flex;gap:8px}
-    .row .col{flex:1}
-    .controls{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
-    .primary{background:#0b1220;color:#fff;border-radius:10px;padding:9px 14px;border:none}
-    .muted{background:#f3f4f6;border-radius:10px;padding:9px 14px;border:none}
-    .download-json{font-size:13px;text-decoration:underline;color:#0b1220;background:none;border:none;padding:6px}
-    .note{color:var(--muted);font-size:13px;margin-top:6px}
-    .featured-player{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04);display:flex;gap:12px;align-items:center;margin-bottom:16px}
-    .featured-player .meta{flex:1}
-    .featured-player h4{margin:0}
-    .featured-player p{margin:4px 0 0;color:var(--muted);font-size:13px}
-    .empty-note{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.03)}
-  </style>
+ <style>
+:root{
+  --bg: #f5efe6;        /* light parchment background */
+  --card: #fdf6f0;      /* cream card */
+  --muted: #5b4636;     /* soft brown for meta / secondary text */
+  --accent: #3b2f2f;    /* dark brown for titles and buttons */
+  --tag-bg: #e3d5c3;    /* light brown for tags */
+  --tag-border: #cbb79a;/* darker outline for tags */
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; font-family:'Cairo',system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+  background:linear-gradient(180deg,var(--bg) 0%,#f5efe6 100%);
+  color:var(--accent);
+  -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  line-height:1.6; padding:24px;
+}
+
+.container{max-width:980px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand h1{margin:0;font-size:20px;letter-spacing:0.2px;color:var(--accent)}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px}
+nav .btn{border:1px solid var(--tag-border);padding:8px 12px;border-radius:10px;text-decoration:none;color:var(--accent);font-size:13px}
+
+.hero{background:var(--card);padding:16px;border-radius:14px;box-shadow:0 6px 18px rgba(59,47,47,0.06);margin-bottom:18px}
+.searchbar{display:flex;gap:8px;align-items:center}
+input[type="search"]{flex:1;padding:10px;border-radius:10px;border:1px solid var(--tag-border)}
+.tags{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.tag{padding:6px 10px;border-radius:999px;border:1px solid var(--tag-border);font-size:13px;background:var(--tag-bg);color:var(--accent)}
+
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:18px}
+.card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04)}
+.card h3{margin:0 0 6px;font-size:17px;color:var(--accent)}
+.card p.excerpt{color:var(--muted);margin:0 0 8px}
+.card .meta{display:flex;justify-content:space-between;align-items:center;gap:8px}
+
+.smallbtn{font-size:13px;padding:7px 10px;border-radius:10px;border:1px solid var(--tag-border);background:var(--tag-bg);text-decoration:none;color:var(--accent)}
+.modal{position:fixed;inset:0;background:rgba(59,47,47,0.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal .inner{background:var(--card);max-width:800px;width:100%;border-radius:12px;padding:18px;max-height:90vh;overflow:auto}
+.poem{white-space:pre-line;font-size:16px;line-height:1.8}
+footer{text-align:center;color:var(--muted);margin-top:24px;font-size:13px}
+
+@media (max-width:800px){
+  .grid{grid-template-columns:1fr}
+  header{flex-direction:column;align-items:flex-start;gap:8px}
+}
+
+form.add{display:grid;gap:8px;margin-top:12px}
+input[type="text"], textarea{padding:10px;border-radius:10px;border:1px solid var(--tag-border)}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:8px}
+.row .col{flex:1}
+.controls{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.primary{background:var(--accent);color:var(--card);border-radius:10px;padding:9px 14px;border:none}
+.muted{background:var(--tag-bg);color:var(--accent);border-radius:10px;padding:9px 14px;border:none}
+.download-json{font-size:13px;text-decoration:underline;color:var(--accent);background:none;border:none;padding:6px}
+.note{color:var(--muted);font-size:13px;margin-top:6px}
+
+.featured-player{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(59,47,47,0.04);display:flex;gap:12px;align-items:center;margin-bottom:16px}
+.featured-player .meta{flex:1}
+.featured-player h4{margin:0;color:var(--accent)}
+.featured-player p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.empty-note{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px;background:var(--card);border-radius:12px;box-shadow:0 6px 18px rgba(59,47,47,0.03)}
+</style>
+
 </head>
 <body>
   <header>
