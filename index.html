@@ -74,24 +74,51 @@
     .brand h1{font-size:20px;font-weight:700;color:var(--accent)}
     .brand p{font-size:13px;color:rgba(0,0,0,0.45);margin-top:2px}
 
-    nav{display:flex;gap:8px;align-items:center;position:relative}
-
-    .btn{
-      padding:8px 12px;
-      border-radius:8px;
+    nav{position:relative;}
+    .menu-wrapper{
+      position:relative;
+    }
+    .menu-btn{
+      padding:8px 14px;
       font-size:14px;
       font-weight:600;
       cursor:pointer;
-      border:1.4px solid var(--brown);
+      border-radius:8px;
+      border:1.5px solid var(--brown);
       background:#fff;
-      color:#5a3f2a;
-      display:inline-flex;
+      color:var(--brown);
+      display:flex;
       align-items:center;
-      gap:8px;
+      gap:6px;
       transition:all .18s ease;
     }
-    .btn:hover{background:#f5ebe0;border-color:var(--brown-hover)}
-    .small{padding:6px 10px;font-size:13px}
+    .menu-btn:hover{background:#f5ebe0;border-color:var(--brown-hover)}
+    .menu-dropdown{
+      display:none;
+      position:absolute;
+      right:0;
+      top:45px;
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:8px;
+      box-shadow:0 8px 28px rgba(0,0,0,0.18);
+      flex-direction:column;
+      min-width:160px;
+      z-index:150;
+      overflow:hidden;
+    }
+    .menu-dropdown button{
+      padding:10px 14px;
+      font-size:14px;
+      text-align:right;
+      border:none;
+      background:none;
+      width:100%;
+      cursor:pointer;
+      transition:all .15s ease;
+      color:var(--brown);
+    }
+    .menu-dropdown button:hover{background:var(--bg-gradient-2);color:var(--accent)}
 
     .hero{
       background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,251,245,0.92) 100%);
@@ -192,17 +219,14 @@
         </div>
       </div>
 
-      <!-- NAV MENU -->
-      <nav>
-        <div style="position:relative">
-          <button class="btn small" id="menuBtn">☰ القائمة</button>
-          <div id="menuDropdown" style="display:none;position:absolute;right:0;top:40px;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 20px rgba(0,0,0,0.12);z-index:150;flex-direction:column;min-width:150px">
-            <button class="btn small dropdown-item" id="btnAdd">✍️ أضف</button>
-            <button class="btn small dropdown-item" id="btnDownload">💾 تحميل</button>
-            <button class="btn small dropdown-item" id="btnReloadJSON">📂 جديد مودي</button>
-            <button class="btn small dropdown-item" id="btnRestoreOriginal">🔄 الترتيب الأصلي</button>
-            <button class="btn small dropdown-item" id="btnImportJSON">📥 استيراد</button>
-          </div>
+      <nav class="menu-wrapper">
+        <button class="menu-btn" id="menuBtn">☰ القائمة</button>
+        <div class="menu-dropdown" id="menuDropdown">
+          <button id="btnAdd">✍️ أضف</button>
+          <button id="btnDownload">💾 تحميل</button>
+          <button id="btnReloadJSON">🥳 جديد مودي</button>
+          <button id="btnRestoreOriginal">🔄 الترتيب الأصلي</button>
+          <button id="btnImportJSON">📥 استيراد</button>
         </div>
       </nav>
     </div>
@@ -213,13 +237,11 @@
       <div class="search-wrapper">
         <input id="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص..." />
       </div>
-
       <div id="tagsWrapper" class="tags-wrapper" aria-label="وسوم القصائد"></div>
     </section>
 
     <section id="listSection">
       <div id="poemGrid" class="grid" aria-live="polite"></div>
-
       <div id="emptyState" style="display:none;margin-top:18px;padding:18px;border-radius:12px;border:2px dashed var(--border);text-align:center">
         <div style="font-size:28px">📜</div>
         <div style="font-weight:700;margin-top:8px">لا توجد قصائد</div>
@@ -257,6 +279,10 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script>
     const STORAGE_KEY = 'mody_poems_v_full_v1';
+    const DEFAULT_POEMS = [
+      {title:"قصيدة البداية",author:"مودي",text:"هذا نص القصيدة الأولى...",excerpt:"مقتطف من القصيدة الأولى",tags:["حب","حزن"]},
+      {title:"قصيدة ثانية",author:"مودي",text:"وهنا نص القصيدة الثانية...",excerpt:"مقتطف من الثانية",tags:["أمل"]}
+    ];
     let poems = [];
     let originalPoems = null;
     let isDragging = false;
@@ -281,133 +307,92 @@
     year.textContent = new Date().getFullYear();
 
     function escapeHtml(text) {
-      const d = document.createElement('div');
-      d.textContent = text || '';
-      return d.innerHTML;
+      const d = document.createElement('div'); d.textContent = text || ''; return d.innerHTML;
     }
 
     async function init() {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          poems = JSON.parse(stored);
-          originalPoems = JSON.parse(stored);
-        } catch(e){ poems = [] }
-      }
-      renderPoems();
-      renderTags();
+      if(stored){
+        try{ poems = JSON.parse(stored); originalPoems = JSON.parse(stored); } 
+        catch(e){ poems = DEFAULT_POEMS.slice(); originalPoems = DEFAULT_POEMS.slice(); save(); }
+      } else { poems = DEFAULT_POEMS.slice(); originalPoems = DEFAULT_POEMS.slice(); save(); }
+      renderPoems(); renderTags();
     }
 
-    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(poems)); }
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(poems)); }
 
-    function renderPoems() {
+    function renderPoems(){
       const query = searchInput.value.toLowerCase();
       const filtered = poems.filter(p=>{
         const matchText = (p.title+p.text).toLowerCase().includes(query);
         const matchTag = activeTag ? p.tags.includes(activeTag) : true;
         return matchText && matchTag;
       });
-      poemGrid.innerHTML = '';
+      poemGrid.innerHTML='';
       if(!filtered.length){ emptyState.style.display='block'; return; }
       emptyState.style.display='none';
-
       filtered.forEach((p,i)=>{
         const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
+        card.className='card';
+        card.innerHTML=`
           <div class="drag-handle">☰</div>
           <div class="content">
             <h3>${escapeHtml(p.title)}</h3>
             <div class="excerpt">${escapeHtml(p.excerpt||p.text.slice(0,140))}</div>
-            <div class="card-footer">
-              <span class="card-tag">${(p.tags||[]).join(', ')}</span>
-            </div>
+            <div class="card-footer"><span class="card-tag">${(p.tags||[]).join(', ')}</span></div>
           </div>`;
         poemGrid.appendChild(card);
       });
-
-      new Sortable(poemGrid,{handle:'.drag-handle',animation:150,onEnd:e=>{if(!isDragging)return;const moved=poems.splice(e.oldIndex,1)[0];poems.splice(e.newIndex,0,moved);save();}});
+      new Sortable(poemGrid,{animation:150,handle:'.drag-handle',ghostClass:'card-ghost',onEnd:()=>{save();}});
     }
 
     function renderTags(){
       const allTags = [...new Set(poems.flatMap(p=>p.tags||[]))];
-      tagsWrapper.innerHTML = '';
-      allTags.forEach(tag=>{
-        const t = document.createElement('div');
-        t.className='tag'+(activeTag===tag?' active':'');
-        t.textContent=tag;
-        t.onclick = ()=>{
-          activeTag = activeTag===tag?null:tag;
-          renderPoems();
-          renderTags();
-        };
-        tagsWrapper.appendChild(t);
+      tagsWrapper.innerHTML='';
+      allTags.forEach(t=>{
+        const btn = document.createElement('div'); btn.className='tag'; btn.textContent=t;
+        if(t===activeTag) btn.classList.add('active');
+        btn.onclick=()=>{ activeTag = activeTag===t?null:t; renderPoems(); renderTags(); }
+        tagsWrapper.appendChild(btn);
       });
     }
 
-    searchInput.addEventListener('input', ()=>renderPoems());
-
-    btnAdd.addEventListener('click',()=>addModal.style.display='flex');
-    btnCancelAdd.addEventListener('click',()=>addModal.style.display='none');
-
-    poemForm.addEventListener('submit',e=>{
+    searchInput.addEventListener('input',()=>{ renderPoems(); });
+    btnDownload.onclick=()=>{ const a=document.createElement('a'); a.href='data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(poems,null,2)); a.download='mody_poems.json'; a.click(); }
+    btnReloadJSON.onclick=()=>{ poems=DEFAULT_POEMS.slice(); originalPoems=DEFAULT_POEMS.slice(); save(); renderPoems(); renderTags(); }
+    btnRestoreOriginal.onclick=()=>{ poems=originalPoems.slice(); save(); renderPoems(); renderTags(); }
+    btnAdd.onclick=()=>{ addModal.style.display='flex'; }
+    btnCancelAdd.onclick=()=>{ addModal.style.display='none'; poemForm.reset(); }
+    poemForm.onsubmit=e=>{
       e.preventDefault();
-      const newPoem={
+      const newPoem = {
         title:document.getElementById('inputTitle').value,
         author:document.getElementById('inputAuthor').value,
         text:document.getElementById('inputText').value,
         excerpt:document.getElementById('inputExcerpt').value,
         audio:document.getElementById('inputAudio').value,
-        tags:document.getElementById('inputTags').value.split(',').map(t=>t.trim()).filter(t=>t)
+        tags:(document.getElementById('inputTags').value||'').split(',').map(s=>s.trim()).filter(Boolean)
       };
-      poems.unshift(newPoem);
-      save();
-      renderPoems();
-      renderTags();
-      poemForm.reset();
-      addModal.style.display='none';
-    });
+      poems.push(newPoem); save(); renderPoems(); renderTags();
+      addModal.style.display='none'; poemForm.reset();
+    }
+    btnImportJSON.onclick=()=>{
+      const fileInput = document.createElement('input'); fileInput.type='file'; fileInput.accept='.json';
+      fileInput.onchange=e=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload=evt=>{
+          try{ const imported = JSON.parse(evt.target.result); if(Array.isArray(imported)){ poems=imported.slice(); originalPoems=imported.slice(); save(); renderPoems(); renderTags(); }else alert('ملف غير صالح'); } catch(e){ alert('ملف غير صالح'); }
+        }
+        reader.readAsText(file);
+      }
+      fileInput.click();
+    }
 
-    btnDownload.addEventListener('click',()=>{
-      const dataStr="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(poems));
-      const dlAnchor = document.createElement('a');
-      dlAnchor.setAttribute('href',dataStr);
-      dlAnchor.setAttribute('download','mody_poems.json');
-      dlAnchor.click();
-    });
-
-    btnReloadJSON.addEventListener('click',()=>{
-      if(!originalPoems) return;
-      poems = JSON.parse(JSON.stringify(originalPoems));
-      save();
-      renderPoems();
-      renderTags();
-    });
-
-    btnRestoreOriginal.addEventListener('click',()=>{
-      if(!originalPoems) return;
-      poems = JSON.parse(JSON.stringify(originalPoems));
-      save();
-      renderPoems();
-      renderTags();
-    });
-
-    btnImportJSON.addEventListener('click',()=>{
-      const json = prompt('ألصق JSON هنا');
-      if(!json) return;
-      try{
-        const data = JSON.parse(json);
-        if(Array.isArray(data)){
-          poems = data;
-          save();
-          renderPoems();
-          renderTags();
-        } else alert('الـ JSON غير صالح');
-      }catch(e){alert('خطأ في الـ JSON');}
-    });
-
-    menuBtn.addEventListener('click',()=>{menuDropdown.style.display=menuDropdown.style.display==='flex'?'none':'flex';});
-    document.addEventListener('click',e=>{if(!menuBtn.contains(e.target)&&!menuDropdown.contains(e.target)){menuDropdown.style.display='none';}});
+    // Menu toggle
+    menuBtn.onclick=()=>{ menuDropdown.style.display=menuDropdown.style.display==='flex'?'none':'flex'; }
+    document.addEventListener('click',e=>{ if(!menuDropdown.contains(e.target)&&!menuBtn.contains(e.target)) menuDropdown.style.display='none'; });
 
     init();
   </script>
