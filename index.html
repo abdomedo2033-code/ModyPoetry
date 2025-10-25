@@ -1,11 +1,10 @@
- <!doctype html>
+<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mody Poetry — مجنون الشعر</title>
   <meta name="description" content="مَجْنُونُ الشِّعر — مجموعتي من القصائد المُرتَّلة والمكتوبة" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -18,9 +17,6 @@
       background:linear-gradient(180deg,#ffffff 0%,#fbfbfb 100%); color:#0b1220;
       -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
       line-height:1.6; padding:24px;
-
-
-     
     }
     .container{max-width:980px;margin:0 auto}
     header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
@@ -42,12 +38,10 @@
     .modal .inner{background:var(--card);max-width:800px;width:100%;border-radius:12px;padding:18px;max-height:90vh;overflow:auto}
     .poem{white-space:pre-line;font-size:16px;line-height:1.8}
     footer{text-align:center;color:var(--muted);margin-top:24px;font-size:13px}
-    /* responsive */
     @media (max-width:800px){
       .grid{grid-template-columns:1fr}
       header{flex-direction:column;align-items:flex-start;gap:8px}
     }
-    /* small form style */
     form.add{display:grid;gap:8px;margin-top:12px}
     input[type="text"], textarea{padding:10px;border-radius:10px;border:1px solid #eee}
     textarea{min-height:120px;resize:vertical}
@@ -58,29 +52,30 @@
     .muted{background:#f3f4f6;border-radius:10px;padding:9px 14px;border:none}
     .download-json{font-size:13px;text-decoration:underline;color:#0b1220;background:none;border:none;padding:6px}
     .note{color:var(--muted);font-size:13px;margin-top:6px}
+    .featured-player{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04);display:flex;gap:12px;align-items:center;margin-bottom:16px}
+    .featured-player .meta{flex:1}
+    .featured-player h4{margin:0}
+    .featured-player p{margin:4px 0 0;color:var(--muted);font-size:13px}
+    .empty-note{grid-column:1/-1;text-align:center;color:var(--muted);padding:28px;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.03)}
   </style>
 </head>
 <body>
- 
- <div id="playerContainer"></div>
-
-    // Some browsers block autoplay or CORS; try to fetch HEAD to test CORS quickly
-    fetch(downloadUrl, { method: 'HEAD', mode: 'no-cors' })
-      .then(() => {
-        // HEAD with no-cors can't reveal much, but we'll still try audio
-        container.appendChild(audio);
-      })
-      .catch(() => {
-        // if fetch fails, do fallback
-        doFallback();
-      });
-
-    // also append audio immediately (so user can try), fallback will replace if error
-    container.appendChild(audio);
-  })();
-</script>
-
   <div class="container">
+
+    <!-- Featured player (uses your Cloudinary link) -->
+    <div class="featured-player" id="featuredPlayer" aria-live="polite">
+      <div class="meta">
+        <h4>التسجيل المميز</h4>
+        <p>DREAM — استمع للتجربة الصوتية</p>
+      </div>
+      <div style="min-width:220px;">
+        <audio controls preload="none" style="width:100%">
+          <source src="https://res.cloudinary.com/dho1iqxul/video/upload/v1761392885/DREAM_m1u274.mp3" type="audio/mpeg">
+          المتصفح لا يدعم تشغيل الصوت
+        </audio>
+      </div>
+    </div>
+
     <header>
       <div class="brand">
         <h1>مَجْنُونُ الشِّعر — Mody Poetry</h1>
@@ -100,12 +95,18 @@
           <button class="smallbtn" id="downloadAll">تحميل JSON</button>
         </div>
         <div class="tags" id="tagsContainer"></div>
-        <div class="note">ملاحظة: لتحميل ملف صوتي استخدم رابط عام (SoundCloud/Direct MP3/Google Drive مباشر). إذا لم يكن لديك رابط، يمكن رفع الملفات إلى Cloudinary أو SoundCloud ثم نسخ الرابط.</div>
+        <div class="note">ملاحظة: لتحميل ملف صوتي استخدم رابط عام (SoundCloud/Direct MP3/Cloudinary). إذا لم يكن لديك رابط، يمكن رفع الملفات إلى Cloudinary أو SoundCloud ثم نسخ الرابط.</div>
       </div>
     </section>
 
     <main>
-      <section id="list" class="grid"></section>
+      <!-- list: hidden until there is at least one poem -->
+      <section id="listWrap">
+        <section id="list" class="grid" style="display:none"></section>
+        <div id="emptyNote" class="empty-note">
+          لا توجد قصائد حالياً — استخدم "أضف قصيدة" لكتابة أو رفع أول قصيدة.
+        </div>
+      </section>
 
       <!-- add form -->
       <section id="add" style="display:none;margin-top:16px" class="card">
@@ -149,27 +150,8 @@
   </template>
 
 <script>
-  // Sample initial poems (replace or edit using the Add form)
-  const SAMPLE = [
-    {
-      id: 'p-1',
-      title: 'أنين السَّحَر',
-      author: 'مودي',
-      excerpt: 'أتسلل بين نسمات الليل لأبحث عن كلماتٍ تراكض في قلبي...',
-      text: 'أنظرُ في السما وأُدرك أنك : إليّ تنظرُ\\nوأني هاهنا أتذلل\\nتقول أنك لا تُسأل عما تفعل : فأنّى ليَ الرضا وإياي تُثقّل',
-      audio: '',
-      tags: ['إيماني','ليل']
-    },
-    {
-      id: 'p-2',
-      title: 'عودةُ الأمل',
-      author: 'مودي',
-      excerpt: 'وردة في منتصف الشتاء...',
-      text: 'في وجهِكِ تشرقُ الغيماتُ\\nوتغدو السماءُ أقلُّ عُمقاً...',
-      audio: '',
-      tags: ['حب','أمل']
-    }
-  ];
+  // Start with empty poems array (no samples)
+  const SAMPLE = [];
 
   // Utilities
   const $ = sel => document.querySelector(sel);
@@ -198,6 +180,8 @@
   const searchInput = $('#search');
   const addSection = $('#add');
   const addForm = $('#addForm');
+  const emptyNote = $('#emptyNote');
+  const listWrap = $('#listWrap');
 
   // read URL for path-based navigation (simple)
   $('#goAdd').addEventListener('click', ()=>{ showAdd(); window.scrollTo({top:0,behavior:'smooth'}) });
@@ -210,8 +194,19 @@
       const hay = (p.title+' '+p.text+' '+(p.excerpt||'')).toLowerCase();
       return hay.includes(q);
     });
+
+    // Show/hide list depending on presence of poems
+    if(poems.length === 0){
+      listEl.style.display = 'none';
+      emptyNote.style.display = 'block';
+      return;
+    } else {
+      emptyNote.style.display = 'none';
+      listEl.style.display = 'grid';
+    }
+
     if(filtered.length===0){
-      listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد قصائد</div>';
+      listEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted)">لا توجد قصائد مطابقة للبحث</div>';
       return;
     }
     filtered.forEach(p=>{
@@ -266,9 +261,7 @@
     node.getElementById('mText').textContent = p.text;
     const mAudio = node.getElementById('mAudio');
     if(p.audio){
-      // if SoundCloud embed (iframe) or direct mp3
       if(p.audio.includes('soundcloud.com') && !p.audio.includes('<iframe')) {
-        // use iframe embed pattern (simple)
         mAudio.innerHTML = `<iframe width="100%" height="120" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(p.audio)}"></iframe>`;
       } else if(p.audio.includes('<iframe')) {
         mAudio.innerHTML = p.audio;
