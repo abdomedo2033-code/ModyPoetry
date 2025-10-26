@@ -4,8 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>🪶 Mody Poetry</title>
-  <meta name="description" content="مجنون الشِعر — موقع يجمع أجمل قصائدي وتأملاتي الشعرية. اكتشف مجموعتي الذهبية من الأشعار التي تلامس القلب وتعبّر عن المشاعر بصدق" />
-  <meta name="robots" content="index, follow">
+  <meta name="description" content="مجنون الشِعر — موقع يجمع أجمل قصائدي وتأملاتي الشعرية" />
   
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -114,6 +113,53 @@
     .audio-item button{background:#d9534f;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px}
     .audio-item button:hover{background:#c9302c}
 
+    .upload-progress{
+      margin-top:10px;
+      padding:10px;
+      background:#f0f8ff;
+      border-radius:8px;
+      border:1px solid #4a90e2;
+      display:none;
+    }
+    .upload-progress.show{display:block}
+    .progress-bar{
+      width:100%;
+      height:20px;
+      background:#e0e0e0;
+      border-radius:10px;
+      overflow:hidden;
+      margin-top:8px;
+    }
+    .progress-fill{
+      height:100%;
+      background:#4a90e2;
+      transition:width 0.3s ease;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#fff;
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .sync-status{
+      position:fixed;
+      bottom:20px;
+      right:20px;
+      padding:10px 16px;
+      background:rgba(139,94,60,0.95);
+      color:#fff;
+      border-radius:8px;
+      font-size:13px;
+      font-weight:600;
+      box-shadow:0 4px 12px rgba(0,0,0,0.2);
+      z-index:1000;
+      display:none;
+      align-items:center;
+      gap:8px;
+    }
+    .sync-status.show{display:flex}
+
     .muted{color:var(--muted);font-size:13px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:18px}
     .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,0.04);border:1px solid var(--border);transition:all .22s cubic-bezier(0.4, 0, 0.2, 1);display:flex;gap:10px;align-items:flex-start;user-select:none;position:relative;overflow:hidden}
@@ -129,7 +175,6 @@
     .card-tags{display:flex;gap:6px;flex-wrap:wrap}
     .card-tag{padding:4px 8px;border-radius:12px;font-size:12px;background:rgba(139,94,60,0.12);color:var(--brown);font-weight:700;display:inline-flex;align-items:center;gap:4px}
     .card-ghost{opacity:.4 !important;transform:scale(.98) rotate(2deg) !important;box-shadow:0 20px 40px rgba(0,0,0,.15) !important;transition:all .2s cubic-bezier(0.4, 0, 0.2, 1) !important}
-    .card-placeholder{background:var(--placeholder);border:2px dashed rgba(139,94,60,0.18);min-height:72px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
 
     .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200}
     .modal-inner{background:var(--card);max-width:820px;width:100%;border-radius:12px;padding:20px;max-height:90vh;overflow:auto;box-shadow:0 30px 60px rgba(0,0,0,.25);border:1px solid var(--border)}
@@ -159,8 +204,8 @@
       <div class="brand">
         <div class="brand-icon">☕</div>
         <div>
-          <h1>Mody Poetry</h1>
-          <p class="muted">قصائد مودي الذهبية —اضف وشارك واستمع</p>
+          <h1>Mody Poetry 🔥</h1>
+          <p class="muted">شارك قصائدك مع الأغاني والفيديوهات</p>
         </div>
       </div>
 
@@ -171,8 +216,6 @@
           <div class="dropdown-menu" id="dropdownMenu">
             <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
             <div class="menu-divider"></div>
-            <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي + ترتيب</button>
-            <div class="menu-divider"></div>
             <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
           </div>
         </div>
@@ -180,14 +223,19 @@
     </div>
   </header>
 
-  <!-- User Info Display -->
+  <!-- Sync Status -->
+  <div id="syncStatus" class="sync-status">
+    <span id="syncText">🔄 جاري المزامنة...</span>
+  </div>
+
+  <!-- User Info -->
   <div id="userInfoDisplay" style="display:none;padding:10px 20px;background:rgba(139,94,60,0.1);border-bottom:1px solid var(--border)">
     <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div>
         <span style="font-weight:600">👤 مرحباً، </span>
         <span id="currentUserName" style="color:var(--brown)">---</span>
       </div>
-      <button class="btn small" id="btnChangeProfile">تغيير الملف الشخصي</button>
+      <button class="btn small" id="btnChangeProfile">تغيير الملف</button>
     </div>
   </div>
 
@@ -196,11 +244,11 @@
       <div class="search-wrapper">
         <input id="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص..." />
       </div>
-      <div id="tagsWrapper" class="tags-wrapper" aria-label="وسوم القصائد"></div>
+      <div id="tagsWrapper" class="tags-wrapper"></div>
     </section>
 
     <section id="listSection">
-      <div id="poemGrid" class="grid" aria-live="polite"></div>
+      <div id="poemGrid" class="grid"></div>
       <div id="emptyState" style="display:none;margin-top:18px;padding:18px;border-radius:12px;border:2px dashed var(--border);text-align:center">
         <div style="font-size:28px">📜</div>
         <div style="font-weight:700;margin-top:8px">لا توجد قصائد</div>
@@ -229,32 +277,34 @@
           <div style="display:flex;flex-direction:column;gap:8px">
             <input id="inputTitle" type="text" placeholder="عنوان القصيدة *" required style="padding:10px;border-radius:8px;border:1px solid #e8dcc8" />
             <input id="inputAuthor" type="text" placeholder="المؤلف / الراوي" style="padding:10px;border-radius:8px;border:1px solid #e8dcc8" />
-            <textarea id="inputText" placeholder="نص القصيدة * (سطر جديد = سطر جديد)" required style="min-height:140px;padding:10px;border-radius:8px;border:1px solid #e8dcc8;font-family:Amiri,serif"></textarea>
+            <textarea id="inputText" placeholder="نص القصيدة *" required style="min-height:140px;padding:10px;border-radius:8px;border:1px solid #e8dcc8;font-family:Amiri,serif"></textarea>
             <input id="inputExcerpt" type="text" placeholder="مقتطف (اختياري)" style="padding:10px;border-radius:8px;border:1px solid #e8dcc8" />
             
             <div>
-              <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الوسوم (اضغط Enter لإضافة)</label>
+              <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الوسوم (اضغط Enter)</label>
               <div id="tagsDisplay" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
               <input id="inputTagField" type="text" placeholder="اكتب وسم واضغط Enter" style="padding:10px;border-radius:8px;border:1px solid #e8dcc8;width:100%" />
             </div>
 
             <div>
-              <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الملفات الصوتية والمرئية</label>
+              <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">📤 رفع الأغاني والفيديوهات</label>
               <div id="audioDisplay" class="audio-list"></div>
               
-              <!-- URL input -->
-              <div class="tag-input-wrapper">
-                <input id="inputAudioField" type="text" placeholder="رابط YouTube أو SoundCloud" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e8dcc8" />
-                <button type="button" id="btnAddAudio" class="btn small">➕ رابط</button>
-              </div>
-              
-              <!-- File upload -->
+              <!-- File Upload -->
               <div style="margin-top:8px">
                 <input type="file" id="inputAudioFile" accept="audio/*,video/*" multiple style="padding:8px;border-radius:8px;border:1px solid #e8dcc8;width:100%;font-size:13px" />
               </div>
               
+              <!-- Upload Progress -->
+              <div id="uploadProgress" class="upload-progress">
+                <div id="uploadText" style="font-size:13px;font-weight:600;color:#4a90e2">جاري الرفع...</div>
+                <div class="progress-bar">
+                  <div id="progressFill" class="progress-fill" style="width:0%">0%</div>
+                </div>
+              </div>
+              
               <div style="margin-top:6px;font-size:12px;color:var(--muted)">
-                💡 يمكنك رفع ملفات صوتية أو فيديو من أي حجم - سيتم رفعها على GitHub
+                💡 يمكنك رفع ملفات صوتية أو فيديو (أي حجم) - سيتم رفعها على Firebase Storage
               </div>
             </div>
 
@@ -277,51 +327,51 @@
   </div>
 
   <footer>
-    © <span id="year"></span> مجنون الشِعر — All rights reserved
+    © <span id="year"></span> مجنون الشِعر — Powered by Firebase 🔥
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-  <script>
-    // ========================================
-    // GITHUB CONFIGURATION
-    // ========================================
-    const GITHUB_CONFIG = {
-      owner: 'abdomedo2033-code',
-      repo: 'ModyPoetry',
-      branch: 'main'
+  
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyANYJJ3gTxEgeaj731npdx37OHd4Xf3t70",
+      authDomain: "modypoems.firebaseapp.com",
+      databaseURL: "https://modypoems-default-rtdb.firebaseio.com",
+      projectId: "modypoems",
+      storageBucket: "modypoems.firebasestorage.app",
+      messagingSenderId: "805060440847",
+      appId: "1:805060440847:web:bc4f89cd351c9c244f447a",
+      measurementId: "G-V1QZ976MYE"
     };
 
-    // ⚠️ PUT YOUR GITHUB TOKEN HERE ⚠️
-    let GITHUB_TOKEN = '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';  // ← REPLACE WITH YOUR ACTUAL TOKEN
+    const app = initializeApp(firebaseConfig);
+    const database = getDatabase(app);
+    const storage = getStorage(app);
 
-    // ========================================
-    // STORAGE KEYS
-    // ========================================
-    const STORAGE_KEY = 'mody_poems_v_full_v1';
+    // State
     const USER_KEY = 'mody_user_profile';
-
-    // ========================================
-    // STATE VARIABLES
-    // ========================================
     let poems = [];
-    let originalPoems = null;
     let isDragging = false;
     let activeTag = null;
     let editingPoem = null;
     let currentTags = [];
     let currentAudios = [];
     let currentUser = null;
+    let isUpdatingFromFirebase = false;
 
-    // ========================================
-    // DOM ELEMENTS
-    // ========================================
+    // DOM Elements
     const poemGrid = document.getElementById('poemGrid');
     const emptyState = document.getElementById('emptyState');
     const searchInput = document.getElementById('searchInput');
     const tagsWrapper = document.getElementById('tagsWrapper');
     const year = document.getElementById('year');
     const btnDownload = document.getElementById('btnDownload');
-    const btnReloadAndSort = document.getElementById('btnReloadAndSort');
     const btnImportJSON = document.getElementById('btnImportJSON');
     const btnAdd = document.getElementById('btnAdd');
     const addModal = document.getElementById('addModal');
@@ -334,11 +384,9 @@
     const confirmButtons = document.getElementById('confirmButtons');
     const inputTagField = document.getElementById('inputTagField');
     const tagsDisplay = document.getElementById('tagsDisplay');
-    const inputAudioField = document.getElementById('inputAudioField');
     const audioDisplay = document.getElementById('audioDisplay');
-    const btnAddAudio = document.getElementById('btnAddAudio');
-    
-    // User profile elements
+    const syncStatus = document.getElementById('syncStatus');
+    const syncText = document.getElementById('syncText');
     const userProfileModal = document.getElementById('userProfileModal');
     const userInfoDisplay = document.getElementById('userInfoDisplay');
     const userName = document.getElementById('userName');
@@ -348,12 +396,19 @@
     const btnChangeProfile = document.getElementById('btnChangeProfile');
     const currentUserName = document.getElementById('currentUserName');
     const inputAudioFile = document.getElementById('inputAudioFile');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadText = document.getElementById('uploadText');
+    const progressFill = document.getElementById('progressFill');
 
     year.textContent = new Date().getFullYear();
 
-    // ========================================
-    // UTILITY FUNCTIONS
-    // ========================================
+    // Utilities
+    function showSyncStatus(message, duration = 2000) {
+      syncText.textContent = message;
+      syncStatus.classList.add('show');
+      setTimeout(() => syncStatus.classList.remove('show'), duration);
+    }
+
     function showAlert(message) {
       confirmMessage.textContent = message;
       confirmButtons.innerHTML = '<button class="btn" onclick="document.getElementById(\'confirmModal\').classList.remove(\'show\')">حسناً</button>';
@@ -363,22 +418,17 @@
     function showConfirm(message, onConfirm) {
       confirmMessage.textContent = message;
       confirmButtons.innerHTML = '';
-      
       const btnCancel = document.createElement('button');
       btnCancel.className = 'btn';
       btnCancel.textContent = 'إلغاء';
-      btnCancel.onclick = function() {
-        confirmModal.classList.remove('show');
-      };
-      
+      btnCancel.onclick = () => confirmModal.classList.remove('show');
       const btnOk = document.createElement('button');
       btnOk.className = 'btn';
       btnOk.textContent = 'تأكيد';
-      btnOk.onclick = function() {
+      btnOk.onclick = () => {
         confirmModal.classList.remove('show');
         onConfirm();
       };
-      
       confirmButtons.appendChild(btnCancel);
       confirmButtons.appendChild(btnOk);
       confirmModal.classList.add('show');
@@ -390,9 +440,7 @@
       return d.innerHTML;
     }
 
-    // ========================================
-    // USER PROFILE MANAGEMENT
-    // ========================================
+    // User Profile
     function checkUserProfile() {
       const stored = localStorage.getItem(USER_KEY);
       if (stored) {
@@ -414,7 +462,6 @@
         showAlert('⚠️ يرجى إدخال اسمك');
         return;
       }
-      
       currentUser = {
         id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
         name: name,
@@ -422,12 +469,10 @@
         bio: userBio.value.trim(),
         createdAt: new Date().toISOString()
       };
-      
       localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
       userProfileModal.style.display = 'none';
       showUserInfo();
-      
-      uploadUserProfileToGitHub();
+      saveUserProfileToFirebase();
     });
 
     btnChangeProfile.addEventListener('click', function() {
@@ -437,166 +482,123 @@
       userProfileModal.style.display = 'flex';
     });
 
-    // ========================================
-    // GITHUB UPLOAD FUNCTIONS
-    // ========================================
-    async function uploadUserProfileToGitHub() {
-      if (!GITHUB_TOKEN || GITHUB_TOKEN === 'ghp_YOUR_NEW_TOKEN_HERE') {
-        console.log('GitHub token not configured');
-        return;
-      }
-      
+    // Firebase Functions
+    async function saveUserProfileToFirebase() {
       try {
-        const path = `users/${currentUser.id}/profile.json`;
-        
-        let sha = null;
-        try {
-          const checkResponse = await fetch(
-            `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,
-            {
-              headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
-            }
-          );
-          if (checkResponse.ok) {
-            const data = await checkResponse.json();
-            sha = data.sha;
-          }
-        } catch(e) {}
-        
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(currentUser, null, 2))));
-        
-        const body = {
-          message: `Update profile for ${currentUser.name}`,
-          content: content,
-          branch: GITHUB_CONFIG.branch
-        };
-        
-        if (sha) body.sha = sha;
-        
-        const response = await fetch(
-          `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Authorization': 'token ' + GITHUB_TOKEN,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body)
-          }
-        );
-        
-        if (!response.ok) throw new Error('Upload failed');
-        
-        console.log('✅ Profile uploaded to GitHub');
+        await set(ref(database, 'users/' + currentUser.id), currentUser);
+        console.log('✅ Profile saved');
       } catch (error) {
-        console.error('Profile upload error:', error);
+        console.error('Profile save error:', error);
       }
     }
 
-    async function uploadMediaToGitHub(file) {
-      if (!GITHUB_TOKEN || GITHUB_TOKEN === 'ghp_YOUR_NEW_TOKEN_HERE') {
-        showAlert('❌ GitHub Token غير مضبوط في الكود');
-        return null;
-      }
-      
+    async function savePoemsToFirebase() {if (isUpdatingFromFirebase) return;
       try {
-        showAlert('⏳ جاري رفع الملف على GitHub...\nيرجى الانتظار');
-        
-        const reader = new FileReader();
-        const base64 = await new Promise((resolve, reject) => {
-          reader.onload = () => resolve(reader.result.split(',')[1]);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-const timestamp = Date.now();
+        showSyncStatus('🔄 جاري المزامنة...');
+        await set(ref(database, 'poems'), poems);
+        showSyncStatus('✅ تم المزامنة بنجاح!');
+        console.log('✅ Poems synced');
+      } catch (error) {
+        console.error('Sync error:', error);
+        showSyncStatus('❌ فشلت المزامنة', 3000);
+      }
+    }
+
+    async function loadPoemsFromFirebase() {
+      try {
+        const snapshot = await get(ref(database, 'poems'));
+        if (snapshot.exists()) {
+          isUpdatingFromFirebase = true;
+          poems = snapshot.val() || [];
+          renderPoems();
+          isUpdatingFromFirebase = false;
+          console.log('✅ Poems loaded:', poems.length);
+        }
+      } catch (error) {
+        console.error('Load error:', error);
+      }
+    }
+
+    function setupFirebaseListener() {
+      const poemsRef = ref(database, 'poems');
+      onValue(poemsRef, (snapshot) => {
+        if (snapshot.exists() && !isUpdatingFromFirebase) {
+          isUpdatingFromFirebase = true;
+          poems = snapshot.val() || [];
+          renderPoems();
+          showSyncStatus('🔄 تحديث من مستخدم آخر!', 2000);
+          isUpdatingFromFirebase = false;
+        }
+      });
+    }
+
+    // File Upload to Firebase Storage
+    async function uploadFileToStorage(file) {
+      return new Promise((resolve, reject) => {
+        const timestamp = Date.now();
         const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const path = `users/${currentUser.id}/media/${timestamp}_${safeName}`;
+        const path = `media/${currentUser.id}/${timestamp}_${safeName}`;
         
-        const response = await fetch(
-          `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Authorization': 'token ' + GITHUB_TOKEN,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              message: `Upload media by ${currentUser.name}: ${safeName}`,
-              content: base64,
-              branch: GITHUB_CONFIG.branch
-            })
+        const fileRef = storageRef(storage, path);
+        const uploadTask = uploadBytesResumable(fileRef, file);
+
+        uploadProgress.classList.add('show');
+        uploadText.textContent = `جاري رفع: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            progressFill.style.width = progress + '%';
+            progressFill.textContent = Math.round(progress) + '%';
+          },
+          (error) => {
+            console.error('Upload error:', error);
+            uploadProgress.classList.remove('show');
+            showAlert('❌ فشل رفع الملف: ' + error.message);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              uploadProgress.classList.remove('show');
+              progressFill.style.width = '0%';
+              showSyncStatus('✅ تم رفع الملف بنجاح!', 2000);
+              resolve({
+                url: downloadURL,
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                uploadedBy: currentUser.name,
+                uploadedAt: new Date().toISOString()
+              });
+            } catch (error) {
+              reject(error);
+            }
           }
         );
+      });
+    }
+
+    // File Input Handler
+    if (inputAudioFile) {
+      inputAudioFile.addEventListener('change', async function(e) {
+        const files = e.target.files;
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error('Upload failed: ' + (errorData.message || response.status));
+        for (const file of Array.from(files)) {
+          try {
+            const uploadedFile = await uploadFileToStorage(file);
+            currentAudios.push(uploadedFile);
+            renderAudiosInForm();
+          } catch (error) {
+            console.error('Upload failed:', error);
+          }
         }
         
-        const data = await response.json();
-        const fileUrl = `https://raw.githubusercontent.com/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/${GITHUB_CONFIG.branch}/${path}`;
-        
-        showAlert('✅ تم رفع الملف بنجاح على GitHub!');
-        return fileUrl;
-        
-      } catch (error) {
-        console.error('Upload error:', error);
-        showAlert('❌ فشل رفع الملف: ' + error.message);
-        return null;
-      }
+        e.target.value = '';
+      });
     }
 
-    async function uploadPoemsToGitHub() {
-      if (!GITHUB_TOKEN || GITHUB_TOKEN === 'ghp_YOUR_NEW_TOKEN_HERE' || !currentUser) return;
-      
-      try {
-        const path = `users/${currentUser.id}/poems.json`;
-        
-        let sha = null;
-        try {
-          const checkResponse = await fetch(
-            `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,
-            {
-              headers: { 'Authorization': 'token ' + GITHUB_TOKEN }
-            }
-          );
-          if (checkResponse.ok) {
-            const data = await checkResponse.json();
-            sha = data.sha;
-          }
-        } catch(e) {}
-        
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(poems, null, 2))));
-        
-        const body = {
-          message: `Update poems for ${currentUser.name}`,
-          content: content,
-          branch: GITHUB_CONFIG.branch
-        };
-        
-        if (sha) body.sha = sha;
-        
-        await fetch(
-          `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Authorization': 'token ' + GITHUB_TOKEN,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(body)
-          }
-        );
-        
-        console.log('✅ Poems synced to GitHub');
-      } catch (error) {
-        console.error('Poems sync error:', error);
-      }
-    }
-
-    // ========================================
-    // TAG MANAGEMENT
-    // ========================================
+    // Tag Management
     function renderTagsInForm() {
       tagsDisplay.innerHTML = '';
       currentTags.forEach(function(tag, index) {
@@ -630,9 +632,7 @@ const timestamp = Date.now();
       }
     });
 
-    // ========================================
-    // AUDIO MANAGEMENT
-    // ========================================
+    // Audio Management
     function renderAudiosInForm() {
       audioDisplay.innerHTML = '';
       currentAudios.forEach(function(audio, index) {
@@ -642,30 +642,17 @@ const timestamp = Date.now();
         let displayText = '';
         let badge = '';
         
-        if (audio.type === 'file') {
-          displayText = '📁 ' + escapeHtml(audio.name);
-          badge = '<span style="background:#28a745;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">محلي</span>';
-        } else if (audio.source === 'github') {
-          displayText = '📦 ' + escapeHtml(audio.name || 'GitHub File');
-          badge = '<span style="background:#6f42c1;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">GitHub</span>';
+        if (audio.url) {
+          const sizeMB = audio.size ? (audio.size / 1024 / 1024).toFixed(2) : '?';
+          displayText = `📦 ${escapeHtml(audio.name)} (${sizeMB} MB)`;
+          badge = '<span style="background:#28a745;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">Firebase</span>';
         } else if (typeof audio === 'string') {
-          displayText = '🎵 ' + escapeHtml(audio.substring(0, 50)) + (audio.length > 50 ? '...' : '');
-        } else {
-          displayText = '🎵 ' + escapeHtml(audio.data.substring(0, 50)) + (audio.data.length > 50 ? '...' : '');
+          displayText = '🎵 ' + escapeHtml(audio.substring(0, 50));
         }
         
         item.innerHTML = badge + displayText + ' <button type="button" onclick="removeAudio(' + index + ')">حذف</button>';
         audioDisplay.appendChild(item);
       });
-    }
-
-    function addAudio() {
-      const audio = inputAudioField.value.trim();
-      if (audio) {
-        currentAudios.push({ type: 'url', data: audio });
-        renderAudiosInForm();
-        inputAudioField.value = '';
-      }
     }
 
     function removeAudio(index) {
@@ -675,38 +662,7 @@ const timestamp = Date.now();
 
     window.removeAudio = removeAudio;
 
-    btnAddAudio.addEventListener('click', addAudio);
-
-    // File upload handler
-    if (inputAudioFile) {
-      inputAudioFile.addEventListener('change', async function(e) {
-        const files = e.target.files;
-        
-        for (const file of Array.from(files)) {
-          const fileSizeMB = file.size / (1024 * 1024);
-          
-          // All files go to GitHub
-          const url = await uploadMediaToGitHub(file);
-          if (url) {
-            currentAudios.push({ 
-              type: 'url', 
-              data: url,
-              name: file.name,
-              source: 'github',
-              uploadedBy: currentUser.name,
-              uploadedAt: new Date().toISOString()
-            });
-            renderAudiosInForm();
-          }
-        }
-        
-        e.target.value = '';
-      });
-    }
-
-    // ========================================
-    // MENU HANDLERS
-    // ========================================
+    // Menu Handlers
     menuToggle.addEventListener('click', function(e) {
       e.stopPropagation();
       dropdownMenu.classList.toggle('show');
@@ -724,115 +680,7 @@ const timestamp = Date.now();
       });
     });
 
-    // ========================================
-    // INITIALIZATION
-    // ========================================
-    function init() {
-      checkUserProfile();
-      
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        try {
-          poems = JSON.parse(stored);
-          fetchJSONIntoOriginal();
-        } catch (e) {
-          console.error('failed parse localStorage, clearing', e);
-          localStorage.removeItem(STORAGE_KEY);
-          poems = [];
-          loadFromJSON();
-        }
-      } else {
-        loadFromJSON();
-      }
-      renderPoems();
-      initSortable();
-      attachListeners();
-    }
-
-    function loadFromJSON(forcePopulate) {
-      const urls = [
-        'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
-        'poems.json'
-      ];
-      
-      function tryFetch(urlIndex) {
-        if (urlIndex >= urls.length) {
-          console.warn('All URLs failed, using fallback data');
-          useFallbackData();
-          return;
-        }
-        
-        fetch(urls[urlIndex] + '?_=' + Date.now(), {cache: 'no-store'})
-          .then(function(res) {
-            if (!res.ok) throw new Error('fetch failed: ' + res.status);
-            return res.json();
-          })
-          .then(function(data) {
-            if (!Array.isArray(data)) throw new Error('poems.json must be an array');
-            originalPoems = data.map(function(p) { return {...p}; });
-            if (!localStorage.getItem(STORAGE_KEY) || (forcePopulate && !localStorage.getItem(STORAGE_KEY))) {
-              poems = originalPoems.map(function(p) { return {...p}; });
-              savePoems();
-            }
-            console.log('poems.json loaded from:', urls[urlIndex], 'items:', originalPoems.length);
-            renderPoems();
-          })
-          .catch(function(err) {
-            console.warn('Failed to load from:', urls[urlIndex], err);
-            tryFetch(urlIndex + 1);
-          });
-      }
-      
-      tryFetch(0);
-    }
-    
-    function useFallbackData() {
-      if (!localStorage.getItem(STORAGE_KEY) && poems.length === 0) {
-        poems = [];
-        originalPoems = [];
-        renderPoems();
-      }
-    }
-
-    function fetchJSONIntoOriginal() {
-      const urls = [
-        'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json'
-      ];
-      
-      function tryFetch(urlIndex) {
-        if (urlIndex >= urls.length) return;
-        
-        fetch(urls[urlIndex] + '?_=' + Date.now(), {cache:'no-store'})
-          .then(function(res) {
-            if (!res.ok) throw new Error('fetch failed');
-            return res.json();
-          })
-          .then(function(data) {
-            if (Array.isArray(data)) {
-              originalPoems = data.map(function(p) { return {...p}; });
-              console.log('Background refresh successful from:', urls[urlIndex]);
-            }
-          })
-          .catch(function(e) {
-            tryFetch(urlIndex + 1);
-          });
-      }
-      
-      tryFetch(0);
-    }
-
-    function savePoems() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(poems));
-        uploadPoemsToGitHub();
-      } catch (e) { 
-        console.error('Failed to save:', e); 
-      }
-    }
-
-    // ========================================
-    // RENDERING FUNCTIONS
-    // ========================================
+    // Rendering Functions
     function renderTags() {
       const tagSet = new Set();
       poems.forEach(function(p) {
@@ -897,14 +745,22 @@ const timestamp = Date.now();
           return '<span class="card-tag">' + escapeHtml(t) + '</span>'; 
         }).join('');
 
+        const userBadge = poem.createdBy ? '<span class="muted" style="font-size:11px">👤 ' + escapeHtml(poem.createdBy) + '</span>' : '';
+        
+        const audioCount = (poem.audios || []).length;
+        const mediaBadge = audioCount > 0 ? '<span class="card-tag" style="background:#4a90e2;color:#fff">🎵 ' + audioCount + ' ملف</span>' : '';
+
         card.innerHTML = `
-          <div class="drag-handle" title="اضغط واسحب من هنا">☰</div>
+          <div class="drag-handle">☰</div>
           <div class="content">
             <h3>${escapeHtml(poem.title)}</h3>
             <div class="excerpt">${escapeHtml(poem.excerpt || poem.text.slice(0,120) + (poem.text.length>120?'...':''))}</div>
             <div class="card-footer">
-              <div>${poem.author?'<span class="muted">✒️ '+escapeHtml(poem.author)+'</span>':''}</div>
-              <div class="card-tags">${tagsHtml}</div>
+              <div>
+                ${poem.author?'<span class="muted">✒️ '+escapeHtml(poem.author)+'</span>':''}
+                ${userBadge}
+              </div>
+              <div class="card-tags">${tagsHtml} ${mediaBadge}</div>
             </div>
           </div>
         `;
@@ -929,10 +785,10 @@ const timestamp = Date.now();
       }).join('');
 
       const audiosHtml = (poem.audios || []).map(function(audio){ 
-        return '<div style="margin-top:8px">' + getAudioHtml(audio) + '</div>'; 
+        return '<div style="margin-top:12px">' + getAudioHtml(audio) + '</div>'; 
       }).join('');
 
-      const legacyAudioHtml = (poem.audio && !poem.audios) ? '<div style="margin-top:8px">' + getAudioHtml(poem.audio) + '</div>' : '';
+      const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">👤 أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>' : '';
 
       modal.innerHTML = `
         <div class="modal-inner">
@@ -940,6 +796,7 @@ const timestamp = Date.now();
             <div style="flex:1">
               <div class="modal-title">${escapeHtml(poem.title)}</div>
               <div class="muted" style="margin-top:6px">${poem.author? '✒️ '+escapeHtml(poem.author):''}</div>
+              ${userInfo}
               ${tagsHtml ? '<div class="modal-tags">' + tagsHtml + '</div>' : ''}
             </div>
             <div style="display:flex;gap:8px">
@@ -950,7 +807,6 @@ const timestamp = Date.now();
           </div>
           <div class="poem-text">${escapeHtml(poem.text)}</div>
           ${audiosHtml}
-          ${legacyAudioHtml}
         </div>
       `;
       document.body.appendChild(modal);
@@ -964,24 +820,10 @@ const timestamp = Date.now();
         document.getElementById('inputAuthor').value = poem.author || '';
         document.getElementById('inputText').value = poem.text || '';
         document.getElementById('inputExcerpt').value = poem.excerpt || '';
-        
         currentTags = poem.tags || [];
         renderTagsInForm();
-        
-        if (poem.audios && Array.isArray(poem.audios)) {
-          currentAudios = poem.audios.map(function(a) {
-            if (typeof a === 'string') {
-              return { type: 'url', data: a };
-            }
-            return a;
-          });
-        } else if (poem.audio) {
-          currentAudios = [{ type: 'url', data: poem.audio }];
-        } else {
-          currentAudios = [];
-        }
+        currentAudios = poem.audios || [];
         renderAudiosInForm();
-        
         document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
         addModal.style.display = 'flex';
         modal.remove();
@@ -990,7 +832,7 @@ const timestamp = Date.now();
       modal.querySelector('#deletePoem').addEventListener('click', function() {
         showConfirm('هل أنت متأكد من حذف هذه القصيدة؟', function() {
           poems = poems.filter(function(p) { return p.id !== poem.id; });
-          savePoems();
+          savePoemsToFirebase();
           renderPoems();
           modal.remove();
         });
@@ -1007,49 +849,39 @@ const timestamp = Date.now();
     function getAudioHtml(audio) {
       if (!audio) return '';
       
-      if (audio.type === 'file') {
-        if (audio.mimeType && audio.mimeType.startsWith('video/')) {
-          return '<video controls preload="metadata" style="width:100%;max-height:400px;border-radius:8px"><source src="' + audio.data + '" type="' + audio.mimeType + '"></video>';
+      if (audio.url) {
+        const isVideo = audio.type && audio.type.startsWith('video/');
+        const sizeMB = audio.size ? (audio.size / 1024 / 1024).toFixed(2) : '?';
+        
+        if (isVideo) {
+          return `
+            <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:13px;margin-bottom:8px;color:var(--brown)">
+                🎬 ${escapeHtml(audio.name)} (${sizeMB} MB)
+              </div>
+              <video controls style="width:100%;max-height:400px;border-radius:8px">
+                <source src="${audio.url}" type="${audio.type}">
+              </video>
+            </div>
+          `;
         } else {
-          return '<audio controls preload="metadata" style="width:100%;border-radius:8px"><source src="' + audio.data + '" type="' + (audio.mimeType || 'audio/mpeg') + '"></audio>';
+          return `
+            <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:13px;margin-bottom:8px;color:var(--brown)">
+                🎵 ${escapeHtml(audio.name)} (${sizeMB} MB)
+              </div>
+              <audio controls style="width:100%;border-radius:8px">
+                <source src="${audio.url}" type="${audio.type}">
+              </audio>
+            </div>
+          `;
         }
-      } else if (audio.type === 'url' || typeof audio === 'string') {
-        const url = audio.data || audio;
-        
-        // YouTube
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-          let videoId = '';
-          if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1].split('?')[0];
-          } else if (url.includes('youtube.com')) {
-            const urlParams = new URLSearchParams(url.split('?')[1] || '');
-            videoId = urlParams.get('v');
-          }
-          if (videoId) {
-            return '<iframe width="100%" height="315" src="https://www.youtube.com/embed/' + videoId + '" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:8px"></iframe>';
-          }
-        }
-        
-        // SoundCloud
-        if (url.includes('soundcloud.com') && !url.includes('<iframe')) {
-          return '<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=' + encodeURIComponent(url) + '&color=%238b5e3c&auto_play=false&hide_related=true"></iframe>';
-        }
-        
-        // Direct iframe embed
-        if (url.includes('<iframe')) {
-          return url;
-        }
-        
-        // Regular audio/video URL
-        return '<audio controls preload="metadata" style="width:100%;border-radius:8px"><source src="' + escapeHtml(url) + '"></audio>';
       }
       
       return '';
     }
 
-    // ========================================
-    // SORTABLE
-    // ========================================
+    // Sortable
     let sortableInstance = null;
     function initSortable() {
       if (!poemGrid) return;
@@ -1058,34 +890,26 @@ const timestamp = Date.now();
       }
       sortableInstance = new Sortable(poemGrid, {
         animation: 200,
-        easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
         ghostClass: 'card-ghost',
-        chosenClass: 'card-chosen',
-        dragClass: 'card-drag',
         handle: '.drag-handle',
-        fallbackOnBody: true,
-        swapThreshold: 0.65,
-        forceFallback: false,
         dataIdAttr: 'data-id',
         onStart: function() { isDragging = true; },
         onEnd: function() {
-          const ids = Array.from(poemGrid.children).map(function(c) { return c.dataset.id; }).filter(Boolean);
+          const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
           const newOrder = [];
-          ids.forEach(function(id) {
-            const found = poems.find(function(p) { return p.id === id; });
+          ids.forEach(id => {
+            const found = poems.find(p => p.id === id);
             if (found) newOrder.push(found);
           });
-          const missing = poems.filter(function(p) { return !ids.includes(p.id); });
+          const missing = poems.filter(p => !ids.includes(p.id));
           poems = newOrder.concat(missing);
-          savePoems();
-          setTimeout(function() { isDragging = false; }, 80);
+          savePoemsToFirebase();
+          setTimeout(() => isDragging = false, 80);
         }
       });
     }
 
-    // ========================================
-    // EVENT LISTENERS
-    // ========================================
+    // Event Listeners
     function attachListeners() {
       searchInput.addEventListener('input', function() {
         activeTag = null;
@@ -1102,100 +926,34 @@ const timestamp = Date.now();
         a.remove();
       });
 
-      btnReloadAndSort.addEventListener('click', function() {
-        showConfirm('هل تريد جلب آخر قصائد مودي من GitHub وترتيب القصائد؟', function() {
-          const urls = [
-            'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
-            'poems.json'
-          ];
-          
-          function tryFetchReload(urlIndex) {
-            if (urlIndex >= urls.length) {
-              showAlert('⚠️ لم يتم العثور على الملف على GitHub.\n\n💡 نصيحة:\n1. أنشئ ملف poems.json في مستودعك\n2. تأكد أن المستودع Public\n3. استخدم "استيراد JSON" لرفع ملف من جهازك');
-              return;
-            }
-            
-            console.log('🔄 Trying to load from:', urls[urlIndex]);
-            
-            fetch(urls[urlIndex] + '?_=' + Date.now(), {cache: 'no-store'})
-              .then(function(res) {
-                console.log('Response status:', res.status);
-                if (!res.ok) throw new Error('Status: ' + res.status);
-                return res.json();
-              })
-              .then(function(data) {
-                if (!Array.isArray(data)) throw new Error('البيانات ليست مصفوفة');
-                originalPoems = data.map(function(p) { return {...p}; });
-                
-                const currentMap = new Map(poems.map(function(p) { return [p.id, p]; }));
-                let added = 0;
-                originalPoems.forEach(function(orig) {
-                  if (!currentMap.has(orig.id)) {
-                    poems.push({...orig});
-                    added++;
-                  }
-                });
-                
-                const ordered = [];
-                const seen = new Set();
-                originalPoems.forEach(function(orig) {
-                  const found = poems.find(function(p) { return p.id === orig.id; });
-                  if (found) {
-                    ordered.push(found);
-                    seen.add(found.id);
-                  }
-                });
-                poems.forEach(function(p) {
-                  if (!seen.has(p.id)) ordered.push(p);
-                });
-                poems = ordered;
-                
-                savePoems();
-                renderPoems();
-                showAlert('✅ تم بنجاح!\n\n🎉 أُضيف: ' + added + ' قصيدة جديدة\n📋 عدد القصائد الكلي: ' + poems.length + '\n✨ تم ترتيب القصائد حسب الأساسي');
-              })
-              .catch(function(err) {
-                console.error('❌ Failed from ' + urls[urlIndex] + ':', err);
-                tryFetchReload(urlIndex + 1);
-              });
-          }
-          
-          tryFetchReload(0);
-        });
-      });
-
       btnImportJSON.addEventListener('click', function() {
         const input = document.createElement('input');
         input.type = 'file';
-        input.accept = '.json,application/json';
+        input.accept = '.json';
         input.onchange = function(e) {
           const file = e.target.files[0];
           if (!file) return;
           const reader = new FileReader();
           reader.onload = function(evt) {
             try {
-              const text = evt.target.result;
-              const data = JSON.parse(text);
-              if (!Array.isArray(data)) throw new Error('الملف يجب أن يحتوي على مصفوفة من القصائد');
-              const currentIds = new Set(poems.map(function(p) { return p.id; }));
-              let addedCount = 0;
-              data.forEach(function(p) {
-                if (!p.id) {
-                  p.id = 'p-' + Date.now() + (Math.random()*1e6|0);
-                }
+              const data = JSON.parse(evt.target.result);
+              if (!Array.isArray(data)) throw new Error('يجب أن يكون الملف مصفوفة');
+              const currentIds = new Set(poems.map(p => p.id));
+              let added = 0;
+              data.forEach(p => {
+                if (!p.id) p.id = 'p-' + Date.now() + Math.random();
                 if (!currentIds.has(p.id)) {
                   poems.push({...p});
-                  currentIds.add(p.id);
-                  addedCount++;
+                  added++;
                 }
               });
-              if (addedCount > 0) {
-                savePoems();
+              if (added > 0) {
+                savePoemsToFirebase();
                 renderPoems();
               }
-              showAlert('تمت إضافة ' + addedCount + ' قصيدة جديدة من الملف.');
+              showAlert('تمت إضافة ' + added + ' قصيدة');
             } catch (err) {
-              showAlert('حدث خطأ عند قراءة الملف: ' + (err.message || err));
+              showAlert('خطأ: ' + err.message);
             }
           };
           reader.readAsText(file);
@@ -1234,21 +992,22 @@ const timestamp = Date.now();
           tags: currentTags,
           audios: currentAudios,
           createdBy: currentUser.name,
-          userId: currentUser.id
+          userId: currentUser.id,
+          createdAt: new Date().toISOString()
         };
         
         if (editingPoem) {
-          const index = poems.findIndex(function(p) { return p.id === editingPoem.id; });
+          const index = poems.findIndex(p => p.id === editingPoem.id);
           if (index !== -1) {
             poems[index] = { ...poemData, id: editingPoem.id };
           }
           editingPoem = null;
         } else {
-          poemData.id = 'p-' + Date.now();
+          poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           poems.unshift(poemData);
         }
         
-        savePoems();
+        savePoemsToFirebase();
         renderPoems();
         addModal.style.display = 'none';
         poemForm.reset();
@@ -1259,11 +1018,20 @@ const timestamp = Date.now();
       });
     }
 
-    // ========================================
-    // START APPLICATION
-    // ========================================
+    // Init
+    async function init() {
+      checkUserProfile();
+      await loadPoemsFromFirebase();
+      setupFirebaseListener();
+      renderPoems();
+      initSortable();
+      attachListeners();
+      showSyncStatus('✅ متصل مع Firebase!', 2000);
+    }
+
     init();
   </script>
 </body>
 </html>
-      
+ 
+ 
