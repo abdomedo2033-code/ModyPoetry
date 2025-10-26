@@ -647,7 +647,7 @@
       });
     }
 
-    async function loadFromGitHub() {
+async function loadFromGitHub() {
       const urls = [
         'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
         'poems.json'
@@ -659,7 +659,24 @@
           if (!response.ok) throw new Error('fetch failed: ' + response.status);
           const data = await response.json();
           if (!Array.isArray(data)) throw new Error('poems.json must be an array');
-          originalPoems = data.map(p => ({...p}));
+          
+          // Convert "audio" to "audios" array for consistency
+          originalPoems = data.map(p => {
+            const poem = {...p};
+            
+            // Handle both "audio" (singular) and "audios" (plural)
+            if (poem.audio && !poem.audios) {
+              poem.audios = Array.isArray(poem.audio) ? poem.audio : [poem.audio];
+              delete poem.audio;
+            } else if (!poem.audios) {
+              poem.audios = [];
+            } else if (!Array.isArray(poem.audios)) {
+              poem.audios = [poem.audios];
+            }
+            
+            return poem;
+          });
+          
           console.log('✅ GitHub poems loaded:', originalPoems.length);
           return originalPoems;
         } catch (error) {
@@ -668,7 +685,6 @@
       }
       return null;
     }
-
     async function uploadFileToStorage(file) {
       return new Promise((resolve, reject) => {
         const timestamp = Date.now();
