@@ -60,10 +60,29 @@
     .card-footer{margin-top:8px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
     .card-tags{display:flex;gap:6px;flex-wrap:wrap}
     .card-tag{padding:4px 8px;border-radius:12px;font-size:12px;background:rgba(139,94,60,0.12);color:var(--brown);font-weight:700}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200}
-    .modal-inner{background:var(--card);max-width:820px;width:100%;border-radius:12px;padding:20px;max-height:90vh;overflow:auto;box-shadow:0 30px 60px rgba(0,0,0,.25);border:1px solid var(--border)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200;overflow-y:auto}
+    .modal-inner{background:var(--card);max-width:820px;width:100%;border-radius:12px;padding:20px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 60px rgba(0,0,0,.25);border:1px solid var(--border)}
     .modal-title{font-family:'Amiri',serif;font-size:22px;margin-bottom:6px;color:var(--accent)}
     .poem-text{font-family:'Amiri',serif;white-space:pre-line;font-size:18px;line-height:2;margin-top:12px;color:var(--text)}
+    .media-container{margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
+    .media-item{margin-bottom:12px;background:#f9f9f9;padding:10px;border-radius:8px;border:1px solid var(--border)}
+    .media-item audio, .media-item video, .media-item iframe{width:100%;border-radius:6px;max-height:400px}
+    .comments-section{margin-top:20px;border-top:2px solid var(--border);padding-top:20px}
+    .comments-header{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:16px;font-weight:700;color:var(--accent)}
+    .comment-form{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid var(--border)}
+    .comment-input{padding:10px;border-radius:6px;border:1.5px solid var(--border);font-size:14px;resize:vertical;min-height:60px;font-family:'Cairo',sans-serif}
+    .comment-submit{align-self:flex-end;padding:8px 16px;background:var(--brown);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;transition:all .2s}
+    .comment-submit:hover{background:var(--brown-hover)}
+    .comments-list{display:flex;flex-direction:column;gap:12px}
+    .comment{background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)}
+    .comment-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .comment-author{font-weight:700;color:var(--accent);font-size:14px}
+    .comment-time{font-size:12px;color:var(--muted)}
+    .comment-text{font-size:14px;line-height:1.6;color:var(--text)}
+    .comment-actions{margin-top:8px;display:flex;gap:8px}
+    .comment-action-btn{background:none;border:none;color:var(--brown);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all .2s}
+    .comment-action-btn:hover{background:#f5ebe0}
+    .no-comments{text-align:center;padding:20px;color:var(--muted);font-size:14px}
     .confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:18px;z-index:1400}
     .confirm-modal.show{display:flex}
     .confirm-box{background:var(--card);border-radius:12px;padding:24px;max-width:450px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);border:1px solid var(--border)}
@@ -152,6 +171,7 @@
             <input id="signupUsername" type="text" placeholder="اسم المستخدم * (يجب أن يكون فريداً)" required />
             <div id="usernameError" class="error-message">⚠️ اسم المستخدم موجود بالفعل! يرجى اختيار اسم آخر.</div>
             <input id="signupPassword" type="password" placeholder="كلمة المرور *" required />
+            <div id="passwordError" class="error-message">⚠️ يرجى إدخال كلمة المرور (4 أحرف على الأقل)</div>
             <input id="signupEmail" type="email" placeholder="بريدك الإلكتروني (اختياري)" />
             <textarea id="signupBio" placeholder="نبذة عنك (اختياري)" style="min-height:80px"></textarea>
             <button class="btn" id="btnSignup">إنشاء الحساب</button>
@@ -165,6 +185,7 @@
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="font-weight:600;color:var(--accent)">تسجيل الدخول كـ: <span id="loginUserName"></span></div>
             <input id="loginPassword" type="password" placeholder="كلمة المرور *" required />
+            <div id="loginPasswordError" class="error-message">⚠️ كلمة المرور غير صحيحة!</div>
             <button class="btn" id="btnLoginSubmit">تسجيل الدخول</button>
           </div>
         </div>
@@ -378,6 +399,7 @@
           document.getElementById('loginForm').style.display = 'none';
           document.getElementById('passwordForm').style.display = 'block';
           document.getElementById('loginPassword').focus();
+          document.getElementById('loginPasswordError').classList.remove('show');
         };
         loginProfilesList.appendChild(item);
       });
@@ -388,6 +410,17 @@
       const errorDiv = document.getElementById('usernameError');
       
       if (username && checkUserNameExists(username)) {
+        errorDiv.classList.add('show');
+      } else {
+        errorDiv.classList.remove('show');
+      }
+    });
+
+    document.getElementById('signupPassword').addEventListener('input', function() {
+      const password = this.value.trim();
+      const errorDiv = document.getElementById('passwordError');
+      
+      if (password && password.length < 4) {
         errorDiv.classList.add('show');
       } else {
         errorDiv.classList.remove('show');
@@ -410,6 +443,7 @@
       document.getElementById('loginForm').style.display = 'none';
       document.getElementById('passwordForm').style.display = 'none';
       document.getElementById('usernameError').classList.remove('show');
+      document.getElementById('passwordError').classList.remove('show');
     });
 
     document.getElementById('btnBackToProfiles').addEventListener('click', () => {
@@ -417,6 +451,7 @@
       document.getElementById('loginForm').style.display = 'block';
       selectedUserForLogin = null;
       document.getElementById('loginPassword').value = '';
+      document.getElementById('loginPasswordError').classList.remove('show');
     });
 
     document.getElementById('btnSignup').addEventListener('click', async () => {
@@ -425,18 +460,21 @@
       const email = document.getElementById('signupEmail').value.trim();
       const bio = document.getElementById('signupBio').value.trim();
 
+      document.getElementById('usernameError').classList.remove('show');
+      document.getElementById('passwordError').classList.remove('show');
+
       if (!username) {
         showAlert('⚠️ يرجى إدخال اسم المستخدم');
         return;
       }
 
       if (!password) {
-        showAlert('⚠️ يرجى إدخال كلمة المرور');
+        document.getElementById('passwordError').classList.add('show');
         return;
       }
 
       if (password.length < 4) {
-        showAlert('⚠️ كلمة المرور يجب أن تكون 4 أحرف على الأقل');
+        document.getElementById('passwordError').classList.add('show');
         return;
       }
 
@@ -469,13 +507,15 @@
     document.getElementById('btnLoginSubmit').addEventListener('click', () => {
       const password = document.getElementById('loginPassword').value.trim();
 
+      document.getElementById('loginPasswordError').classList.remove('show');
+
       if (!password) {
         showAlert('⚠️ يرجى إدخال كلمة المرور');
         return;
       }
 
       if (hashPassword(password) !== selectedUserForLogin.passwordHash) {
-        showAlert('❌ كلمة المرور غير صحيحة!');
+        document.getElementById('loginPasswordError').classList.add('show');
         return;
       }
 
@@ -861,7 +901,7 @@
         const userBadge = poem.createdBy ? '<span class="muted" style="font-size:11px">👤 ' + escapeHtml(poem.createdBy) + '</span>' : '';
         
         const audioCount = (poem.audios || []).length;
-        const mediaBadge = audioCount > 0 ? '<span class="card-tag" style="background:#4a90e2;color:#fff">🎵 ' + audioCount + ' ملف</span>' : '';
+        const mediaBadge = audioCount > 0 ? '<span class="card-tag" style="background:#4a90e2;color:#fff">🎵 ' + audioCount + '</span>' : '';
 
         let authorDisplay = '';
         if (poem.author) {
@@ -927,11 +967,8 @@
         const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
         if (youtubeEmbed) {
           return `
-            <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
-              <div style="font-size:13px;margin-bottom:8px;color:var(--brown)">
-                🎬 YouTube: <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">${escapeHtml(audioUrl.substring(0, 50) + (audioUrl.length > 50 ? '...' : ''))}</a>
-              </div>
-              <iframe width="100%" height="315" src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:8px"></iframe>
+            <div class="media-item">
+              <iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
           `;
         }
@@ -939,19 +976,45 @@
         const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
         if (soundcloudEmbed) {
           return `
-            <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
-              <div style="font-size:13px;margin-bottom:8px;color:var(--brown)">
-                🎵 SoundCloud: <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">${escapeHtml(audioUrl.substring(0, 50) + (audioUrl.length > 50 ? '...' : ''))}</a>
-              </div>
-              <iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}" style="border-radius:8px"></iframe>
+            <div class="media-item">
+              <iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe>
+            </div>
+          `;
+        }
+        
+        const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+        const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+        const lowerUrl = audioUrl.toLowerCase();
+        
+        const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
+        const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
+        
+        if (isDirectAudio) {
+          return `
+            <div class="media-item">
+              <audio controls>
+                <source src="${audioUrl}">
+                متصفحك لا يدعم تشغيل الملفات الصوتية
+              </audio>
+            </div>
+          `;
+        }
+        
+        if (isDirectVideo) {
+          return `
+            <div class="media-item">
+              <video controls>
+                <source src="${audioUrl}">
+                متصفحك لا يدعم تشغيل الفيديو
+              </video>
             </div>
           `;
         }
         
         return `
-          <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
+          <div class="media-item">
             <div style="font-size:13px;color:var(--brown)">
-              🔗 <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">${escapeHtml(audioUrl.substring(0, 80) + (audioUrl.length > 80 ? '...' : ''))}</a>
+              🔗 <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">فتح الرابط</a>
             </div>
           </div>
         `;
@@ -959,26 +1022,19 @@
       
       if (audio.url) {
         const isVideo = audio.type && audio.type.startsWith('video/');
-        const sizeMB = audio.size ? (audio.size / 1024 / 1024).toFixed(2) : '?';
         
         if (isVideo) {
           return `
-            <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
-              <div style="font-size:13px;margin-bottom:8px;color:var(--brown)">
-                🎬 ${escapeHtml(audio.name)} (${sizeMB} MB)
-              </div>
-              <video controls style="width:100%;max-height:400px;border-radius:8px">
+            <div class="media-item">
+              <video controls>
                 <source src="${audio.url}" type="${audio.type}">
               </video>
             </div>
           `;
         } else {
           return `
-            <div style="background:#f9f9f9;padding:12px;border-radius:8px;border:1px solid var(--border)">
-              <div style="font-size:13px;margin-bottom:8px;color:var(--brown)">
-                🎵 ${escapeHtml(audio.name)} (${sizeMB} MB)
-              </div>
-              <audio controls style="width:100%;border-radius:8px">
+            <div class="media-item">
+              <audio controls>
                 <source src="${audio.url}" type="${audio.type}">
               </audio>
             </div>
@@ -989,13 +1045,108 @@
       return '';
     }
 
-    function openModal(poem) {
+    async function loadCommentsFromFirebase(poemId) {
+      try {
+        const snapshot = await get(ref(database, `comments/${poemId}`));
+        if (snapshot.exists()) {
+          return Object.values(snapshot.val());
+        }
+        return [];
+      } catch (error) {
+        console.error('Error loading comments:', error);
+        return [];
+      }
+    }
+
+    async function saveCommentToFirebase(poemId, comment) {
+      try {
+        const commentId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        await set(ref(database, `comments/${poemId}/${commentId}`), comment);
+        return true;
+      } catch (error) {
+        console.error('Error saving comment:', error);
+        return false;
+      }
+    }
+
+    async function deleteCommentFromFirebase(poemId, commentId) {
+      try {
+        await set(ref(database, `comments/${poemId}/${commentId}`), null);
+        return true;
+      } catch (error) {
+        console.error('Error deleting comment:', error);
+        return false;
+      }
+    }
+
+    function formatTimeAgo(dateString) {
+      const now = new Date();
+      const date = new Date(dateString);
+      const seconds = Math.floor((now - date) / 1000);
+      
+      if (seconds < 60) return 'الآن';
+      if (seconds < 3600) return Math.floor(seconds / 60) + ' دقيقة';
+      if (seconds < 86400) return Math.floor(seconds / 3600) + ' ساعة';
+      if (seconds < 604800) return Math.floor(seconds / 86400) + ' يوم';
+      if (seconds < 2592000) return Math.floor(seconds / 604800) + ' أسبوع';
+      return Math.floor(seconds / 2592000) + ' شهر';
+    }
+
+    async function renderComments(poemId, commentsContainer) {
+      const comments = await loadCommentsFromFirebase(poemId);
+      const commentsList = commentsContainer.querySelector('.comments-list');
+      commentsList.innerHTML = '';
+      
+      if (comments.length === 0) {
+        commentsList.innerHTML = '<div class="no-comments">لا توجد تعليقات بعد. كن أول من يعلق! 💬</div>';
+        return;
+      }
+      
+      comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      
+      comments.forEach(comment => {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment';
+        
+        const canDelete = comment.userId === currentUser.id;
+        const deleteButton = canDelete ? `<button class="comment-action-btn" onclick="window.deleteComment('${poemId}', '${comment.id}')">🗑️ حذف</button>` : '';
+        
+        commentDiv.innerHTML = `
+          <div class="comment-header">
+            <span class="comment-author">${escapeHtml(comment.username)}</span>
+            <span class="comment-time">${formatTimeAgo(comment.createdAt)}</span>
+          </div>
+          <div class="comment-text">${escapeHtml(comment.text)}</div>
+          ${deleteButton ? '<div class="comment-actions">' + deleteButton + '</div>' : ''}
+        `;
+        
+        commentsList.appendChild(commentDiv);
+      });
+    }
+
+    window.deleteComment = async function(poemId, commentId) {
+      showConfirm('هل تريد حذف هذا التعليق؟', async () => {
+        const success = await deleteCommentFromFirebase(poemId, commentId);
+        if (success) {
+          const modal = document.querySelector('.modal');
+          const commentsContainer = modal.querySelector('.comments-section');
+          await renderComments(poemId, commentsContainer);
+          showSyncStatus('✅ تم حذف التعليق', 2000);
+        } else {
+          showAlert('❌ فشل حذف التعليق');
+        }
+      });
+    };
+
+    async function openModal(poem) {
       const modal = document.createElement('div');
       modal.className = 'modal';
       
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
 
-      const audiosHtml = (poem.audios || []).map(audio => '<div style="margin-top:12px">' + getAudioHtml(audio) + '</div>').join('');
+      const audiosHtml = (poem.audios || []).length > 0 
+        ? '<div class="media-container">' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>'
+        : '';
 
       const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">👤 أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>' : '';
 
@@ -1029,9 +1180,61 @@
           </div>
           <div class="poem-text">${escapeHtml(poem.text)}</div>
           ${audiosHtml}
+          
+          <div class="comments-section">
+            <div class="comments-header">
+              💬 التعليقات (<span id="commentsCount">0</span>)
+            </div>
+            <div class="comment-form">
+              <textarea class="comment-input" id="commentInput" placeholder="اكتب تعليقك هنا..."></textarea>
+              <button class="comment-submit" id="submitComment">إرسال التعليق</button>
+            </div>
+            <div class="comments-list"></div>
+          </div>
         </div>
       `;
       document.body.appendChild(modal);
+
+      const commentsContainer = modal.querySelector('.comments-section');
+      await renderComments(poem.id, commentsContainer);
+      
+      const comments = await loadCommentsFromFirebase(poem.id);
+      modal.querySelector('#commentsCount').textContent = comments.length;
+
+      modal.querySelector('#submitComment').addEventListener('click', async function() {
+        const commentText = modal.querySelector('#commentInput').value.trim();
+        
+        if (!commentText) {
+          showAlert('⚠️ يرجى كتابة تعليق');
+          return;
+        }
+        
+        const comment = {
+          id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          text: commentText,
+          username: currentUser.username,
+          userId: currentUser.id,
+          createdAt: new Date().toISOString()
+        };
+        
+        const success = await saveCommentToFirebase(poem.id, comment);
+        
+        if (success) {
+          modal.querySelector('#commentInput').value = '';
+          await renderComments(poem.id, commentsContainer);
+          const updatedComments = await loadCommentsFromFirebase(poem.id);
+          modal.querySelector('#commentsCount').textContent = updatedComments.length;
+          showSyncStatus('✅ تم إضافة التعليق', 2000);
+        } else {
+          showAlert('❌ فشل إضافة التعليق');
+        }
+      });
+
+      modal.querySelector('#commentInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          modal.querySelector('#submitComment').click();
+        }
+      });
 
       modal.querySelector('#closeModal').addEventListener('click', () => modal.remove());
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
@@ -1120,7 +1323,8 @@
       a.href = URL.createObjectURL(blob);
       a.download = 'mody_poems_' + Date.now() + '.json';
       document.body.appendChild(a);
-      a.click();a.remove();
+      a.click();
+      a.remove();
     });
 
     document.getElementById('btnReloadAndSort').addEventListener('click', async () => {
