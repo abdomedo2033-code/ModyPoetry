@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://abdomedo2033-code.github.io/ModyPoetry/sitemap.xml
