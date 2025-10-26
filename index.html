@@ -1170,8 +1170,8 @@ function getAudioHtml(audio) {
         ? '<div class="media-container">' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>'
         : '';
 
-      const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">👤 أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>' : '';
-
+const userIcon = poem.createdBy && poem.createdBy.toLowerCase().includes('mody') ? '✒️' : '👤';
+const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">' + userIcon + ' أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>' : '';
       const canEdit = isOwnPoem(poem);
       const canDelete = isOwnPoem(poem);
 
