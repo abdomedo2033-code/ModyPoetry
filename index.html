@@ -957,71 +957,72 @@
       }
       return null;
     }
-
-    function getAudioHtml(audio) {
+function getAudioHtml(audio) {
       if (!audio) return '';
       
-      if (audio.type === 'link' || (typeof audio === 'string')) {
-        const audioUrl = audio.url || audio;
-        
-        const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
-        if (youtubeEmbed) {
-          return `
-            <div class="media-item">
-              <iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-            </div>
-          `;
-        }
-        
-        const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
-        if (soundcloudEmbed) {
-          return `
-            <div class="media-item">
-              <iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe>
-            </div>
-          `;
-        }
-        
-        const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
-        const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-        const lowerUrl = audioUrl.toLowerCase();
-        
-        const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
-        const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
-        
-        if (isDirectAudio) {
-          return `
-            <div class="media-item">
-              <audio controls>
-                <source src="${audioUrl}">
-                متصفحك لا يدعم تشغيل الملفات الصوتية
-              </audio>
-            </div>
-          `;
-        }
-        
-        if (isDirectVideo) {
-          return `
-            <div class="media-item">
-              <video controls>
-                <source src="${audioUrl}">
-                متصفحك لا يدعم تشغيل الفيديو
-              </video>
-            </div>
-          `;
-        }
-        
+      // Handle string URLs (common in poems.json)
+      let audioUrl = '';
+      if (typeof audio === 'string') {
+        audioUrl = audio;
+      } else if (audio.url) {
+        audioUrl = audio.url;
+      } else {
+        return '';
+      }
+      
+      // Check for YouTube
+      const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
+      if (youtubeEmbed) {
         return `
           <div class="media-item">
-            <div style="font-size:13px;color:var(--brown)">
-              🔗 <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">فتح الرابط</a>
-            </div>
+            <iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
           </div>
         `;
       }
       
-      if (audio.url) {
-        const isVideo = audio.type && audio.type.startsWith('video/');
+      // Check for SoundCloud
+      const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
+      if (soundcloudEmbed) {
+        return `
+          <div class="media-item">
+            <iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe>
+          </div>
+        `;
+      }
+      
+      // Check if it's a direct audio/video file
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+      const lowerUrl = audioUrl.toLowerCase();
+      
+      const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
+      const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
+      
+      if (isDirectAudio) {
+        return `
+          <div class="media-item">
+            <audio controls>
+              <source src="${audioUrl}">
+              متصفحك لا يدعم تشغيل الملفات الصوتية
+            </audio>
+          </div>
+        `;
+      }
+      
+      if (isDirectVideo) {
+        return `
+          <div class="media-item">
+            <video controls>
+              <source src="${audioUrl}">
+              متصفحك لا يدعم تشغيل الفيديو
+            </video>
+          </div>
+        `;
+      }
+      
+      // For uploaded files from Firebase
+      if (audio.url && audio.type && audio.name) {
+        const isVideo = audio.type.startsWith('video/');
         
         if (isVideo) {
           return `
@@ -1042,9 +1043,15 @@
         }
       }
       
-      return '';
+      // Default: show as clickable link
+      return `
+        <div class="media-item">
+          <div style="font-size:13px;color:var(--brown)">
+            🔗 <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">فتح الرابط</a>
+          </div>
+        </div>
+      `;
     }
-
     async function loadCommentsFromFirebase(poemId) {
       try {
         const snapshot = await get(ref(database, `comments/${poemId}`));
