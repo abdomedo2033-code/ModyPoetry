@@ -160,6 +160,25 @@
     }
     .sync-status.show{display:flex}
 
+    .hidden-poem{
+      opacity:0.4;
+      position:relative;
+    }
+    .hidden-poem::after{
+      content:'👁️ مخفية';
+      position:absolute;
+      top:50%;
+      left:50%;
+      transform:translate(-50%, -50%);
+      background:rgba(0,0,0,0.8);
+      color:#fff;
+      padding:8px 16px;
+      border-radius:8px;
+      font-size:13px;
+      font-weight:600;
+      pointer-events:none;
+    }
+
     .muted{color:var(--muted);font-size:13px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:18px}
     .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,0.04);border:1px solid var(--border);transition:all .22s cubic-bezier(0.4, 0, 0.2, 1);display:flex;gap:10px;align-items:flex-start;user-select:none;position:relative;overflow:hidden}
@@ -215,6 +234,8 @@
           <button class="btn small menu-toggle" id="menuToggle">☰ القائمة</button>
           <div class="dropdown-menu" id="dropdownMenu">
             <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
+            <div class="menu-divider"></div>
+            <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي + ترتيب</button>
             <div class="menu-divider"></div>
             <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
           </div>
@@ -356,7 +377,10 @@
 
     // State
     const USER_KEY = 'mody_user_profile';
+    const HIDDEN_KEY = 'mody_hidden_poems';
     let poems = [];
+    let originalPoems = null;
+    let hiddenPoems = [];
     let isDragging = false;
     let activeTag = null;
     let editingPoem = null;
@@ -372,6 +396,7 @@
     const tagsWrapper = document.getElementById('tagsWrapper');
     const year = document.getElementById('year');
     const btnDownload = document.getElementById('btnDownload');
+    const btnReloadAndSort = document.getElementById('btnReloadAndSort');
     const btnImportJSON = document.getElementById('btnImportJSON');
     const btnAdd = document.getElementById('btnAdd');
     const addModal = document.getElementById('addModal');
@@ -401,6 +426,41 @@
     const progressFill = document.getElementById('progressFill');
 
     year.textContent = new Date().getFullYear();
+
+    // Load hidden poems
+    function loadHiddenPoems() {
+      const stored = localStorage.getItem(HIDDEN_KEY);
+      if (stored) {
+        try {
+          hiddenPoems = JSON.parse(stored);
+        } catch (e) {
+          hiddenPoems = [];
+        }
+      }
+    }
+
+    function saveHiddenPoems() {
+      localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenPoems));
+    }
+
+    function isPoemHidden(poemId) {
+      return hiddenPoems.includes(poemId);
+    }
+
+    function toggleHidePoem(poemId) {
+      const index = hiddenPoems.indexOf(poemId);
+      if (index > -1) {
+        hiddenPoems.splice(index, 1);
+      } else {
+        hiddenPoems.push(poemId);
+      }
+      saveHiddenPoems();
+      renderPoems();
+    }
+
+    function isOwnPoem(poem) {
+      return poem.userId === currentUser.id;
+    }
 
     // Utilities
     function showSyncStatus(message, duration = 2000) {
@@ -453,9 +513,8 @@
 
     function showUserInfo() {
       currentUserName.textContent = currentUser.name;
-      userInfoDisplay.style.display = 'block';
-    }
-
+  userInfoDisplay.style.display = 'block';
+      
     btnSaveProfile.addEventListener('click', function() {
       const name = userName.value.trim();
       if (!name) {
@@ -492,7 +551,8 @@
       }
     }
 
-    async function savePoemsToFirebase() {if (isUpdatingFromFirebase) return;
+    async function savePoemsToFirebase() {
+      if (isUpdatingFromFirebase) return;
       try {
         showSyncStatus('🔄 جاري المزامنة...');
         await set(ref(database, 'poems'), poems);
@@ -530,6 +590,29 @@
           isUpdatingFromFirebase = false;
         }
       });
+    }
+
+    // Load from GitHub JSON
+    async function loadFromGitHub() {
+      const urls = [
+        'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
+        'poems.json'
+      ];
+
+      for (let i = 0; i < urls.length; i++) {
+        try {
+          const response = await fetch(urls[i] + '?_=' + Date.now(), {cache: 'no-store'});
+          if (!response.ok) throw new Error('fetch failed: ' + response.status);
+          const data = await response.json();
+          if (!Array.isArray(data)) throw new Error('poems.json must be an array');
+          originalPoems = data.map(p => ({...p}));
+          console.log('✅ GitHub poems loaded:', originalPoems.length);
+          return originalPoems;
+        } catch (error) {
+          console.warn('Failed to load from:', urls[i], error);
+        }
+      }
+      return null;
     }
 
     // File Upload to Firebase Storage
@@ -739,6 +822,9 @@
       filtered.forEach(function(poem) {
         const card = document.createElement('div');
         card.className = 'card';
+        if (isPoemHidden(poem.id)) {
+          card.classList.add('hidden-poem');
+        }
         card.dataset.id = poem.id || ('p-' + (Math.random()*1e9|0));
 
         const tagsHtml = (poem.tags || []).slice(0,3).map(function(t){ 
@@ -790,6 +876,14 @@
 
       const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">👤 أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>' : '';
 
+      const canEdit = isOwnPoem(poem);
+      const canDelete = isOwnPoem(poem);
+      const isHidden = isPoemHidden(poem.id);
+
+      const editButton = canEdit ? '<button class="btn small" id="editPoem">✏️ تعديل</button>' : '';
+      const deleteButton = canDelete ? '<button class="btn small" id="deletePoem">🗑️ حذف</button>' : '';
+      const hideButton = !canEdit ? `<button class="btn small" id="hidePoem">${isHidden ? '👁️ إظهار' : '🙈 إخفاء'}</button>` : '';
+
       modal.innerHTML = `
         <div class="modal-inner">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
@@ -799,9 +893,10 @@
               ${userInfo}
               ${tagsHtml ? '<div class="modal-tags">' + tagsHtml + '</div>' : ''}
             </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn small" id="editPoem">✏️ تعديل</button>
-              <button class="btn small" id="deletePoem">🗑️ حذف</button>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              ${editButton}
+              ${deleteButton}
+              ${hideButton}
               <button class="btn small" id="closeModal">✖️ إغلاق</button>
             </div>
           </div>
@@ -814,29 +909,40 @@
       modal.querySelector('#closeModal').addEventListener('click', function() { modal.remove(); });
       modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
       
-      modal.querySelector('#editPoem').addEventListener('click', function() {
-        editingPoem = poem;
-        document.getElementById('inputTitle').value = poem.title || '';
-        document.getElementById('inputAuthor').value = poem.author || '';
-        document.getElementById('inputText').value = poem.text || '';
-        document.getElementById('inputExcerpt').value = poem.excerpt || '';
-        currentTags = poem.tags || [];
-        renderTagsInForm();
-        currentAudios = poem.audios || [];
-        renderAudiosInForm();
-        document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
-        addModal.style.display = 'flex';
-        modal.remove();
-      });
-      
-      modal.querySelector('#deletePoem').addEventListener('click', function() {
-        showConfirm('هل أنت متأكد من حذف هذه القصيدة؟', function() {
-          poems = poems.filter(function(p) { return p.id !== poem.id; });
-          savePoemsToFirebase();
-          renderPoems();
+      if (canEdit) {
+        modal.querySelector('#editPoem').addEventListener('click', function() {
+          editingPoem = poem;
+          document.getElementById('inputTitle').value = poem.title || '';
+          document.getElementById('inputAuthor').value = poem.author || '';
+          document.getElementById('inputText').value = poem.text || '';
+          document.getElementById('inputExcerpt').value = poem.excerpt || '';
+          currentTags = poem.tags || [];
+          renderTagsInForm();
+          currentAudios = poem.audios || [];
+          renderAudiosInForm();
+          document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
+          addModal.style.display = 'flex';
           modal.remove();
         });
-      });
+      }
+      
+      if (canDelete) {
+        modal.querySelector('#deletePoem').addEventListener('click', function() {
+          showConfirm('هل أنت متأكد من حذف هذه القصيدة؟', function() {
+            poems = poems.filter(function(p) { return p.id !== poem.id; });
+            savePoemsToFirebase();
+            renderPoems();
+            modal.remove();
+          });
+        });
+      }
+
+      if (!canEdit && modal.querySelector('#hidePoem')) {
+        modal.querySelector('#hidePoem').addEventListener('click', function() {
+          toggleHidePoem(poem.id);
+          modal.remove();
+        });
+      }
       
       document.addEventListener('keydown', function esc(e){ 
         if (e.key === 'Escape') { 
@@ -926,6 +1032,50 @@
         a.remove();
       });
 
+      btnReloadAndSort.addEventListener('click', async function() {
+        showConfirm('هل تريد جلب آخر قصائد مودي من GitHub وترتيب القصائد؟\n\nسيتم دمج القصائد الجديدة مع قصائدك الحالية.', async function() {
+          showSyncStatus('🔄 جاري تحميل قصائد مودي...', 3000);
+          
+          const githubPoems = await loadFromGitHub();
+          
+          if (!githubPoems) {
+            showAlert('⚠️ لم يتم العثور على الملف على GitHub.\n\n💡 نصيحة:\n1. أنشئ ملف poems.json في مستودعك\n2. تأكد أن المستودع Public\n3. استخدم "استيراد JSON" لرفع ملف من جهازك');
+            return;
+          }
+
+          const currentMap = new Map(poems.map(p => [p.id, p]));
+          let added = 0;
+          
+          githubPoems.forEach(orig => {
+            if (!currentMap.has(orig.id)) {
+              poems.push({...orig});
+              added++;
+            }
+          });
+
+          const ordered = [];
+          const seen = new Set();
+          
+          githubPoems.forEach(orig => {
+            const found = poems.find(p => p.id === orig.id);
+            if (found) {
+              ordered.push(found);
+              seen.add(found.id);
+            }
+          });
+          
+          poems.forEach(p => {
+            if (!seen.has(p.id)) ordered.push(p);
+          });
+          
+          poems = ordered;
+          
+          await savePoemsToFirebase();
+          renderPoems();
+          showAlert(`✅ تم بنجاح!\n\n🎉 أُضيف: ${added} قصيدة جديدة\n📋 عدد القصائد الكلي: ${poems.length}\n✨ تم ترتيب القصائد حسب الأساسي`);
+        });
+      });
+
       btnImportJSON.addEventListener('click', function() {
         const input = document.createElement('input');
         input.type = 'file';
@@ -943,6 +1093,12 @@
               data.forEach(p => {
                 if (!p.id) p.id = 'p-' + Date.now() + Math.random();
                 if (!currentIds.has(p.id)) {
+                  // Add imported by info
+                  if (!p.createdBy) {
+                    p.createdBy = currentUser.name + ' (مستورد)';
+                    p.userId = currentUser.id;
+                    p.importedAt = new Date().toISOString();
+                  }
                   poems.push({...p});
                   added++;
                 }
@@ -951,7 +1107,7 @@
                 savePoemsToFirebase();
                 renderPoems();
               }
-              showAlert('تمت إضافة ' + added + ' قصيدة');
+              showAlert(`تمت إضافة ${added} قصيدة من الملف\n\n📝 جميع القصائد المستوردة تحمل اسمك: "${currentUser.name} (مستورد)"`);
             } catch (err) {
               showAlert('خطأ: ' + err.message);
             }
@@ -1021,6 +1177,7 @@
     // Init
     async function init() {
       checkUserProfile();
+      loadHiddenPoems();
       await loadPoemsFromFirebase();
       setupFirebaseListener();
       renderPoems();
@@ -1033,5 +1190,3 @@
   </script>
 </body>
 </html>
- 
- 
