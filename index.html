@@ -757,8 +757,9 @@ async function loadFromGitHub() {
               document.getElementById('uploadProgress').classList.remove('show');
               document.getElementById('progressFill').style.width = '0%';
               showSyncStatus('✅ تم رفع الملف بنجاح!', 2000);
-              resolve({
+             resolve({
                 url: downloadURL,
+                path: path,  // ← إضافة المسار الأصلي
                 name: file.name,
                 size: file.size,
                 type: file.type,
@@ -1318,8 +1319,7 @@ const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">' +
           modal.remove();
         });
       }
-      
-  if (canDelete) {
+if (canDelete) {
         modal.querySelector('#deletePoem').addEventListener('click', () => {
           showConfirm('هل أنت متأكد من حذف هذه القصيدة؟\n\n⚠️ سيتم حذفها والملفات المرفوعة من السحابة لجميع المستخدمين!', async () => {
             try {
@@ -1328,27 +1328,68 @@ const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">' +
               // Delete uploaded files from Storage
               if (poem.audios && poem.audios.length > 0) {
                 let deletedFiles = 0;
+                let failedFiles = 0;
+                
                 for (const audio of poem.audios) {
                   // Only delete files uploaded to Firebase Storage (not external links)
                   if (audio.url && audio.url.includes('firebasestorage.googleapis.com')) {
                     try {
-                      // Extract file path from URL
+                      // Method 1: Extract path from URL
                       const url = new URL(audio.url);
-                      const pathMatch = url.pathname.match(/\/o\/(.+?)\?/);
+                      let filePath = null;
+                      
+                      // Try to extract from pathname: /v0/b/bucket/o/path%2Fto%2Ffile
+                      const pathMatch = url.pathname.match(/\/o\/(.+?)(?:\?|$)/);
                       if (pathMatch) {
-                        const filePath = decodeURIComponent(pathMatch[1]);
+                        filePath = decodeURIComponent(pathMatch[1]);
+                      }
+                      
+                      // Alternative: if we have the original upload path stored
+                      if (!filePath && audio.path) {
+                        filePath = audio.path;
+                      }
+                      
+                      // Alternative: reconstruct path from known structure
+                      if (!filePath && audio.name && poem.userId) {
+                        // Try to find the file in user's media folder
+                        const userMediaPath = `media/${poem.userId}/`;
+                        const userFolderRef = storageRef(storage, userMediaPath);
+                        const filesList = await listAll(userFolderRef);
+                        
+                        // Find file by matching URL
+                        for (const fileRef of filesList.items) {
+                          const fileUrl = await getDownloadURL(fileRef);
+                          if (fileUrl === audio.url) {
+                            filePath = fileRef.fullPath;
+                            break;
+                          }
+                        }
+                      }
+                      
+                      if (filePath) {
+                        console.log('🔍 Attempting to delete file:', filePath);
                         const fileRef = storageRef(storage, filePath);
                         await deleteObject(fileRef);
                         deletedFiles++;
-                        console.log('✅ Deleted file:', filePath);
+                        console.log('✅ Successfully deleted file:', filePath);
+                      } else {
+                        console.warn('⚠️ Could not extract file path from URL:', audio.url);
+                        failedFiles++;
                       }
+                      
                     } catch (error) {
-                      console.error('Error deleting file:', error);
+                      console.error('❌ Error deleting file:', audio.url, error);
+                      failedFiles++;
                     }
                   }
                 }
+                
                 if (deletedFiles > 0) {
-                  showSyncStatus(`🗑️ تم حذف ${deletedFiles} ملف...`, 2000);
+                  showSyncStatus(`🗑️ تم حذف ${deletedFiles} ملف من السحابة`, 2000);
+                }
+                
+                if (failedFiles > 0) {
+                  console.warn(`⚠️ فشل حذف ${failedFiles} ملف`);
                 }
               }
               
@@ -1376,7 +1417,7 @@ const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">' +
           });
         });
       }
-
+      
       if (!canEdit && modal.querySelector('#hidePoem')) {
         modal.querySelector('#hidePoem').addEventListener('click', () => {
           toggleHidePoem(poem.id);
