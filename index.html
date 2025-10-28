@@ -1282,8 +1282,16 @@
         return true;
       });
 
-      filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-
+  // Sort by manual order first, then by date
+  
+filtered.sort((a, b) => {
+  if (a.manualOrder !== undefined && b.manualOrder !== undefined) {
+    return a.manualOrder - b.manualOrder;
+  }
+  if (a.manualOrder !== undefined) return -1;
+  if (b.manualOrder !== undefined) return 1;
+  return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+});
       if (filtered.length === 0) {
         poemGrid.style.display = 'none';
         emptyState.style.display = 'block';
@@ -1754,19 +1762,22 @@
     isDragging = true;
   },
   onEnd: async () => {
-    const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
-    const newOrder = [];
-    ids.forEach(id => {
-      const found = poems.find(p => p.id === id);
-      if (found) newOrder.push(found);
-    });
-    const missing = poems.filter(p => !ids.includes(p.id));
-    poems = newOrder.concat(missing);
-    await savePoemsToFirebase();
-    setTimeout(() => {
-      isDragging = false;
-    }, 300);
-  }
+  const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
+  const newOrder = [];
+  ids.forEach((id, index) => { 
+    const found = poems.find(p => p.id === id); 
+    if (found) {
+      found.manualOrder = index; // Add order property
+      newOrder.push(found); 
+    }
+  });
+  const missing = poems.filter(p => !ids.includes(p.id));
+  poems = newOrder.concat(missing);
+  await savePoemsToFirebase();
+  setTimeout(() => { 
+    isDragging = false; 
+  }, 300);
+}
 });
     }
 
@@ -1939,7 +1950,7 @@ ${followBtn}
               showAlert('❌ فشل رفع الصورة: ' + error.message);
             }
           });
-          
+
         }
         const editBioBtn = modal.querySelector('#editBioBtn');
   const bioDisplay = modal.querySelector('#bioDisplay');
@@ -1966,20 +1977,20 @@ ${followBtn}
       try {
         currentUser.bio = newBio;
         user.bio = newBio;
-        
+
         const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
         if (userIndex > -1) {
           allUsers[userIndex].bio = newBio;
         }
-        
+
         saveAllUsers();
         localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
         await saveUserToFirebase();
-        
+
         bioDisplay.innerHTML = newBio ? escapeHtml(newBio) : '<span class="muted">لا توجد نبذة</span>';
         bioEdit.style.display = 'none';
         bioDisplay.style.display = 'block';
-        
+
         showSyncStatus('✅ تم تحديث النبذة بنجاح', 2000);
       } catch (error) {
         showAlert('❌ فشل تحديث النبذة: ' + error.message);
