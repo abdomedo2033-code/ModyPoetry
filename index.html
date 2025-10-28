@@ -6,95 +6,250 @@
   <title>🪶 Mody Poetry</title>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{--bg-gradient-1:#fff8f0;--bg-gradient-2:#fef3e8;--card:#ffffff;--muted:#8b7355;--accent:#3a1f0b;--brown:#8b5e3c;--brown-hover:#a67c52;--text:#2e1a0f;--shadow:rgba(58,31,11,0.08);--shadow-lg:rgba(58,31,11,0.12);--border:#e8dcc8;--header-dark:#e8d2bf;--header-dark-2:#d9c0a6}
+    :root{--bg-gradient-1:#fff8f0;--bg-gradient-2:#fef3e8;--card:#ffffff;--muted:#8b7355;--accent:#3a1f0b;--brown:#8b5e3c;--brown-hover:#a67c52;--text:#2e1a0f;--shadow:rgba(58,31,11,0.08);--shadow-lg:rgba(58,31,11,0.12);--border:#e8dcc8;--header-dark:#e8d2bf;--header-dark-2:#d9c0a6;--success:#28a745;--danger:#dc3545;--info:#17a2b8;--warning:#ffc107}
+    [data-theme="dark"]{--bg-gradient-1:#1a1a1a;--bg-gradient-2:#2d2d2d;--card:#2a2a2a;--muted:#b8a088;--accent:#f4e4d7;--brown:#c9966b;--brown-hover:#e0b080;--text:#e8dcc8;--shadow:rgba(0,0,0,0.3);--shadow-lg:rgba(0,0,0,0.5);--border:#4a4a4a;--header-dark:#3a3a3a;--header-dark-2:#2a2a2a}
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow-x:hidden}
-    body{font-family:'Cairo',system-ui,sans-serif;background:linear-gradient(135deg,var(--bg-gradient-1) 0%,var(--bg-gradient-2) 100%);background-attachment:fixed;color:var(--text);line-height:1.7;padding:0}
-    .container{max-width:1100px;margin:0 auto;padding:20px}
-    header{background:linear-gradient(180deg,var(--header-dark) 0%, var(--header-dark-2) 100%);border-bottom:1px solid rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;box-shadow:0 6px 28px rgba(0,0,0,0.08)}
-    .header-content{max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    body{font-family:'Cairo',system-ui,sans-serif;background:linear-gradient(135deg,var(--bg-gradient-1) 0%,var(--bg-gradient-2) 100%);background-attachment:fixed;color:var(--text);line-height:1.7;padding:0;transition:background 0.3s ease,color 0.3s ease}
+    .container{max-width:1200px;margin:0 auto;padding:20px}
+    header{background:linear-gradient(180deg,var(--header-dark) 0%, var(--header-dark-2) 100%);border-bottom:1px solid rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;box-shadow:0 6px 28px rgba(0,0,0,0.08);transition:all 0.3s ease}
+    .header-content{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
     .brand{display:flex;align-items:center;gap:12px}
     .brand-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;background:rgba(58,31,11,0.06);color:var(--brown);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
     .brand h1{font-size:20px;font-weight:700;color:var(--accent)}
-    .brand p{font-size:13px;color:rgba(0,0,0,0.45);margin-top:2px}
+    .brand p{font-size:13px;color:var(--muted);margin-top:2px}
     nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:1.4px solid var(--brown);background:#fff;color:#5a3f2a;transition:all .18s ease}
-    .btn:hover{background:#f5ebe0;border-color:var(--brown-hover)}
+    .btn{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:1.4px solid var(--brown);background:var(--card);color:var(--text);transition:all .18s ease}
+    .btn:hover{background:var(--brown);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px var(--shadow)}
+    .btn-primary{background:var(--brown);color:#fff;border-color:var(--brown)}
+    .btn-primary:hover{background:var(--brown-hover)}
+    .btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}
+    .btn-success{background:var(--success);color:#fff;border-color:var(--success)}
     .small{padding:6px 10px;font-size:13px}
+    .icon-btn{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:18px;position:relative;border:1.4px solid var(--brown);background:var(--card);color:var(--text)}
     .menu-container{position:relative}
-    .dropdown-menu{position:absolute;top:calc(100% + 8px);left:0;background:#fff;border-radius:10px;box-shadow:0 12px 32px rgba(0,0,0,0.15);border:1px solid var(--border);min-width:240px;display:none;z-index:200;padding:6px}
+    .dropdown-menu{position:absolute;top:calc(100% + 8px);left:0;background:var(--card);border-radius:10px;box-shadow:0 12px 32px var(--shadow-lg);border:1px solid var(--border);min-width:240px;display:none;z-index:200;padding:6px;max-height:500px;overflow-y:auto}
     .dropdown-menu.show{display:block}
-    .menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:600;color:#5a3f2a;cursor:pointer;transition:all .15s ease;border:none;background:transparent;width:100%;text-align:right}
-    .menu-item:hover{background:#f5ebe0}
+    .menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s ease;border:none;background:transparent;width:100%;text-align:right}
+    .menu-item:hover{background:rgba(139,94,60,0.1)}
     .menu-divider{height:1px;background:var(--border);margin:6px 0}
-    .hero{background:linear-gradient(135deg,rgba(255,255,255,0.92) 0%,rgba(255,251,245,0.92) 100%);border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
-    input[type="search"],input[type="text"],input[type="email"],input[type="url"],input[type="password"],textarea{padding:10px 12px;border-radius:8px;border:1.5px solid #e8dcc8;font-size:15px;background:#fff;width:100%}
+    .hero{background:var(--card);border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
+    input[type="search"],input[type="text"],input[type="email"],input[type="url"],input[type="password"],textarea,select{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:15px;background:var(--card);color:var(--text);width:100%;font-family:'Cairo',sans-serif;transition:border 0.2s ease}
+    input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brown)}
+    .search-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
     .tags-wrapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .tag{padding:7px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.2px solid #d4c4b0;background:#fff;color:#5a3f2a;transition:all .18s ease}
-    .tag:hover{background:#f5ebe0;border-color:var(--brown)}
-    .tag.active{background:#f5ebe0;border-color:var(--brown)}
-    .tag-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:#f5ebe0;border:1px solid var(--brown);border-radius:8px;font-size:13px;color:var(--brown);font-weight:600}
-    .tag-badge button{background:none;border:none;color:var(--brown);cursor:pointer;font-size:16px;padding:0;line-height:1}
-    .audio-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
-    .audio-item{display:flex;align-items:center;gap:8px;padding:8px;background:#f9f9f9;border-radius:8px;border:1px solid var(--border);font-size:13px}
-    .audio-item button{background:#d9534f;color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px}
-    .upload-progress{margin-top:10px;padding:10px;background:#f0f8ff;border-radius:8px;border:1px solid #4a90e2;display:none}
-    .upload-progress.show{display:block}
-    .progress-bar{width:100%;height:20px;background:#e0e0e0;border-radius:10px;overflow:hidden;margin-top:8px}
-    .progress-fill{height:100%;background:#4a90e2;transition:width 0.3s ease;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600}
-    .sync-status{position:fixed;bottom:20px;right:20px;padding:10px 16px;background:rgba(139,94,60,0.95);color:#fff;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(0,0,0,0.2);z-index:1000;display:none}
-    .sync-status.show{display:flex}
-    .profile-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:15px}
-    .profile-item{padding:12px;background:#f5ebe0;border-radius:8px;cursor:pointer;transition:all .2s ease;border:2px solid transparent}
-    .profile-item:hover{border-color:var(--brown);background:#ffe8d6}
-    .profile-item-name{font-weight:700;color:var(--accent);font-size:15px}
-    .profile-item-email{font-size:12px;color:var(--muted);margin-top:2px}
-    .muted{color:var(--muted);font-size:13px}
+    .tag{padding:7px 12px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:1.2px solid var(--border);background:var(--card);color:var(--text);transition:all .18s ease}
+    .tag:hover{background:var(--brown);color:#fff;border-color:var(--brown);transform:translateY(-2px)}
+    .tag.active{background:var(--brown);color:#fff;border-color:var(--brown)}
+    .tag-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(139,94,60,0.1);border:1px solid var(--brown);border-radius:8px;font-size:13px;color:var(--brown);font-weight:600}
+    .tag-badge button{background:none;border:none;color:var(--brown);cursor:pointer;font-size:16px;padding:0;line-height:1;transition:transform 0.2s}
+    .tag-badge button:hover{transform:scale(1.3)}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:18px}
-    .card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 20px rgba(0,0,0,0.04);border:1px solid var(--border);transition:all .22s;display:flex;gap:10px;position:relative}
-    .card:hover{transform:translateY(-4px);box-shadow:0 12px 28px rgba(0,0,0,0.08)}
-    .card .drag-handle{flex:0 0 36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:grab;font-size:17px;color:var(--brown)}
-    .card .content{flex:1}
-    .card h3{font-family:'Amiri',serif;margin:0 0 6px 0;color:var(--accent);font-size:19px;font-weight:700}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 8px 20px var(--shadow);border:1px solid var(--border);transition:all .22s;position:relative}
+    .card:hover{transform:translateY(-4px);box-shadow:0 12px 28px var(--shadow-lg)}
+    .card-author{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;transition:opacity 0.2s}
+    .card-author:hover{opacity:0.8}
+    .avatar-small{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--brown)}
+    .card h3{font-family:'Amiri',serif;margin:0 0 6px 0;color:var(--accent);font-size:20px;font-weight:700;padding-bottom:8px;border-bottom:2px solid var(--border)}
     .excerpt{font-family:'Amiri',serif;color:var(--muted);line-height:1.9;font-size:16px;min-height:56px}
-    .card-footer{margin-top:8px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .card-footer{margin-top:10px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+    .card-indicators{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+    .card-indicators span{display:flex;align-items:center;gap:4px}
+    .like-btn{background:none;border:none;cursor:pointer;font-size:20px;transition:all .2s;padding:4px 8px;border-radius:6px;display:flex;align-items:center;gap:4px}
+    .like-btn:hover{background:rgba(220,53,69,0.1);transform:scale(1.1)}
+    .like-btn.liked{color:var(--danger)}
+    .like-count{font-size:13px;font-weight:600;color:var(--muted)}
     .card-tags{display:flex;gap:6px;flex-wrap:wrap}
     .card-tag{padding:4px 8px;border-radius:12px;font-size:12px;background:rgba(139,94,60,0.12);color:var(--brown);font-weight:700}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200;overflow-y:auto}
-    .modal-inner{background:var(--card);max-width:820px;width:100%;border-radius:12px;padding:20px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 60px rgba(0,0,0,.25);border:1px solid var(--border)}
-    .modal-title{font-family:'Amiri',serif;font-size:22px;margin-bottom:6px;color:var(--accent)}
-    .poem-text{font-family:'Amiri',serif;white-space:pre-line;font-size:18px;line-height:2;margin-top:12px;color:var(--text)}
+    /* Drag handle for cards */
+    .drag-handle{
+      position:absolute;top:10px;left:10px;width:22px;height:22px;border-radius:6px;
+      border:1px solid var(--border);background:rgba(139,94,60,0.08);display:flex;align-items:center;justify-content:center;
+      cursor:grab;font-size:14px;color:var(--muted);z-index:10
+    }
+    .drag-handle:active{cursor:grabbing}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200;overflow-y:auto}
+    .modal-inner{background:var(--card);max-width:900px;width:100%;border-radius:12px;padding:20px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 60px rgba(0,0,0,.4);border:1px solid var(--border)}
+    .modal-title{font-family:'Amiri',serif;font-size:24px;margin-bottom:8px;color:var(--accent)}
+    .poem-text{font-family:'Amiri',serif;white-space:pre-line;font-size:18px;line-height:2;margin-top:12px;color:var(--text);padding:15px;background:rgba(139,94,60,0.03);border-radius:8px;border-right:4px solid var(--brown)}
     .media-container{margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
-    .media-item{margin-bottom:12px;background:#f9f9f9;padding:10px;border-radius:8px;border:1px solid var(--border)}
-    .media-item audio, .media-item video, .media-item iframe{width:100%;border-radius:6px;max-height:400px}
-    .comments-section{margin-top:20px;border-top:2px solid var(--border);padding-top:20px}
-    .comments-header{display:flex;align-items:center;gap:8px;margin-bottom:16px;font-size:16px;font-weight:700;color:var(--accent)}
-    .comment-form{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;padding:12px;background:#f9f9f9;border-radius:8px;border:1px solid var(--border)}
-    .comment-input{padding:10px;border-radius:6px;border:1.5px solid var(--border);font-size:14px;resize:vertical;min-height:60px;font-family:'Cairo',sans-serif}
+    .media-item{margin-bottom:12px;background:rgba(139,94,60,0.03);padding:10px;border-radius:8px;border:1px solid var(--border)}
+    .media-item audio,.media-item video,.media-item iframe,.media-item img{width:100%;border-radius:6px;max-height:600px;object-fit:contain;cursor:pointer}
+    .media-item video,.media-item img{max-width:800px;margin:0 auto;display:block}
+    .media-item iframe{min-height:400px}
+    comments-section{margin-top:20px;border-top:2px solid var(--border);padding-top:20px}
+    .comments-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:16px;font-weight:700;color:var(--accent)}
+    .comment-form{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;padding:12px;background:rgba(139,94,60,0.03);border-radius:8px;border:1px solid var(--border)}
+    .comment-input{padding:10px;border-radius:6px;border:1.5px solid var(--border);font-size:14px;resize:vertical;min-height:60px;background:var(--card)}
     .comment-submit{align-self:flex-end;padding:8px 16px;background:var(--brown);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;transition:all .2s}
-    .comment-submit:hover{background:var(--brown-hover)}
+    .comment-submit:hover{background:var(--brown-hover);transform:translateY(-1px)}
     .comments-list{display:flex;flex-direction:column;gap:12px}
-    .comment{background:#fff;padding:12px;border-radius:8px;border:1px solid var(--border)}
+    .comment{background:var(--card);padding:12px;border-radius:8px;border:1px solid var(--border)}
     .comment-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-    .comment-author{font-weight:700;color:var(--accent);font-size:14px}
+    .comment-author{display:flex;align-items:center;gap:8px}
+    .comment-author-name{font-weight:700;color:var(--accent);font-size:14px}
     .comment-time{font-size:12px;color:var(--muted)}
     .comment-text{font-size:14px;line-height:1.6;color:var(--text)}
     .comment-actions{margin-top:8px;display:flex;gap:8px}
     .comment-action-btn{background:none;border:none;color:var(--brown);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all .2s}
-    .comment-action-btn:hover{background:#f5ebe0}
-    .no-comments{text-align:center;padding:20px;color:var(--muted);font-size:14px}
-    .confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:18px;z-index:1400}
+    .comment-action-btn:hover{background:rgba(139,94,60,0.1)}
+    .no-comments{text-align:center;padding:30px;color:var(--muted);font-size:14px}
+    .sync-status{position:fixed;bottom:20px;right:20px;padding:10px 16px;background:var(--brown);color:#fff;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px var(--shadow-lg);z-index:1000;display:none}
+    .sync-status.show{display:flex}
+    .confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;padding:18px;z-index:1400}
     .confirm-modal.show{display:flex}
-    .confirm-box{background:var(--card);border-radius:12px;padding:24px;max-width:450px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.3);border:1px solid var(--border)}
+    .confirm-box{background:var(--card);border-radius:12px;padding:24px;max-width:450px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.4);border:1px solid var(--border)}
     .confirm-message{font-size:16px;margin-bottom:20px;line-height:1.6;white-space:pre-line}
     .confirm-buttons{display:flex;gap:10px;justify-content:flex-end}
-    .tab-buttons{display:flex;gap:8px;margin-bottom:15px;border-bottom:2px solid var(--border);padding-bottom:8px}
-    .tab-btn{padding:8px 16px;border:none;background:transparent;color:var(--muted);font-weight:600;cursor:pointer;border-radius:6px 6px 0 0;transition:all .2s}
-    .tab-btn.active{background:var(--brown);color:#fff}
-    .error-message{color:#d9534f;font-size:13px;margin-top:4px;display:none}
+    .error-message{color:var(--danger);font-size:13px;margin-top:4px;display:none}
     .error-message.show{display:block}
-    footer{text-align:center;color:var(--muted);margin-top:36px;padding:20px;font-size:13px}
-    @media (max-width:768px){.grid{grid-template-columns:1fr}.dropdown-menu{right:0;left:auto}}
+    .empty-state{margin-top:18px;padding:40px 18px;border-radius:12px;border:2px dashed var(--border);text-align:center}
+    .empty-icon{font-size:48px;margin-bottom:10px}
+    .audio-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+    .audio-item{display:flex;align-items:center;gap:8px;padding:8px;background:rgba(139,94,60,0.05);border-radius:8px;border:1px solid var(--border);font-size:13px;justify-content:space-between}
+    .audio-item button{background:var(--danger);color:#fff;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:12px}
+    .upload-progress{margin-top:10px;padding:10px;background:rgba(74,144,226,0.1);border-radius:8px;border:1px solid #4a90e2;display:none}
+    .upload-progress.show{display:block}
+    .progress-bar{width:100%;height:20px;background:#e0e0e0;border-radius:10px;overflow:hidden;margin-top:8px}
+    .progress-fill{height:100%;background:linear-gradient(90deg,#4a90e2,#357abd);transition:width 0.3s ease;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:600}
+
+    .profile-list{display:flex;flex-direction:column;gap:8px;max-height:300px;overflow-y:auto;margin-bottom:15px}
+    .profile-item{padding:12px;background:rgba(139,94,60,0.05);border-radius:8px;cursor:pointer;transition:all .2s ease;border:2px solid transparent}
+    .profile-item:hover{border-color:var(--brown);background:rgba(139,94,60,0.1)}
+    .profile-item-name{font-weight:700;color:var(--accent);font-size:15px}
+    .profile-item-email{font-size:12px;color:var(--muted);margin-top:2px}
+    .image-preview-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .image-preview-item{position:relative;width:100px;height:100px;border-radius:8px;overflow:hidden;border:2px solid var(--border)}
+    .image-preview-item img{width:100%;height:100%;object-fit:cover}
+    .image-preview-remove{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;background:var(--danger);color:#fff;border:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+    .dm-modal{max-width:900px}
+    .dm-layout{display:grid;grid-template-columns:280px 1fr;gap:16px}
+    .dm-sidebar{border:1px solid var(--border);border-radius:10px;background:var(--card);height:60vh;overflow:auto}
+    .dm-list-item{padding:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer}
+    .dm-list-item:hover{background:rgba(139,94,60,0.08)}
+    .dm-content{border:1px solid var(--border);border-radius:10px;background:var(--card);height:60vh;display:flex;flex-direction:column}
+    .dm-messages{flex:1;overflow:auto;padding:12px}
+    .dm-message{margin-bottom:10px;max-width:70%}
+    .dm-message.me{margin-left:auto;text-align:right}
+    .dm-message .bubble{display:inline-block;padding:8px 10px;border-radius:12px;background:rgba(139,94,60,0.08)}
+    .dm-message.me .bubble{background:var(--brown);color:#fff}
+    .dm-input{display:flex;gap:8px;padding:10px;border-top:1px solid var(--border)}
+    .dm-input textarea{flex:1;min-height:60px}
+
+    /* UI polish overrides */
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .poem-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .poem-images-grid img { width: 100%; height: 300px; object-fit: cover; border-radius: 8px; transition: transform 0.2s ease; }
+    .poem-images-grid img:hover { transform: scale(1.02); }
+    .media-resizable { position: relative; display: inline-block; max-width: 100%; margin-bottom: 15px; }
+    .media-resizable img, .media-resizable video { display: block; border-radius: 8px; box-shadow: 0 4px 12px var(--shadow); }
+    .media-size-controls { position: absolute; top: 10px; right: 10px; z-index: 10; }
+    .media-size-btn {
+      background: rgba(0,0,0,0.75); color: white; border: 1px solid rgba(255,255,255,0.3);
+      padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
+      transition: all 0.2s; backdrop-filter: blur(4px);
+    }
+    .media-size-btn:hover { background: rgba(139,94,60,0.9); transform: scale(1.05); }
+    .media-item video { max-height: 500px; width: auto; max-width: 100%; }
+    .media-item audio { width: 100%; max-width: 600px; margin: 0 auto; display: block; }
+
+    .profile-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 12px; margin-top: 15px; }
+    .stat-item { text-align: center; padding: 12px; background: var(--card); border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: transform 0.2s; }
+    .stat-item:hover { transform: translateY(-2px); }
+    .stat-number { font-size: 20px; font-weight: 700; color: var(--brown); }
+    .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+
+    .tabs { display: flex; border-bottom: 2px solid var(--border); margin-top: 20px; }
+    .tab { flex: 1; padding: 10px; text-align: center; font-weight: 600; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+    .tab.active { border-color: var(--brown); color: var(--brown); }
+    .tabs .tab span { font-weight: normal; font-size: 12px; color: var(--muted); }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Modal action menu (kebab) */
+    .actions-menu-container{position:relative}
+    .actions-trigger{
+      background:var(--card); border:1.5px solid var(--border); color:var(--text);
+      padding:6px 10px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px
+    }
+    .actions-dropdown{
+      position:absolute; top:calc(100% + 8px); right:0; background:var(--card); border:1px solid var(--border);
+      border-radius:10px; box-shadow:0 12px 32px var(--shadow-lg); min-width:220px; z-index:1500; display:none; padding:6px
+    }
+    .actions-dropdown.show{display:block}
+    .action-item{
+      display:flex; align-items:center; gap:8px; width:100%; padding:8px 10px; border-radius:8px; cursor:pointer;
+      background:transparent; border:none; font-size:14px; font-weight:600; color:var(--text); text-align:right
+    }
+    .action-item:hover{background:rgba(139,94,60,0.1)}
+
+    @media (max-width:768px){
+      .grid{grid-template-columns:1fr}
+      .dropdown-menu{right:0;left:auto}
+      .search-filters{grid-template-columns:1fr}
+      .dm-layout{grid-template-columns:1fr}
+      .dm-sidebar{height:30vh}
+      .dm-content{height:50vh}
+    }/* 🟢 الكود الموحد لجميع الأزرار الأيقونية (Love, Close, Menu) */
+.icon-btn {
+    background: var(--card);
+    border: 1.5px solid var(--border); /* توحيد سمك ولون الحدود */
+    color: var(--text);
+    width: 40px; /* حجم موحد */
+    height: 40px; /* حجم موحد */
+    border-radius: 50%; /* لجعلها دائرية */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.2s, border-color 0.2s;
+    font-size: 18px;
+}
+
+/* Modal action menu (Menu button icon style) */
+.actions-menu-container{position:relative}
+
+/* 🟢 تعديل زر الخيارات ليكون أيقونة دائرية متطابقة */
+.actions-trigger.icon-btn { /* استخدام الفئة الجديدة icon-btn */
+    padding: 0; /* إلغاء البادينج القديم */
+    border-radius: 50%;
+    /* الأزرار الأخرى تُعدل بالـ icon-btn في الأعلى */
+}
+
+/* 🟢 زر الإعجاب (مع العدد) - Override لجعله بيضاويًا */
+.like-btn-with-count {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    
+    width: auto !important;
+    min-width: 40px; 
+    height: 40px; /* تحديد الارتفاع */
+    padding: 0 8px; /* مسافة داخلية أفقية */
+    border-radius: 20px; /* لجعله بيضاويًا */
+
+    /* التأكد من استخدام نفس الحدود */
+    border: 1.5px solid var(--border); 
+    background: var(--card);
+}
+
+.like-count {
+    font-size: 14px;
+    margin-left: 4px; /* مسافة بين القلب والعدد */
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+}
+
+.like-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+/* ... باقي الـ CSS الخاص بـ .actions-dropdown و @media ... */
+/* يجب ألا يتم مسحها، يجب فقط استبدال الأجزاء التي عدلناها */
   </style>
 </head>
 <body>
@@ -104,22 +259,48 @@
         <div class="brand-icon">☕</div>
         <div>
           <h1>Mody Poetry</h1>
-          <p class="muted">شارك قصائدك مع الأغاني والفيديوهات</p>
+          <p class="muted">منصة شاملة للشعر والأدب</p>
         </div>
       </div>
       <nav>
-        <button class="btn small" id="btnAdd">✍️ أضف</button>
+        <button class="icon-btn" id="btnThemeToggle" title="تبديل السمة">🌙</button>
+
+        <!-- Add poem: guard if not logged in -->
+        <button class="btn small" id="btnAdd" title="أضف قصيدة">✏️ أضف</button>
+
+        <div class="menu-container">
+          <button class="icon-btn" id="btnNotifications" title="الإشعارات">
+            🔔
+            <span class="notification-badge" id="notifBadge" style="display:none">0</span>
+          </button>
+          <div class="dropdown-menu" id="notificationsMenu" style="width:380px">
+            <div style="padding:10px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <span>الإشعارات</span>
+              <button class="btn small" id="clearAllNotifications" style="padding:4px 8px;font-size:11px">مسح الكل</button>
+            </div>
+            <div id="notificationsList" style="max-height:400px;overflow-y:auto;padding:6px"></div>
+          </div>
+        </div>
+
+        <div class="menu-container">
+          <button class="icon-btn" id="btnDM" title="الرسائل المباشرة">
+            💌
+            <span class="notification-badge" id="dmBadge" style="display:none">0</span>
+          </button>
+        </div>
+
         <div class="menu-container">
           <button class="btn small" id="menuToggle">☰ القائمة</button>
           <div class="dropdown-menu" id="dropdownMenu">
-<button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي</button>
+            <button class="menu-item" id="btnMyProfile">👤 ملفي الشخصي</button>
+            <button class="menu-item" id="btnFavorites">⭐ القصائد المفضلة</button>
+            <button class="menu-item" id="btnFollowing">👥 المتابَعون</button>
             <div class="menu-divider"></div>
+            <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي</button>
             <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
-            <div class="menu-divider"></div>
             <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
             <div class="menu-divider"></div>
             <button class="menu-item" id="btnDeleteProfile">🗑️ حذف الملف</button>
-            <div class="menu-divider"></div>
             <button class="menu-item" id="btnLogout">🚪 تسجيل خروج</button>
           </div>
         </div>
@@ -130,54 +311,59 @@
   <div id="syncStatus" class="sync-status"><span id="syncText">🔄 جاري المزامنة...</span></div>
 
   <div id="userInfoDisplay" style="display:none;padding:10px 20px;background:rgba(139,94,60,0.1);border-bottom:1px solid var(--border)">
-    <div style="max-width:1100px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+    <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
       <div><span style="font-weight:600">👤 مرحباً، </span><span id="currentUserName" style="color:var(--brown)">---</span></div>
     </div>
   </div>
 
   <div class="container">
     <section class="hero">
-      <input id="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص..." />
+      <label for="searchInput" style="display:none">البحث</label>
+      <input id="searchInput" name="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص... (استخدم @اسم_المستخدم واضغط Enter لإنشاء وسم)" />
       <div id="tagsWrapper" class="tags-wrapper"></div>
+      <div id="activeSearchTags" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
     </section>
 
     <section>
       <div id="poemGrid" class="grid"></div>
-      <div id="emptyState" style="display:none;margin-top:18px;padding:18px;border-radius:12px;border:2px dashed var(--border);text-align:center">
-        <div style="font-size:28px">📜</div>
+      <div id="emptyState" class="empty-state" style="display:none">
+        <div class="empty-icon">📜</div>
         <div style="font-weight:700;margin-top:8px">لا توجد قصائد</div>
         <div class="muted" style="margin-top:6px">اضغط "أضف" لإضافة قصيدة جديدة</div>
       </div>
     </section>
 
+    <!-- Auth modal -->
     <div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1500;align-items:center;justify-content:center;padding:18px">
       <div style="background:var(--card);border-radius:12px;padding:20px;max-width:450px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);border:1px solid var(--border)">
         <h3 style="margin:0 0 15px 0">🔐 تسجيل الدخول / إنشاء حساب</h3>
-        
-        <div class="tab-buttons">
-          <button class="tab-btn active" id="tabLogin">تسجيل دخول</button>
-          <button class="tab-btn" id="tabSignup">إنشاء حساب</button>
+        <div class="tabs" style="border-bottom:2px solid var(--border);margin-bottom:15px;display:flex;gap:8px">
+          <button class="tab active" id="tabLogin">تسجيل دخول</button>
+          <button class="tab" id="tabSignup">إنشاء حساب</button>
         </div>
-
         <div id="loginForm">
           <div id="loginProfilesList" class="profile-list" style="max-height:250px"></div>
-          <div style="margin-top:15px;text-align:center;color:var(--muted);font-size:13px">
-            اختر حسابك من القائمة أعلاه
-          </div>
+          <div style="margin-top:15px;text-align:center;color:var(--muted);font-size:13px">اختر حسابك من القائمة أعلاه</div>
         </div>
-
         <div id="signupForm" style="display:none">
           <div style="display:flex;flex-direction:column;gap:10px">
-            <input id="signupUsername" type="text" placeholder="اسم المستخدم * (يجب أن يكون فريداً)" required />
+            <label for="signupUsername" style="font-size:14px;font-weight:600">اسم المستخدم *</label>
+            <input id="signupUsername" name="signupUsername" type="text" placeholder="اسم المستخدم (يجب أن يكون فريداً)" required autocomplete="username" />
             <div id="usernameError" class="error-message">⚠️ اسم المستخدم موجود بالفعل! يرجى اختيار اسم آخر.</div>
-            <input id="signupPassword" type="password" placeholder="كلمة المرور *" required />
+
+            <label for="signupPassword" style="font-size:14px;font-weight:600">كلمة المرور *</label>
+            <input id="signupPassword" name="signupPassword" type="password" placeholder="كلمة المرور (4 أحرف على الأقل)" required autocomplete="new-password" />
             <div id="passwordError" class="error-message">⚠️ يرجى إدخال كلمة المرور (4 أحرف على الأقل)</div>
-            <input id="signupEmail" type="email" placeholder="بريدك الإلكتروني (اختياري)" />
-            <textarea id="signupBio" placeholder="نبذة عنك (اختياري)" style="min-height:80px"></textarea>
+
+            <label for="signupEmail" style="font-size:14px;font-weight:600">البريد الإلكتروني (اختياري)</label>
+            <input id="signupEmail" name="signupEmail" type="email" placeholder="بريدك الإلكتروني" autocomplete="email" />
+
+            <label for="signupBio" style="font-size:14px;font-weight:600">نبذة عنك (اختياري)</label>
+            <textarea id="signupBio" name="signupBio" placeholder="نبذة عنك" style="min-height:80px"></textarea>
+
             <button class="btn" id="btnSignup">إنشاء الحساب</button>
           </div>
         </div>
-
         <div id="passwordForm" style="display:none">
           <div style="margin-bottom:15px">
             <button class="btn small" id="btnBackToProfiles">← العودة للحسابات</button>
@@ -192,43 +378,59 @@
       </div>
     </div>
 
+    <!-- Add/Edit poem modal -->
     <div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1300;align-items:center;justify-content:center;padding:18px">
       <div style="background:var(--card);border-radius:12px;padding:16px;max-width:720px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);border:1px solid var(--border);max-height:90vh;overflow-y:auto">
-        <h3 style="margin:0 0 10px 0" id="modalFormTitle">✍️ أضف قصيدة</h3>
+        <h3 style="margin:0 0 10px 0" id="modalFormTitle">✏️ أضف قصيدة</h3>
         <form id="poemForm">
           <div style="display:flex;flex-direction:column;gap:8px">
-            <input id="inputTitle" type="text" placeholder="عنوان القصيدة *" required />
-            <input id="inputAuthor" type="text" placeholder="المؤلف / الراوي" />
-            <textarea id="inputText" placeholder="نص القصيدة *" required style="min-height:140px;font-family:Amiri,serif"></textarea>
-            <input id="inputExcerpt" type="text" placeholder="مقتطف (اختياري)" />
-            <div>
-              <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الوسوم (اضغط Enter)</label>
-              <div id="tagsDisplay" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-              <input id="inputTagField" type="text" placeholder="اكتب وسم واضغط Enter" />
+            <label for="inputTitle" style="font-size:14px;font-weight:600;margin-bottom:4px">عنوان القصيدة *</label>
+            <input id="inputTitle" name="poemTitle" type="text" placeholder="عنوان القصيدة" required />
+
+            <label for="inputAuthor" style="font-size:14px;font-weight:600;margin-bottom:4px">المؤلف / الراوي</label>
+            <input id="inputAuthor" name="poemAuthor" type="text" placeholder="المؤلف / الراوي" />
+
+            <label for="inputText" style="font-size:14px;font-weight:600;margin-bottom:4px">نص القصيدة *</label>
+            <textarea id="inputText" name="poemText" placeholder="نص القصيدة" required style="min-height:140px;font-family:Amiri,serif"></textarea>
+
+            <label for="inputExcerpt" style="font-size:14px;font-weight:600;margin-bottom:4px">مقتطف (اختياري)</label>
+            <input id="inputExcerpt" name="poemExcerpt" type="text" placeholder="مقتطف" />
+
+            <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الوسوم (اضغط Enter)</label>
+            <div id="tagsDisplay" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
+            <input id="inputTagField" type="text" placeholder="اكتب وسم واضغط Enter" />
+          </div>
+
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">🖼️ الصور</label>
+            <input type="file" id="inputImages" accept="image/*" multiple style="font-size:13px" />
+            <div id="imagesPreview" class="image-preview-grid"></div>
+          </div>
+
+          <div>
+            <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">🎤 الوسائط (أغاني / فيديوهات)</label>
+            <div id="audioDisplay" class="audio-list"></div>
+            <div style="margin-top:8px"><input type="file" id="inputAudioFile" accept="audio/*,video/*" multiple style="font-size:13px" /></div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <input id="inputAudioLink" type="url" placeholder="أو الصق رابط (YouTube, SoundCloud, إلخ)" style="flex:1" />
+              <button type="button" id="btnAddAudioLink" class="btn small">➕ إضافة</button>
             </div>
-            <div>
-              <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">📤 الوسائط (أغاني / فيديوهات)</label>
-              <div id="audioDisplay" class="audio-list"></div>
-              <div style="margin-top:8px"><input type="file" id="inputAudioFile" accept="audio/*,video/*" multiple style="font-size:13px" /></div>
-              <div style="display:flex;gap:8px;margin-top:8px">
-                <input id="inputAudioLink" type="url" placeholder="أو الصق رابط (YouTube, SoundCloud, إلخ)" style="flex:1" />
-                <button type="button" id="btnAddAudioLink" class="btn small">➕ إضافة</button>
-              </div>
-              <div id="uploadProgress" class="upload-progress">
-                <div id="uploadText" style="font-size:13px;font-weight:600;color:#4a90e2">جاري الرفع...</div>
-                <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%">0%</div></div>
-              </div>
-              <div style="margin-top:6px;font-size:12px;color:var(--muted)">💡 يمكنك رفع ملفات أو إضافة روابط</div>
+            <div id="uploadProgress" class="upload-progress">
+              <div id="uploadText" style="font-size:13px;font-weight:600;color:#4a90e2">جاري الرفع...</div>
+              <div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%">0%</div></div>
             </div>
-            <div style="display:flex;gap:8px;justify-content:flex-end">
-              <button type="button" class="btn" id="btnCancelAdd">إلغاء</button>
-              <button type="submit" class="btn">نشر القصيدة 📤</button>
-            </div>
+            <div style="margin-top:6px;font-size:12px;color:var(--muted)">💡 يمكنك رفع ملفات أو إضافة روابط</div>
+          </div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button type="button" class="btn" id="btnCancelAdd">إلغاء</button>
+            <button type="submit" class="btn">نشر القصيدة 📤</button>
           </div>
         </form>
       </div>
     </div>
 
+    <!-- Confirm modal -->
     <div id="confirmModal" class="confirm-modal">
       <div class="confirm-box">
         <div id="confirmMessage" class="confirm-message"></div>
@@ -237,13 +439,14 @@
     </div>
   </div>
 
-  <footer>© <span id="year"></span> مجنون الشِعر — Powered by Firebase 🔥</footer>
+  <footer>© <span id="year"></span> مجنون الشعر – Powered by Firebase 🔥</footer>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
     const app = initializeApp({
       apiKey: "AIzaSyANYJJ3gTxEgeaj731npdx37OHd4Xf3t70",
       authDomain: "modypoems.firebaseapp.com",
@@ -260,13 +463,48 @@ import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, de
     const USER_KEY = 'mody_current_user';
     const HIDDEN_KEY_PREFIX = 'mody_hidden_poems';
     const ALL_USERS_KEY = 'mody_all_users';
-    let poems = [], originalPoems = null, hiddenPoems = [], allUsers = [];
-    let isDragging = false, activeTag = null, editingPoem = null;
-    let currentTags = [], currentAudios = [], currentUser = null, isUpdatingFromFirebase = false;
+    const FAVORITES_KEY = 'mody_favorites';
+    const FOLLOWING_KEY = 'mody_following';
+    const THEME_KEY = 'mody_theme';
+
+    let poems = [];
+    let hiddenPoems = [];
+    let allUsers = [];
+    let favorites = [];
+    let following = [];
+    let notifications = [];
+    let isDragging = false;
+    let activeSearchTags = [];
+    let editingPoem = null;
+    let currentTags = [];
+    let currentAudios = [];
+    let currentImages = [];
+    let currentUser = null;
+    let isUpdatingFromFirebase = false;
     let selectedUserForLogin = null;
 
-    const year = document.getElementById('year');
-    year.textContent = new Date().getFullYear();
+    let isRendering = false;
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      const btn = document.getElementById('btnThemeToggle');
+      btn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+      btn.title = savedTheme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي';
+    }
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem(THEME_KEY, newTheme);
+      const btn = document.getElementById('btnThemeToggle');
+      btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+      btn.title = newTheme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي';
+    }
+    document.getElementById('btnThemeToggle').addEventListener('click', toggleTheme);
+    initTheme();
 
     function hashPassword(password) {
       let hash = 0;
@@ -286,112 +524,1613 @@ import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, de
           allUsers = Object.values(users);
           saveAllUsers();
         }
-      } catch (error) {
-        console.error('Error loading users:', error);
-      }
+      } catch (error) { console.error('Error loading users:', error); }
     }
-
     function loadAllUsers() {
       const stored = localStorage.getItem(ALL_USERS_KEY);
-      if (stored) try { allUsers = JSON.parse(stored); } catch (e) { allUsers = []; }
+      if (stored) { try { allUsers = JSON.parse(stored); } catch { allUsers = []; } }
     }
-
-    function saveAllUsers() {
-      localStorage.setItem(ALL_USERS_KEY, JSON.stringify(allUsers));
-    }
-
+    function saveAllUsers() { localStorage.setItem(ALL_USERS_KEY, JSON.stringify(allUsers)); }
     function checkUserNameExists(username, excludeId = null) {
       return allUsers.some(u => u.username.toLowerCase().trim() === username.toLowerCase().trim() && u.id !== excludeId);
     }
+
+    function loadFavorites() {
+      if (!currentUser) return;
+      const key = FAVORITES_KEY + '_' + currentUser.id;
+      const stored = localStorage.getItem(key);
+      if (stored) { try { favorites = JSON.parse(stored); } catch { favorites = []; } }
+    }
+    function saveFavorites() {
+      if (!currentUser) return;
+      const key = FAVORITES_KEY + '_' + currentUser.id;
+      localStorage.setItem(key, JSON.stringify(favorites));
+    }
+    function toggleFavorite(poemId) {
+      const index = favorites.indexOf(poemId);
+      if (index > -1) { favorites.splice(index, 1); showSyncStatus('❌ تمت إزالة القصيدة من المفضلة', 2000); }
+      else { favorites.push(poemId); showSyncStatus('⭐ تمت إضافة القصيدة للمفضلة', 2000); }
+      saveFavorites();
+    }
+    function isFavorite(poemId) { return favorites.includes(poemId); }
+
+    function loadFollowing() {
+      if (!currentUser) return;
+      const key = FOLLOWING_KEY + '_' + currentUser.id;
+      const stored = localStorage.getItem(key);
+      if (stored) { try { following = JSON.parse(stored); } catch { following = []; } }
+    }
+    function saveFollowing() {
+      if (!currentUser) return;
+      const key = FOLLOWING_KEY + '_' + currentUser.id;
+      localStorage.setItem(key, JSON.stringify(following));
+    }
+    function toggleFollow(userId) {
+      const index = following.indexOf(userId);
+      if (index > -1) { following.splice(index, 1); showSyncStatus('👋 تم إلغاء المتابعة', 2000); }
+      else { following.push(userId); showSyncStatus('✅ تمت المتابعة بنجاح', 2000); }
+      saveFollowing();
+    }
+    function isFollowing(userId) { return following.includes(userId); }
 
     function loadHiddenPoems() {
       if (!currentUser) return;
       const key = HIDDEN_KEY_PREFIX + '_' + currentUser.id;
       const stored = localStorage.getItem(key);
-      if (stored) try { hiddenPoems = JSON.parse(stored); } catch (e) { hiddenPoems = []; }
+      if (stored) { try { hiddenPoems = JSON.parse(stored); } catch { hiddenPoems = []; } }
     }
-
     function saveHiddenPoems() {
       if (!currentUser) return;
       const key = HIDDEN_KEY_PREFIX + '_' + currentUser.id;
       localStorage.setItem(key, JSON.stringify(hiddenPoems));
     }
-
-    function isPoemHidden(poemId) {
-      return hiddenPoems.includes(poemId);
-    }
-
+    function isPoemHidden(poemId) { return hiddenPoems.includes(poemId); }
     function toggleHidePoem(poemId) {
       const index = hiddenPoems.indexOf(poemId);
-      if (index > -1) hiddenPoems.splice(index, 1);
-      else hiddenPoems.push(poemId);
+      if (index > -1) hiddenPoems.splice(index, 1); else hiddenPoems.push(poemId);
       saveHiddenPoems();
     }
+    function isOwnPoem(poem) { return poem.userId === currentUser.id; }
+    function isOriginalModyPoem(poem) { return !poem.userId && !poem.createdBy; }
 
-    function isOwnPoem(poem) {
-      return poem.userId === currentUser.id;
+    async function toggleLike(poemId) {
+      try {
+        const likesRef = ref(database, `likes/${poemId}`);
+        const snapshot = await get(likesRef);
+        let likes = snapshot.exists() ? snapshot.val() : {};
+        if (likes[currentUser.id]) { delete likes[currentUser.id]; }
+        else {
+          likes[currentUser.id] = { username: currentUser.username, timestamp: new Date().toISOString() };
+          const poem = poems.find(p => p.id === poemId);
+          if (poem && poem.userId && poem.userId !== currentUser.id) {
+            await addNotification(poem.userId, { type: 'like', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
+          }
+        }
+        await set(likesRef, likes);
+        return Object.keys(likes).length;
+      } catch (error) { console.error('Error toggling like:', error); return 0; }
+    }
+    async function getLikesCount(poemId) {
+      try {
+        const snapshot = await get(ref(database, `likes/${poemId}`));
+        if (snapshot.exists()) return Object.keys(snapshot.val()).length;
+        return 0;
+      } catch { return 0; }
+    }
+    async function isLiked(poemId) {
+      try { const snapshot = await get(ref(database, `likes/${poemId}/${currentUser.id}`)); return snapshot.exists(); }
+      catch { return false; }
     }
 
-    function isOriginalModyPoem(poem) {
-      return !poem.userId && !poem.createdBy;
+    async function addNotification(userId, notification) {
+      try {
+        const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        await set(ref(database, `notifications/${userId}/${notifId}`), { ...notification, id: notifId, read: false });
+      } catch (error) { console.error('Error adding notification:', error); }
+    }
+    async function loadNotifications() {
+      if (!currentUser) return;
+      try {
+        const snapshot = await get(ref(database, `notifications/${currentUser.id}`));
+        if (snapshot.exists()) {
+          notifications = Object.values(snapshot.val());
+          renderNotifications();
+          updateNotificationBadge();
+        }
+      } catch (error) { console.error('Error loading notifications:', error); }
+    }
+    function renderNotifications() {
+      const container = document.getElementById('notificationsList');
+      container.innerHTML = '';
+      if (notifications.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">لا توجد إشعارات</div>';
+        return;
+      }
+      notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      notifications.forEach(notif => {
+        const div = document.createElement('div');
+        div.className = 'notification-item' + (notif.read ? '' : ' unread');
+        let icon = '🔔', text = '';
+        if (notif.type === 'like') { icon = '❤️'; text = `${notif.from} أعجب بقصيدتك "${notif.poemTitle}"`; }
+        else if (notif.type === 'comment') { icon = '💬'; text = `${notif.from} علق على قصيدتك "${notif.poemTitle}"`; }
+        else if (notif.type === 'follow') { icon = '👥'; text = `${notif.from} بدأ بمتابعتك`; }
+        else if (notif.type === 'mention') { icon = '📢'; text = `${notif.from} ذكرك في تعليق`; }
+        else if (notif.type === 'message') { icon = '💌'; text = `${notif.from} أرسل لك رسالة: "${notif.messagePreview}"`; }
+        else if (notif.type === 'new_poem') { icon = '🪶'; text = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`; }
+
+        div.innerHTML = `
+          <div class="notification-content" style="flex:1;display:flex;align-items:center;gap:10px">
+            <span style="font-size:20px">${icon}</span>
+            <div class="notification-text" style="flex:1">${text}</div>
+            <div class="notification-time" style="font-size:12px;color:var(--muted)">${formatTimeAgo(notif.timestamp)}</div>
+          </div>
+          <button class="notification-delete" onclick="event.stopPropagation();window.deleteNotification('${notif.id}')">×</button>
+        `;
+        div.onclick = async () => {
+          if (!notif.read) await markNotificationAsRead(notif.id);
+          if (notif.poemId) {
+            const poem = poems.find(p => p.id === notif.poemId);
+            if (poem) openModal(poem);
+          } else if (notif.type === 'follow' && notif.fromId) {
+            openUserProfile(notif.fromId);
+          } else if (notif.type === 'message' && notif.fromId) {
+            openDMWindow(notif.fromId);
+          }
+          document.getElementById('notificationsMenu').classList.remove('show');
+        };
+        container.appendChild(div);
+      });
+    }
+    window.deleteNotification = async function(notifId) {
+      try {
+        await set(ref(database, `notifications/${currentUser.id}/${notifId}`), null);
+        notifications = notifications.filter(n => n.id !== notifId);
+        renderNotifications();
+        updateNotificationBadge();
+        showSyncStatus('✅ تم حذف الإشعار', 1500);
+      } catch (error) { console.error('Error deleting notification:', error); }
+    };
+    document.getElementById('clearAllNotifications').addEventListener('click', async () => {
+      showConfirm('هل تريد حذف جميع الإشعارات؟', async () => {
+        try {
+          await set(ref(database, `notifications/${currentUser.id}`), null);
+          notifications = [];
+          renderNotifications();
+          updateNotificationBadge();
+          showSyncStatus('✅ تم حذف جميع الإشعارات', 2000);
+          document.getElementById('notificationsMenu').classList.remove('show');
+        } catch { showAlert('❌ فشل حذف الإشعارات'); }
+      });
+    });
+    async function markNotificationAsRead(notifId) {
+      try { await set(ref(database, `notifications/${currentUser.id}/${notifId}/read`), true);
+        const notif = notifications.find(n => n.id === notifId); if (notif) notif.read = true; updateNotificationBadge();
+      } catch (error) { console.error('Error marking notification as read:', error); }
+    }
+    function updateNotificationBadge() {
+      const unreadCount = notifications.filter(n => !n.read).length;
+      const badge = document.getElementById('notifBadge');
+      if (unreadCount > 0) { badge.textContent = unreadCount; badge.style.display = 'flex'; }
+      else badge.style.display = 'none';
     }
 
+    // DM System
+    let dmConversations = [];
+    function getConversationId(userA, userB) { return [userA, userB].sort().join('_'); }
+    async function loadDMConversations() {
+      if (!currentUser) return;
+      try {
+        const snapshot = await get(ref(database, `dm_conversations/${currentUser.id}`));
+        if (snapshot.exists()) dmConversations = Object.values(snapshot.val());
+        updateDMBadge();
+      } catch (e) {}
+    }
+    function updateDMBadge() {
+      const badge = document.getElementById('dmBadge');
+      const unread = dmConversations.filter(c => c.unreadCount && c.unreadCount > 0).length;
+      if (unread > 0) { badge.textContent = unread; badge.style.display = 'flex'; }
+      else badge.style.display = 'none';
+    }
+    async function openDMWindow(targetUserId = null) {
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+      const targetUser = targetUserId ? allUsers.find(u => u.id === targetUserId) : null;
+
+      modal.innerHTML = `
+        <div class="modal-inner dm-modal">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <h3 style="margin:0">💌 الرسائل المباشرة</h3>
+            <button class="btn small" id="closeDM">✖️ إغلاق</button>
+          </div>
+          <div class="dm-layout">
+            <div class="dm-sidebar">
+              <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;gap:8px">
+                <input id="dmSearch" type="text" placeholder="ابحث عن مستخدم..." />
+                <button class="btn small" id="dmStartNew">بدء محادثة</button>
+              </div>
+              <div id="dmConversationsList"></div>
+            </div>
+            <div class="dm-content">
+              <div id="dmHeader" style="padding:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+                <span class="muted">اختر محادثة لعرض الرسائل</span>
+              </div>
+              <div id="dmMessages" class="dm-messages"></div>
+              <div class="dm-input">
+                <textarea id="dmText" placeholder="اكتب رسالتك..."></textarea>
+                <button class="btn btn-primary" id="dmSend">إرسال</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const listEl = modal.querySelector('#dmConversationsList');
+      const messagesEl = modal.querySelector('#dmMessages');
+      const headerEl = modal.querySelector('#dmHeader');
+
+      modal.querySelector('#closeDM').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+      function renderDMList() {
+        listEl.innerHTML = '';
+        const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+        if (sorted.length === 0) {
+          listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
+          return;
+        }
+        sorted.forEach(conv => {
+          const user = allUsers.find(u => u.id === conv.userId);
+          const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`;
+          const item = document.createElement('div');
+          item.className = 'dm-list-item';
+          item.innerHTML = `
+            <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
+            <div style="flex:1">
+              <div style="font-weight:700;color:var(--accent)">${escapeHtml(user?.username||'مستخدم')}</div>
+              <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
+            </div>
+            ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
+          `;
+          item.onclick = () => loadConversation(conv.userId);
+          listEl.appendChild(item);
+        });
+      }
+
+      async function ensureConversationMeta(withUserId) {
+        const withUser = allUsers.find(u => u.id === withUserId);
+        const convId = getConversationId(currentUser.id, withUserId);
+        const myMetaRef = ref(database, `dm_conversations/${currentUser.id}/${convId}`);
+        const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+
+        const myMetaSnap = await get(myMetaRef);
+        if (!myMetaSnap.exists()) {
+          await set(myMetaRef, {
+            id: convId,
+            userId: withUserId,
+            username: withUser?.username || '',
+            lastMessage: '',
+            updatedAt: null,
+            unreadCount: 0
+          });
+        }
+        const theirMetaSnap = await get(theirMetaRef);
+        if (!theirMetaSnap.exists()) {
+          await set(theirMetaRef, {
+            id: convId,
+            userId: currentUser.id,
+            username: currentUser.username,
+            lastMessage: '',
+            updatedAt: null,
+            unreadCount: 0
+          });
+        }
+      }
+
+      async function loadConversation(withUserId) {
+        await ensureConversationMeta(withUserId);
+        const withUser = allUsers.find(u => u.id === withUserId);
+        const convId = getConversationId(currentUser.id, withUserId);
+        headerEl.innerHTML = `
+          <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" />
+          <div style="font-weight:700;color:var(--accent)">${escapeHtml(withUser?.username || '')}</div>
+          <span class="muted" style="margin-right:auto;font-size:12px">محادثة خاصة</span>
+        `;
+        messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارٍ التحميل...</div>';
+        const msgsSnap = await get(ref(database, `dm_messages/${convId}`));
+        messagesEl.innerHTML = '';
+        if (msgsSnap.exists()) {
+          const msgs = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+          msgs.forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'dm-message' + (m.fromId === currentUser.id ? ' me' : '');
+            div.innerHTML = `<div class="bubble">${escapeHtml(m.text)}</div><div class="muted" style="font-size:11px;margin-top:4px">${formatTimeAgo(m.timestamp)}</div>`;
+            messagesEl.appendChild(div);
+          });
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        } else {
+          messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
+        }
+        await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+
+        const sendBtn = modal.querySelector('#dmSend');
+        sendBtn.onclick = async () => {
+          const textEl = modal.querySelector('#dmText');
+          const text = textEl.value.trim();
+          if (!text) { showAlert('⚠️ يرجى كتابة رسالة'); return; }
+          const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+          const payload = {
+            id: msgId, convId, text,
+            from: currentUser.username, fromId: currentUser.id, toId: withUserId,
+            timestamp: new Date().toISOString()
+          };
+          await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+          await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+            id: convId, userId: withUserId, username: withUser?.username || '',
+            lastMessage: text, updatedAt: payload.timestamp, unreadCount: 0
+          });
+          const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+          const theirMetaSnap = await get(theirMetaRef);
+          const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+          await set(theirMetaRef, {
+            id: convId, userId: currentUser.id, username: currentUser.username,
+            lastMessage: text, updatedAt: payload.timestamp, unreadCount: theirUnread
+          });
+          await addNotification(withUserId, {
+            type: 'message', from: currentUser.username, fromId: currentUser.id,
+            messagePreview: text.substring(0,50) + (text.length>50?'...':''), timestamp: payload.timestamp
+          });
+          const div = document.createElement('div');
+          div.className = 'dm-message me';
+          div.innerHTML = `<div class="bubble">${escapeHtml(text)}</div><div class="muted" style="font-size:11px;margin-top:4px">${formatTimeAgo(payload.timestamp)}</div>`;
+          messagesEl.appendChild(div);
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+          textEl.value = '';
+          showSyncStatus('✅ تم إرسال الرسالة', 1500);
+          await loadDMConversations();
+          renderDMList();
+        };
+      }
+
+      modal.querySelector('#dmStartNew').addEventListener('click', () => {
+        const q = (modal.querySelector('#dmSearch').value || '').trim().toLowerCase();
+        const candidates = allUsers.filter(u => u.id !== currentUser.id && u.username.toLowerCase().includes(q));
+        listEl.innerHTML = '';
+        if (candidates.length === 0) {
+          listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا يوجد مستخدم بهذا الاسم</div>';
+          return;
+        }
+        candidates.forEach(user => {
+          const item = document.createElement('div');
+          item.className = 'dm-list-item';
+          item.innerHTML = `
+            <img src="${user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" />
+            <div style="flex:1">
+              <div style="font-weight:700;color:var(--accent)">${escapeHtml(user.username)}</div>
+              <div class="muted" style="font-size:12px">ابدأ محادثة</div>
+            </div>
+          `;
+          item.onclick = () => loadConversation(user.id);
+          listEl.appendChild(item);
+        });
+      });
+
+      await loadDMConversations();
+      renderDMList();
+      if (targetUser) loadConversation(targetUserId);
+    }
+
+    // UI controls
     function showSyncStatus(message, duration = 2000) {
-      const syncStatus = document.getElementById('syncStatus');
-      const syncText = document.getElementById('syncText');
-      syncText.textContent = message;
-      syncStatus.classList.add('show');
-      setTimeout(() => syncStatus.classList.remove('show'), duration);
+      const el = document.getElementById('syncStatus');
+      const t = document.getElementById('syncText');
+      t.textContent = message;
+      el.classList.add('show');
+      setTimeout(()=> el.classList.remove('show'), duration);
     }
-
     function showAlert(message) {
       document.getElementById('confirmMessage').textContent = message;
       document.getElementById('confirmButtons').innerHTML = '<button class="btn" onclick="document.getElementById(\'confirmModal\').classList.remove(\'show\')">حسناً</button>';
       document.getElementById('confirmModal').classList.add('show');
     }
-    
     function showConfirm(message, onConfirm) {
       document.getElementById('confirmMessage').textContent = message;
       const btns = document.getElementById('confirmButtons');
       btns.innerHTML = '';
-      const btnCancel = document.createElement('button');
-      btnCancel.className = 'btn';
-      btnCancel.textContent = 'إلغاء';
-      btnCancel.onclick = () => document.getElementById('confirmModal').classList.remove('show');
-      const btnOk = document.createElement('button');
-      btnOk.className = 'btn';
-      btnOk.textContent = 'تأكيد';
-      btnOk.onclick = () => {
-        document.getElementById('confirmModal').classList.remove('show');
-        onConfirm();
-      };
-      btns.appendChild(btnCancel);
-      btns.appendChild(btnOk);
+      const cancel = document.createElement('button'); cancel.className='btn'; cancel.textContent='إلغاء'; cancel.onclick=()=>document.getElementById('confirmModal').classList.remove('show');
+      const ok = document.createElement('button'); ok.className='btn'; ok.textContent='تأكيد'; ok.onclick=()=>{document.getElementById('confirmModal').classList.remove('show'); onConfirm();};
+      btns.appendChild(cancel); btns.appendChild(ok);
       document.getElementById('confirmModal').classList.add('show');
     }
+    function escapeHtml(text) { const d=document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
 
-    function escapeHtml(text) {
-      const d = document.createElement('div');
-      d.textContent = text || '';
-      return d.innerHTML;
+    window.resizeMedia = function(mediaId) {
+      const element = document.getElementById(mediaId);
+      if (!element) return;
+
+      const sizes = ['400px', '600px', '900px', '100%'];
+      const labels = ['صغير', 'متوسط', 'كبير', 'ملء'];
+
+      let currentIndex = parseInt(element.dataset.sizeIndex || '1');
+      currentIndex = (currentIndex + 1) % sizes.length;
+
+      element.style.width = sizes[currentIndex];
+      element.style.height = 'auto';
+      element.dataset.sizeIndex = currentIndex;
+
+      const btn = document.querySelector(`[onclick*="${mediaId}"]`);
+      if (btn) { btn.textContent = `📐 ${labels[currentIndex]}`; }
+    };
+
+    function formatTimeAgo(dateString) {
+      const now = new Date(), date = new Date(dateString); const seconds = Math.floor((now - date)/1000);
+      if (seconds < 60) return 'الآن';
+      if (seconds < 3600) return Math.floor(seconds/60) + ' دقيقة';
+      if (seconds < 86400) return Math.floor(seconds/3600) + ' ساعة';
+      if (seconds < 604800) return Math.floor(seconds/86400) + ' يوم';
+      if (seconds < 2592000) return Math.floor(seconds/604800) + ' أسبوع';
+      return Math.floor(seconds/2592000) + ' شهر';
     }
 
-    function displayLoginProfiles() {
-      const loginProfilesList = document.getElementById('loginProfilesList');
-      loginProfilesList.innerHTML = '';
-      
-      if (allUsers.length === 0) {
-        loginProfilesList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">لا توجد حسابات محفوظة<br/>قم بإنشاء حساب جديد</div>';
+    async function saveUserToFirebase() { try { await set(ref(database, 'users/' + currentUser.id), currentUser); } catch (e) {} }
+    async function savePoemsToFirebase() {
+      if (isUpdatingFromFirebase) return;
+      try { showSyncStatus('🔄 جاري المزامنة...'); await set(ref(database, 'poems'), poems); showSyncStatus('✅ تم المزامنة بنجاح!'); }
+      catch (error) { console.error('Sync error:', error); showSyncStatus('❌ فشلت المزامنة', 3000); }
+    }
+    async function loadPoemsFromFirebase() {
+      try {
+        const snapshot = await get(ref(database, 'poems'));
+        if (snapshot.exists()) {
+          isUpdatingFromFirebase = true;
+          const data = snapshot.val();
+          poems = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+          renderPoems();
+          isUpdatingFromFirebase = false;
+        }
+      } catch (error) { console.error('Load error:', error); }
+    }
+    function setupFirebaseListener() {
+      const poemsRef = ref(database, 'poems');
+      onValue(poemsRef, async (snapshot) => {
+        if (snapshot.exists()) {
+          isUpdatingFromFirebase = true;
+          const data = snapshot.val();
+          poems = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+          renderPoems();
+          isUpdatingFromFirebase = false;
+        }
+      });
+    }
+
+    async function loadFromGitHub() {
+      const urls = [
+        'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
+        'poems.json'
+      ];
+      for (let i=0;i<urls.length;i++) {
+        try {
+          const response = await fetch(urls[i] + '?_=' + Date.now(), {cache:'no-store'});
+          if (!response.ok) throw new Error('fetch failed: ' + response.status);
+          const data = await response.json();
+          if (!Array.isArray(data)) throw new Error('poems.json must be an array');
+          return data.map(p => {
+            const poem = {...p};
+            if (poem.audio && !poem.audios) {
+              poem.audios = Array.isArray(poem.audio) ? poem.audio : [poem.audio];
+              delete poem.audio;
+            } else if (!poem.audios) poem.audios = [];
+            else if (!Array.isArray(poem.audios)) poem.audios = [poem.audios];
+            if (!poem.images) poem.images = [];
+            if (!poem.likes) poem.likes = 0;
+            return poem;
+          });
+        } catch (error) { console.warn('Failed to load from:', urls[i], error); }
+      }
+      return null;
+    }
+
+    async function uploadFileToStorage(file) {
+      return new Promise((resolve, reject) => {
+        const timestamp = Date.now();
+        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+        const path = `media/${currentUser.id}/${timestamp}_${safeName}`;
+        const fileRef = storageRef(storage, path);
+        const uploadTask = uploadBytesResumable(fileRef, file);
+        document.getElementById('uploadProgress').classList.add('show');
+        document.getElementById('uploadText').textContent = `جاري رفع: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+        uploadTask.on('state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+            const fill = document.getElementById('progressFill');
+            fill.style.width = progress + '%';
+            fill.textContent = Math.round(progress) + '%';
+          },
+          (error) => {
+            document.getElementById('uploadProgress').classList.remove('show');
+            showAlert('❌ فشل رفع الملف: ' + error.message);
+            reject(error);
+          },
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              document.getElementById('uploadProgress').classList.remove('show');
+              document.getElementById('progressFill').style.width = '0%';
+              showSyncStatus('✅ تم رفع الملف بنجاح!', 2000);
+              resolve({
+                url: downloadURL, path, name: file.name, size: file.size, type: file.type,
+                uploadedBy: currentUser.username, uploadedAt: new Date().toISOString()
+              });
+            } catch (error) { reject(error); }
+          }
+        );
+      });
+    }
+
+    document.getElementById('inputImages').addEventListener('change', async function(e) {
+      const files = e.target.files;
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) { showAlert('⚠️ يرجى اختيار ملفات صور فقط'); continue; }
+        try { const uploadedFile = await uploadFileToStorage(file); currentImages.push(uploadedFile); renderImagesPreview(); }
+        catch (error) { console.error('Upload failed:', error); }
+      }
+      e.target.value = '';
+    });
+    document.getElementById('inputAudioFile').addEventListener('change', async function(e) {
+      const files = e.target.files;
+      for (const file of Array.from(files)) {
+        try { const uploadedFile = await uploadFileToStorage(file); currentAudios.push(uploadedFile); renderAudiosInForm(); }
+        catch (error) { console.error('Upload failed:', error); }
+      }
+      e.target.value = '';
+    });
+    document.getElementById('btnAddAudioLink').addEventListener('click', function() {
+      const link = document.getElementById('inputAudioLink').value.trim();
+      if (!link) { showAlert('⚠️ يرجى إدخال رابط'); return; }
+      try {
+        new URL(link);
+        currentAudios.push({ type: 'link', url: link, addedBy: currentUser.username, addedAt: new Date().toISOString() });
+        renderAudiosInForm();
+        document.getElementById('inputAudioLink').value = '';
+        showSyncStatus('✅ تم إضافة الرابط', 1500);
+      } catch { showAlert('⚠️ الرابط غير صحيح'); }
+    });
+
+    function renderImagesPreview() {
+      const preview = document.getElementById('imagesPreview');
+      preview.innerHTML = '';
+      currentImages.forEach((img, index) => {
+        const div = document.createElement('div');
+        div.className = 'image-preview-item';
+        div.innerHTML = `
+          <img src="${img.url}" alt="صورة ${index+1}">
+          <button class="image-preview-remove" type="button" onclick="window.removeImage(${index})">×</button>
+        `;
+        preview.appendChild(div);
+      });
+    }
+    window.removeImage = function(index) { currentImages.splice(index, 1); renderImagesPreview(); };
+
+    function renderTagsInForm() {
+      const display = document.getElementById('tagsDisplay');
+      display.innerHTML = '';
+      currentTags.forEach((tag, index) => {
+        const badge = document.createElement('span');
+        badge.className = 'tag-badge';
+        badge.innerHTML = escapeHtml(tag) + ' <button type="button" onclick="window.removeTag(' + index + ')">×</button>';
+        display.appendChild(badge);
+      });
+    }
+    function addTag() {
+      const tag = document.getElementById('inputTagField').value.trim();
+      if (tag && !currentTags.includes(tag)) { currentTags.push(tag); renderTagsInForm(); document.getElementById('inputTagField').value = ''; }
+    }
+    window.removeTag = function(index) { currentTags.splice(index, 1); renderTagsInForm(); };
+    document.getElementById('inputTagField').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); addTag(); } });
+
+    function renderAudiosInForm() {
+      const display = document.getElementById('audioDisplay');
+      display.innerHTML = '';
+      currentAudios.forEach((audio, index) => {
+        const sizeMB = audio.size ? (audio.size/1024/1024).toFixed(2) : '';
+        const isFile = audio.url && audio.type && audio.name && audio.type !== 'link';
+        const isLink = audio.type === 'link';
+        const badge = isFile ? '<span style="background:#28a745;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">Firebase</span>' :
+                      isLink ? '<span style="background:#4a90e2;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">Link</span>' : '';
+        const text = isFile ? `📦 ${escapeHtml(audio.name)} ${sizeMB ? '('+sizeMB+' MB)' : ''}` :
+                      isLink ? '🔗 ' + escapeHtml(audio.url.substring(0,50) + (audio.url.length>50?'...':'')) : '';
+        const item = document.createElement('div');
+        item.className = 'audio-item';
+        item.innerHTML = `<div>${badge} ${text}</div><button type="button" onclick="window.removeAudio(${index})">حذف</button>`;
+        display.appendChild(item);
+      });
+    }
+    window.removeAudio = function(index) { currentAudios.splice(index, 1); renderAudiosInForm(); };
+
+    document.getElementById('menuToggle').addEventListener('click', function(e) {
+      e.stopPropagation();
+      document.getElementById('dropdownMenu').classList.toggle('show');
+    });
+    document.getElementById('btnNotifications').addEventListener('click', function(e) {
+      e.stopPropagation();
+      document.getElementById('notificationsMenu').classList.toggle('show');
+      document.getElementById('dropdownMenu').classList.remove('show');
+    });
+    document.getElementById('btnDM').addEventListener('click', function(e) {
+      e.stopPropagation();
+      openDMWindow();
+      document.getElementById('notificationsMenu').classList.remove('show');
+      document.getElementById('dropdownMenu').classList.remove('show');
+    });
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.menu-container')) {
+        document.getElementById('dropdownMenu').classList.remove('show');
+        document.getElementById('notificationsMenu').classList.remove('show');
+      }
+    });
+    document.querySelectorAll('.menu-item').forEach(item => item.addEventListener('click', () => { document.getElementById('dropdownMenu').classList.remove('show'); }));
+
+    function renderTags() {
+      const tagSet = new Set();
+      poems.forEach(p => { if (!isPoemHidden(p.id)) (p.tags || []).forEach(t => tagSet.add(t)); });
+      const tagsWrapper = document.getElementById('tagsWrapper');
+      tagsWrapper.innerHTML = '';
+      const allBtn = document.createElement('button');
+      allBtn.className = 'tag';
+      allBtn.textContent = 'الكل';
+      if (activeSearchTags.length === 0) allBtn.classList.add('active');
+      allBtn.addEventListener('click', () => { activeSearchTags = []; document.getElementById('searchInput').value=''; renderActiveSearchTags(); renderPoems(); });
+      tagsWrapper.appendChild(allBtn);
+      Array.from(tagSet).sort().forEach(tag => {
+        const btn = document.createElement('button');
+        btn.className = 'tag';
+        btn.textContent = tag;
+        if (activeSearchTags.includes(tag)) btn.classList.add('active');
+        btn.addEventListener('click', () => {
+          if (!activeSearchTags.includes(tag)) {
+            activeSearchTags.push(tag);
+          }
+          document.getElementById('searchInput').value='';
+          renderActiveSearchTags();
+          renderPoems();
+        });
+        tagsWrapper.appendChild(btn);
+      });
+    }
+
+    function renderActiveSearchTags() {
+      const container = document.getElementById('activeSearchTags');
+      container.innerHTML = '';
+      activeSearchTags.forEach((tag, index) => {
+        const badge = document.createElement('span');
+        badge.className = 'tag-badge';
+        badge.innerHTML = `${escapeHtml(tag)} <button type="button" onclick="window.removeSearchTag(${index})">×</button>`;
+        container.appendChild(badge);
+      });
+    }
+    window.removeSearchTag = function(index) {
+      activeSearchTags.splice(index, 1);
+      renderActiveSearchTags();
+      renderPoems();
+    };
+
+    document.getElementById('searchInput').addEventListener('input', () => { renderPoems(); });
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const query = document.getElementById('searchInput').value.trim();
+        if (query.startsWith('@')) {
+          const authorTag = query;
+          if (!activeSearchTags.includes(authorTag)) { activeSearchTags.push(authorTag); }
+          document.getElementById('searchInput').value = '';
+          renderActiveSearchTags();
+          renderPoems();
+        }
+      }
+    });
+
+    async function renderPoems() {
+      if (isRendering) return;
+      isRendering = true;
+
+      const poemGrid = document.getElementById('poemGrid');
+      const emptyState = document.getElementById('emptyState');
+      poemGrid.innerHTML = '';
+
+      const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+      let filtered = poems.filter(p => {
+        if (isPoemHidden(p.id)) return false;
+
+        if (activeSearchTags.length > 0) {
+          const authorTags = activeSearchTags.filter(t => t.startsWith('@'));
+          const regularTags = activeSearchTags.filter(t => !t.startsWith('@'));
+
+          if (authorTags.length > 0) {
+            let authorMatches = false;
+            for (const tag of authorTags) {
+              const authorQuery = tag.substring(1).trim().toLowerCase();
+              const poemAuthor = (p.author && p.author.trim()) || (p.createdBy && p.createdBy.trim()) || '';
+              if (poemAuthor.toLowerCase() === authorQuery) { authorMatches = true; break; }
+            }
+            if (!authorMatches) return false;
+          }
+
+          if (regularTags.length > 0) {
+            let allRegularTagsMatch = true;
+            for (const tag of regularTags) {
+              if (!p.tags || !p.tags.includes(tag)) { allRegularTagsMatch = false; break; }
+            }
+            if (!allRegularTagsMatch) return false;
+          }
+        }
+
+        if (searchQuery) {
+          if (searchQuery.startsWith('@')) {
+            const authorQuery = searchQuery.substring(1).trim().toLowerCase();
+            if (!authorQuery) return true;
+            const poemAuthor = (p.author && p.author.trim()) || (p.createdBy && p.createdBy.trim()) || '';
+            return poemAuthor.toLowerCase() === authorQuery;
+          }
+          const titleMatch = (p.title || '').toLowerCase().includes(searchQuery);
+          const textMatch = (p.text || '').toLowerCase().includes(searchQuery);
+          const authorMatch = (p.author || '').toLowerCase().includes(searchQuery);
+          const createdByMatch = (p.createdBy || '').toLowerCase().includes(searchQuery);
+          if (!titleMatch && !textMatch && !authorMatch && !createdByMatch) return false;
+        }
+        return true;
+      });
+
+      filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+      if (filtered.length === 0) {
+        poemGrid.style.display = 'none';
+        emptyState.style.display = 'block';
+      } else {
+        poemGrid.style.display = 'grid';
+        emptyState.style.display = 'none';
+
+        for (const poem of filtered) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.dataset.id = poem.id;
+
+          // drag handle
+          const drag = document.createElement('div');
+          drag.className = 'drag-handle';
+          drag.title = 'اسحب لإعادة الترتيب';
+          drag.textContent = '☰';
+          card.appendChild(drag);
+
+          const hasAudio = poem.audios && poem.audios.length > 0;
+          const hasImages = poem.images && poem.images.length > 0;
+          const indicators = [];
+          if (hasAudio) indicators.push('<span>🎵 صوت</span>');
+          if (hasImages) indicators.push('<span>🖼️ صور</span>');
+          const indicatorsHtml = indicators.length > 0 ? `<div class="card-indicators">${indicators.join('')}</div>` : '';
+
+          const tagsHtml = (poem.tags && poem.tags.length > 0)
+            ? `<div class="card-tags" style="margin-top:10px">${poem.tags.map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('')}</div>`
+            : '';
+
+          const title = poem.title || 'بدون عنوان';
+          const excerpt = poem.excerpt || (poem.text ? poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '') : '');
+
+          const contentWrap = document.createElement('div');
+          contentWrap.style.cursor = 'pointer';
+          contentWrap.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+              <h3>${escapeHtml(title)}</h3>
+            </div>
+            <div class="excerpt">${escapeHtml(excerpt)}</div>
+            ${tagsHtml}
+            <div class="card-footer">
+              ${indicatorsHtml}
+            </div>
+          `;
+          contentWrap.addEventListener('click', () => openModal(poem));
+          card.appendChild(contentWrap);
+          poemGrid.appendChild(card);
+        }
+      }
+
+      isRendering = false;
+      renderTags();
+      renderActiveSearchTags();
+    }
+
+    async function getCommentsCount(poemId) {
+      try {
+        const snapshot = await get(ref(database, `comments/${poemId}`));
+        if (snapshot.exists()) return Object.keys(snapshot.val()).length;
+        return 0;
+      } catch { return 0; }
+    }
+
+    function getYouTubeEmbedUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        let videoId = null;
+        if (urlObj.hostname.includes('youtube.com')) videoId = urlObj.searchParams.get('v');
+        else if (urlObj.hostname.includes('youtu.be')) videoId = urlObj.pathname.slice(1);
+        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+      } catch {}
+      return null;
+    }
+    function getSoundCloudEmbedUrl(url) {
+      if (url.includes('soundcloud.com')) return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
+      return null;
+    }
+    function getAudioHtml(audio) {
+      if (!audio) return '';
+      let audioUrl = '';
+      if (typeof audio === 'string') audioUrl = audio;
+      else if (audio.url) audioUrl = audio.url;
+      else return '';
+
+      const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
+      if (youtubeEmbed) {
+        return `<div class="media-item"><iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+      }
+      const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
+      if (soundcloudEmbed) {
+        return `<div class="media-item"><iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe></div>`;
+      }
+
+      const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+      const lowerUrl = audioUrl.toLowerCase();
+      const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
+      const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
+
+      if (isDirectAudio) {
+        return `<div class="media-item"><audio controls><source src="${audioUrl}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
+      }
+      if (isDirectVideo) {
+        const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
+        return `<div class="media-item media-resizable">
+          <div class="media-size-controls">
+            <button class="media-size-btn" onclick="window.resizeMedia('${videoId}')">📐 متوسط</button>
+          </div>
+          <video id="${videoId}" data-size-index="1" controls style="width:600px;height:auto;max-width:100%">
+            <source src="${audioUrl}">متصفحك لا يدعم تشغيل الفيديو
+          </video>
+        </div>`;
+      }
+
+      if (audio.url && audio.type && audio.name) {
+        const isVideo = audio.type.startsWith('video/');
+        if (isVideo) {
+          const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
+          return `<div class="media-item media-resizable">
+            <div class="media-size-controls">
+              <button class="media-size-btn" onclick="window.resizeMedia('${videoId}')">📐 متوسط</button>
+            </div>
+            <video id="${videoId}" data-size-index="1" controls style="width:600px;height:auto;max-width:100%">
+              <source src="${audio.url}" type="${audio.type}">
+            </video>
+          </div>`;
+        } else {
+          return `<div class="media-item"><audio controls><source src="${audio.url}" type="${audio.type}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
+        }
+      }
+
+      return '';
+    }
+
+    async function loadCommentsFromFirebase(poemId) {
+      try { const snapshot = await get(ref(database, `comments/${poemId}`)); if (snapshot.exists()) return Object.values(snapshot.val()); return []; }
+      catch (error) { console.error('Error loading comments:', error); return []; }
+    }
+    async function saveCommentToFirebase(poemId, comment) {
+      try {
+        const commentId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        await set(ref(database, `comments/${poemId}/${commentId}`), comment);
+        const poem = poems.find(p => p.id === poemId);
+        if (poem && poem.userId && poem.userId !== currentUser.id) {
+          await addNotification(poem.userId, { type: 'comment', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
+        }
+        const mentions = comment.text.match(/@(\w+)/g);
+        if (mentions) {
+          for (const mention of mentions) {
+            const username = mention.substring(1);
+            const mentionedUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+            if (mentionedUser && mentionedUser.id !== currentUser.id) {
+              await addNotification(mentionedUser.id, { type: 'mention', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
+            }
+          }
+        }
+        return true;
+      } catch (error) { console.error('Error saving comment:', error); return false; }
+    }
+    async function deleteCommentFromFirebase(poemId, commentId) {
+      try { await set(ref(database, `comments/${poemId}/${commentId}`), null); return true; }
+      catch (error) { console.error('Error deleting comment:', error); return false; }
+    }
+    async function renderComments(poemId, commentsContainer) {
+      const comments = await loadCommentsFromFirebase(poemId);
+      const commentsList = commentsContainer.querySelector('.comments-list');
+      commentsList.innerHTML = '';
+      if (comments.length === 0) {
+        commentsList.innerHTML = '<div class="no-comments">لا توجد تعليقات بعد. كن أول من يعلق! 💬</div>';
         return;
       }
-      
-      allUsers.forEach(user => {
-        const item = document.createElement('div');
-        item.className = 'profile-item';
-        item.innerHTML = `
-          <div class="profile-item-name">${escapeHtml(user.username)}</div>
-          ${user.email ? '<div class="profile-item-email">' + escapeHtml(user.email) + '</div>' : ''}
+      comments.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
+      comments.forEach(comment => {
+        const commentDiv = document.createElement('div');
+        commentDiv.className = 'comment';
+        const canDelete = comment.userId === currentUser.id;
+        const deleteButton = canDelete ? `<button class="comment-action-btn" onclick="window.deleteComment('${poemId}', '${comment.id}')">🗑️ حذف</button>` : '';
+        const commentUser = allUsers.find(u => u.id === comment.userId);
+        const avatarHtml = commentUser && commentUser.avatar
+          ? `<img src="${commentUser.avatar}" class="avatar-small" alt="${comment.username}">`
+          : `<div class="avatar-small" style="background:var(--brown);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">${(comment.username||'?').charAt(0)}</div>`;
+        commentDiv.innerHTML = `
+          <div class="comment-header">
+            <div class="comment-author" onclick="window.openUserProfile('${comment.userId}')">
+              ${avatarHtml}
+              <span class="comment-author-name">${escapeHtml(comment.username)}</span>
+            </div>
+            <span class="comment-time">${formatTimeAgo(comment.createdAt)}</span>
+          </div>
+          <div class="comment-text">${escapeHtml(comment.text)}</div>
+          ${deleteButton ? '<div class="comment-actions">' + deleteButton + '</div>' : ''}
         `;
+        commentsList.appendChild(commentDiv);
+      });
+    }
+    window.deleteComment = async function(poemId, commentId) {
+      showConfirm('هل تريد حذف هذا التعليق؟', async () => {
+        const success = await deleteCommentFromFirebase(poemId, commentId);
+        if (success) {
+          const modal = document.querySelector('.modal');
+          const commentsContainer = modal.querySelector('.comments-section');
+          await renderComments(poemId, commentsContainer);
+          const count = await getCommentsCount(poemId);
+          modal.querySelector('#commentsCount').textContent = count;
+          showSyncStatus('✅ تم حذف التعليق', 2000);
+        } else { showAlert('❌ فشل حذف التعليق'); }
+      });
+    };
+
+    async function openModal(poem) {
+      const modal = document.createElement('div'); modal.className = 'modal';
+      const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
+      const audiosHtml = (poem.audios || []).length > 0
+        ? '<div class="media-container"><h4 style="margin-bottom:10px">🎵 الوسائط</h4>' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>' : '';
+      const imagesHtml = (poem.images || []).length > 0
+        ? '<div class="media-container"><h4 style="margin-bottom:10px">🖼️ الصور</h4>' +
+          (poem.images || []).map((img, idx) => `
+            <div class="media-resizable">
+              <div class="media-size-controls">
+                <button class="media-size-btn" onclick="window.resizeMedia('img-${idx}')">📐 متوسط</button>
+              </div>
+              <img id="img-${idx}" data-size-index="1" src="${img.url}" onclick="window.open('${img.url}','_blank')" style="cursor:pointer;width:600px;height:auto;max-width:100%">
+            </div>
+          `).join('') + '</div>' : '';
+
+      let userInfoDisplay = '';
+      if (poem.userId) {
+        const user = allUsers.find(u => u.id === poem.userId);
+        if (user) {
+          const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`;
+          userInfoDisplay = `
+            <div class="card-author" onclick="window.openUserProfile('${poem.userId}')" style="margin-top:8px;cursor:pointer">
+              <img src="${avatarUrl}" class="avatar-small" alt="${user.username}">
+              <span style="font-weight:600;color:var(--brown)">أضيفت بواسطة: ${escapeHtml(user.username)}</span>
+            </div>
+          `;
+        }
+      } else if (poem.createdBy) {
+        const userIcon = poem.createdBy.toLowerCase().includes('mody') ? '✒️' : '👤';
+        userInfoDisplay = '<div class="muted" style="margin-top:4px">' + userIcon + ' أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>';
+      }
+// ... هنا يجب أن تكون متغيرات userInfoDisplay و tagsHtml معرّفة ...
+
+      // FIX 1: ترتيب المتغيرات لحل ReferenceError
+      const canEdit = isOwnPoem(poem);
+      const canDelete = isOwnPoem(poem);
+      const isFav = isFavorite(poem.id);
+
+      let authorDisplay = '';
+      if (poem.author) authorDisplay = '<div class="muted" style="margin-top:6px">✒️ ' + escapeHtml(poem.author) + '</div>';
+
+      const likesCount = await getLikesCount(poem.id);
+      const userLiked = await isLiked(poem.id);
+
+      // FIX 2: كتلة HTML مصححة وخالية من التكرار
+      modal.innerHTML = `
+        <div class="modal-inner">
+
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1">
+              <div class="modal-title">${escapeHtml(poem.title)}</div>
+              ${authorDisplay}
+              ${userInfoDisplay}
+              ${tagsHtml ?
+'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + tagsHtml + '</div>' : ''}
+            </div>
+
+            <div style="display:flex; gap:8px; align-items:center;">
+
+            <button class="icon-btn like-btn-with-count" id="modalLikeBtn" title="${userLiked ? 'إزالة الإعجاب' : 'أعجبني'}">
+  <span class="like-icon">${userLiked ? '❤️' : '💔'}</span>
+  <span class="like-count">${likesCount > 0 ? likesCount : ''}</span>
+</button>
+<div class="actions-menu-container">
+  <button class="actions-trigger icon-btn" id="actionsTrigger" title="خيارات">
+    ☰
+  </button>
+  <div class="actions-dropdown" id="actionsDropdown">
+ 
+                  <button class="action-item" id="favoritePoem">${isFav ?
+'⭐ إزالة من المفضلة' : '☆ إضافة للمفضلة'}</button>
+                  ${(poem.userId && poem.userId !== currentUser?.id) ?
+'<button class="action-item" id="dmPoet">💌 رسالة للكاتب</button>' : ''}
+                  ${canEdit ?
+'<button class="action-item" id="editPoem">✏️ تعديل القصيدة</button>' : ''}
+                  ${canDelete ?
+'<button class="action-item" id="deletePoem">🗑️ حذف القصيدة</button>' : ''}
+                  ${!canEdit ?
+'<button class="action-item" id="hidePoem">🙈 إخفاء القصيدة</button>' : ''}
+                </div>
+              </div>
+
+              <button class="icon-btn" id="closeModal" title="إغلاق">✖️</button>
+            </div>
+          </div>
+
+          <div class="poem-text">${escapeHtml(poem.text)}</div>
+          ${imagesHtml}
+          ${audiosHtml}
+
+
+          <div class="comments-section">
+            <div class="comments-header">
+              💬 تعليقات <span id="commentsCount"></span>
+            </div>
+            <div class="comment-form">
+              <textarea class="comment-input" id="commentInput" placeholder="اكتب تعليقك..."></textarea>
+              <button class="comment-submit" id="submitComment">إرسال</button>
+
+            </div>
+            <div class="comments-list"></div>
+          </div>
+        </div>
+      `;
+      // ... باقي الدالة (مثل document.body.appendChild(modal);) يجب أن يأتي هنا.
+      document.body.appendChild(modal);
+
+      // Actions menu toggle
+      const trigger = modal.querySelector('#actionsTrigger');
+      const dropdown = modal.querySelector('#actionsDropdown');
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        dropdown.classList.toggle('show');
+      });
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.actions-menu-container')) dropdown.classList.remove('show');
+      });
+
+     modal.querySelector('#modalLikeBtn').addEventListener('click', async function() {
+  const newCount = await toggleLike(poem.id);
+  const newLiked = await isLiked(poem.id);
+
+  // 🟢 التعديل الجديد: تحديث الأيقونة والعدد في عناصرهم المخصصة
+  const iconSpan = this.querySelector('.like-icon');
+  const countSpan = this.querySelector('.like-count');
+
+  if (iconSpan) {
+    iconSpan.innerHTML = newLiked ? '❤️' : '💔';
+  }
+
+  if (countSpan) {
+    countSpan.textContent = newCount > 0 ? newCount : '';
+  }
+
+  this.title = newLiked ? 'إزالة الإعجاب' : 'أعجبني';
+  showSyncStatus(newLiked ? '❤️ تم الإعجاب' : '💔 تم إزالة الإعجاب', 1500);
+  dropdown.classList.remove('show');
+});
+
+      const commentsContainer = modal.querySelector('.comments-section');
+      await renderComments(poem.id, commentsContainer);
+      const count = await getCommentsCount(poem.id);
+      modal.querySelector('#commentsCount').textContent = count;
+
+      modal.querySelector('#submitComment').addEventListener('click', async function() {
+        const commentText = modal.querySelector('#commentInput').value.trim();
+        if (!commentText) { showAlert('⚠️ يرجى كتابة تعليق'); return; }
+        const comment = {
+          id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          text: commentText, username: currentUser.username, userId: currentUser.id,
+          createdAt: new Date().toISOString()
+        };
+        const success = await saveCommentToFirebase(poem.id, comment);
+        if (success) {
+          modal.querySelector('#commentInput').value = '';
+          await renderComments(poem.id, commentsContainer);
+          const updatedCount = await getCommentsCount(poem.id);
+          modal.querySelector('#commentsCount').textContent = updatedCount;
+          showSyncStatus('✅ تم إضافة التعليق', 2000);
+        } else { showAlert('❌ فشل إضافة التعليق'); }
+      });
+      modal.querySelector('#commentInput').addEventListener('keypress', function(e) { if (e.key === 'Enter' && e.ctrlKey) modal.querySelector('#submitComment').click(); });
+
+      // Favorites
+      modal.querySelector('#favoritePoem').addEventListener('click', () => {
+        toggleFavorite(poem.id);
+        modal.querySelector('#favoritePoem').textContent = isFavorite(poem.id) ? '⭐ إزالة من المفضلة' : '☆ إضافة للمفضلة';
+        dropdown.classList.remove('show');
+      });
+
+      // DM writer
+      if (poem.userId && poem.userId !== currentUser?.id && modal.querySelector('#dmPoet')) {
+        modal.querySelector('#dmPoet').addEventListener('click', () => {
+          modal.remove();
+          openDMWindow(poem.userId);
+        });
+      }
+
+      // Edit
+      if (canEdit) {
+        modal.querySelector('#editPoem').addEventListener('click', () => {
+          editingPoem = poem;
+          document.getElementById('inputTitle').value = poem.title || '';
+          document.getElementById('inputAuthor').value = poem.author || '';
+          document.getElementById('inputText').value = poem.text || '';
+          document.getElementById('inputExcerpt').value = poem.excerpt || '';
+          currentTags = poem.tags || []; renderTagsInForm();
+          currentAudios = poem.audios || []; renderAudiosInForm();
+          currentImages = poem.images || []; renderImagesPreview();
+          document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
+          document.getElementById('addModal').style.display = 'flex';
+          modal.remove();
+        });
+      }
+
+      // Delete
+      if (canDelete) {
+        modal.querySelector('#deletePoem').addEventListener('click', () => {
+          showConfirm('هل أنت متأكد من حذف هذه القصيدة؟\n\n⚠️ سيتم حذفها والملفات المرفوعة من السحابة لجميع المستخدمين!', async () => {
+            try {
+              showSyncStatus('🔄 جاري الحذف...', 5000);
+              if (poem.audios && poem.audios.length > 0) {
+                for (const audio of poem.audios) {
+                  if (audio.url && audio.url.includes('firebasestorage.googleapis.com')) {
+                    try { if (audio.path) { const fileRef = storageRef(storage, audio.path); await deleteObject(fileRef); } }
+                    catch (error) { console.error('Error deleting audio file:', error); }
+                  }
+                }
+              }
+              if (poem.images && poem.images.length > 0) {
+                for (const img of poem.images) {
+                  if (img.url && img.url.includes('firebasestorage.googleapis.com')) {
+                    try { if (img.path) { const fileRef = storageRef(storage, img.path); await deleteObject(fileRef); } }
+                    catch (error) { console.error('Error deleting image file:', error); }
+                  }
+                }
+              }
+              try { await set(ref(database, `comments/${poem.id}`), null); } catch {}
+              try { await set(ref(database, `likes/${poem.id}`), null); } catch {}
+              poems = poems.filter(p => p.id !== poem.id);
+              await savePoemsToFirebase();
+              modal.remove();
+              showSyncStatus('✅ تم حذف القصيدة والملفات من السحابة', 2500);
+            } catch (error) { showAlert('❌ حدث خطأ أثناء الحذف: ' + error.message); }
+          });
+        });
+      }
+
+      // Hide
+      if (!canEdit && modal.querySelector('#hidePoem')) {
+        modal.querySelector('#hidePoem').addEventListener('click', () => {
+          toggleHidePoem(poem.id);
+          renderPoems();
+          modal.remove();
+          showSyncStatus('✅ تم إخفاء القصيدة من جهازك', 2000);
+        });
+      }
+
+      // Close
+      modal.querySelector('#closeModal').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+      document.addEventListener('keydown', function esc(e){ if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); } });
+    }
+
+    // Sortable with handle only
+    let sortableInstance = null;
+    function initSortable() {
+      const poemGrid = document.getElementById('poemGrid');
+      if (!poemGrid) return;
+      if (sortableInstance && typeof sortableInstance.destroy === 'function') { try { sortableInstance.destroy(); } catch(e){} }
+      sortableInstance = new Sortable(poemGrid, {
+        animation: 200,
+        handle: '.drag-handle',
+        draggable: '.card',
+        dataIdAttr: 'data-id',
+        onStart: () => { isDragging = true; },
+        onEnd: () => {
+          const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
+          const newOrder = [];
+          ids.forEach(id => { const found = poems.find(p => p.id === id); if (found) newOrder.push(found); });
+          const missing = poems.filter(p => !ids.includes(p.id));
+          poems = newOrder.concat(missing);
+          savePoemsToFirebase();
+          setTimeout(() => isDragging = false, 80);
+        }
+      });
+    }
+
+    document.getElementById('btnDownload').addEventListener('click', () => {
+      const a = document.createElement('a');
+      const blob = new Blob([JSON.stringify(poems, null, 2)], {type: 'application/json'});
+      a.href = URL.createObjectURL(blob);
+      a.download = 'mody_poems_' + Date.now() + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+
+    document.getElementById('btnReloadAndSort').addEventListener('click', async () => {
+      showConfirm('هل تريد جلب آخر قصائد مودي من GitHub؟', async () => {
+        showSyncStatus('🔄 جاري تحميل قصائد مودي...', 3000);
+        const githubPoems = await loadFromGitHub();
+        if (!githubPoems) { showAlert('⚠️ لم يتم العثور على الملف على GitHub.'); return; }
+        const currentMap = new Map(); poems.forEach(p => currentMap.set(p.id, p));
+        let added = 0, updated = 0, restored = 0;
+        githubPoems.forEach(orig => {
+          if (isPoemHidden(orig.id)) { toggleHidePoem(orig.id); restored++; }
+          if (!currentMap.has(orig.id)) { poems.push({...orig}); added++; }
+          else {
+            const existing = currentMap.get(orig.id);
+            if (isOriginalModyPoem(existing)) {
+              Object.assign(existing, {
+                title: orig.title, author: orig.author, text: orig.text, excerpt: orig.excerpt,
+                tags: orig.tags || [], audios: orig.audios || [], images: orig.images || []
+              });
+              updated++;
+            }
+          }
+        });
+        await savePoemsToFirebase();
+        showAlert(`✅ تم بنجاح!\n\n🎉 أُضيف: ${added} قصيدة جديدة\n🔄 حُدِّث: ${updated} قصيدة\n🔓 استُعيد: ${restored} قصيدة مخفية\n📋 عدد القصائد الكلي: ${poems.length}`);
+      });
+    });
+
+    document.getElementById('btnImportJSON').addEventListener('click', () => {
+      const input = document.createElement('input'); input.type='file'; input.accept='.json';
+      input.onchange = function(e) {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function(evt) {
+          try {
+            const data = JSON.parse(evt.target.result);
+            if (!Array.isArray(data)) throw new Error('يجب أن يكون الملف مصفوفة');
+            const currentMap = new Map(); poems.forEach(p => currentMap.set(p.id, p));
+            let added = 0, skipped = 0, updated = 0;
+            data.forEach((p, index) => {
+              if (!p.id) p.id = 'imported_' + Date.now() + '_' + index + '_' + Math.random().toString(36).substr(2,9);
+              if (!p.audios) p.audios = []; if (!p.images) p.images = []; if (!p.tags) p.tags = [];
+              if (!currentMap.has(p.id)) {
+                if (!p.createdBy) { p.createdBy = currentUser.username + ' (مستورد)'; p.userId = currentUser.id; p.importedAt = new Date().toISOString(); }
+                poems.push({...p}); currentMap.set(p.id, p); added++;
+              } else {
+                const existing = currentMap.get(p.id);
+                if (isOriginalModyPoem(existing)) {
+                  Object.assign(existing, { title: p.title, author: p.author, text: p.text, excerpt: p.excerpt, tags: p.tags||[], audios: p.audios||[], images: p.images||[] });
+                  updated++;
+                } else skipped++;
+              }
+            });
+            if (added > 0 || updated > 0) { await savePoemsToFirebase(); }
+            showAlert(`✅ تم الاستيراد!\n\n📝 أُضيف: ${added} قصيدة جديدة\n🔄 حُدِّث: ${updated} قصيدة أصلية\n⏭️ تم تجاهل: ${skipped} قصيدة (موجودة مسبقاً)\n📊 إجمالي القصائد: ${poems.length}`);
+          } catch (err) { showAlert('❌ خطأ في الاستيراد: ' + err.message); }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    });
+
+    document.getElementById('btnMyProfile').addEventListener('click', async () => { openUserProfile(currentUser.id); });
+
+    async function openUserProfile(userId) {
+      const user = allUsers.find(u => u.id === userId);
+      if (!user) return;
+
+      const modal = document.createElement('div');
+      modal.className = 'modal';
+
+      const isOwnProfile = user.id === currentUser.id;
+      const isFollowingUser = isFollowing(user.id);
+
+      const userPoemsCount = user.poemsCount || 0;
+      const userCommentsCount = user.commentsCount || 0;
+      const totalLikes = user.likesCount || 0;
+      const followersCount = user.followersCount || 0;
+
+      const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=120`;
+
+      const followBtn = !isOwnProfile ? `
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="follow-btn ${isFollowingUser ? 'following' : 'not-following'}" id="followBtn" style="flex:1">
+            ${isFollowingUser ? '✓ متابَع' : '+ متابعة'}
+          </button>
+          <button class="btn" id="chatBtn" style="padding:8px 20px">💬 محادثة</button>
+        </div>` : '';
+
+      modal.innerHTML = `
+        <div class="modal-inner user-profile-modal">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <h3 style="margin:0">👤 الملف الشخصي</h3>
+            <button class="btn small" id="closeProfileModal">✖️ إغلاق</button>
+          </div>
+
+          <div class="profile-header" style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;padding:20px;background:rgba(139,94,60,0.05);border-radius:12px">
+            <div class="profile-avatar-container">
+              <label for="avatarInput" style="cursor:pointer">
+                <img src="${avatarUrl}" class="profile-avatar" alt="${user.username}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--brown)">
+              </label>
+              ${isOwnProfile ? '<input type="file" id="avatarInput" accept="image/*" style="display:none">' : ''}
+            </div>
+            <div class="profile-info" style="flex:1">
+              <div class="profile-name" style="font-size:24px;font-weight:700;color:var(--accent);margin-bottom:5px">${escapeHtml(user.username)}</div>
+              ${user.email ? '<div class="profile-username" style="font-size:14px;color:var(--muted);margin-bottom:10px">📧 ' + escapeHtml(user.email) + '</div>' : ''}
+              ${user.bio ? '<div class="profile-bio" style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:15px;padding:10px;background:rgba(139,94,60,0.03);border-radius:6px">' + escapeHtml(user.bio) + '</div>' : '<div class="muted">لا توجد نبذة</div>'}
+              ${followBtn}
+
+              <div class="profile-stats">
+                <div class="stat-item"><div class="stat-number">${userPoemsCount}</div><div class="stat-label">🪶 القصائد</div></div>
+                <div class="stat-item"><div class="stat-number">${userCommentsCount}</div><div class="stat-label">💬 التعليقات</div></div>
+                <div class="stat-item"><div class="stat-number">${totalLikes}</div><div class="stat-label">❤️ الإعجابات</div></div>
+                <div class="stat-item"><div class="stat-number">${followersCount}</div><div class="stat-label">👥 المتابعون</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-tab="poems">🪶 القصائد <span>(${userPoemsCount})</span></button>
+            <button class="tab" data-tab="comments">💬 التعليقات <span>(${userCommentsCount})</span></button>
+          </div>
+
+          <div class="tab-content active" id="tabPoems">
+            <div class="grid" style="margin-top:0"></div>
+          </div>
+          <div class="tab-content" id="tabComments">
+            <div class="comments-list"></div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      modal.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+          modal.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          modal.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          this.classList.add('active');
+          const tabName = this.dataset.tab;
+          modal.querySelector('#tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+        });
+      });
+
+      if (!isOwnProfile) {
+        modal.querySelector('#followBtn').addEventListener('click', function() {
+          toggleFollow(user.id);
+          if (isFollowing(user.id)) {
+            addNotification(user.id, { type: 'follow', from: currentUser.username, fromId: currentUser.id, timestamp: new Date().toISOString() });
+          }
+          const btn = this;
+          const nowFollowing = isFollowing(user.id);
+          btn.textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
+          btn.className = 'follow-btn ' + (nowFollowing ? 'following' : 'not-following');
+        });
+        modal.querySelector('#chatBtn').addEventListener('click', () => { modal.remove(); openDMWindow(user.id); });
+      }
+
+      if (isOwnProfile) {
+        const avatarInput = modal.querySelector('#avatarInput');
+        if (avatarInput) {
+          avatarInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0]; if (!file) return;
+            if (!file.type.startsWith('image/')) { showAlert('⚠️ يرجى اختيار صورة'); return; }
+            try {
+              const uploaded = await uploadFileToStorage(file);
+              currentUser.avatar = uploaded.url;
+              const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+              if (userIndex > -1) { allUsers[userIndex].avatar = uploaded.url; }
+              saveAllUsers();
+              localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+              await saveUserToFirebase();
+              modal.querySelector('.profile-avatar').src = uploaded.url;
+              showSyncStatus('✅ تم رفع الصورة بنجاح', 2000);
+            } catch (error) {
+              showAlert('❌ فشل رفع الصورة: ' + error.message);
+            }
+          });
+        }
+      }
+
+      modal.querySelector('#closeProfileModal').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+      get(ref(database, 'poems')).then(snapshot => {
+        const allPoems = Object.values(snapshot.val() || {});
+        const userPoems = allPoems.filter(p => p.userId === userId);
+        const poemsGrid = modal.querySelector('#tabPoems .grid');
+        if (userPoems.length === 0) {
+          poemsGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><div>لا توجد قصائد</div></div>';
+        } else {
+          userPoems.forEach(poem => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <h3>${escapeHtml(poem.title)}</h3>
+              <div class="excerpt">${escapeHtml(poem.excerpt || poem.text.substring(0, 100) + '...')}</div>
+            `;
+            card.onclick = () => { modal.remove(); openModal(poem); };
+            poemsGrid.appendChild(card);
+          });
+        }
+      });
+
+      get(ref(database, 'comments')).then(snapshot => {
+        const allComments = snapshot.val() || {};
+        const userComments = [];
+        for (const poemId in allComments) {
+          for (const cId in allComments[poemId]) {
+            if (allComments[poemId][cId].userId === userId) {
+              userComments.push(allComments[poemId][cId]);
+            }
+          }
+        }
+        const commentsList = modal.querySelector('#tabComments .comments-list');
+        if (userComments.length === 0) {
+          commentsList.innerHTML = '<div class="no-comments">لا توجد تعليقات</div>';
+        } else {
+          userComments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          userComments.forEach(comment => {
+            const div = document.createElement('div');
+            div.className = 'comment';
+            div.innerHTML = `
+              <div class="comment-header">
+                <span class="comment-time">${formatTimeAgo(comment.createdAt)}</span>
+              </div>
+              <div class="comment-text">${escapeHtml(comment.text)}</div>
+            `;
+            commentsList.appendChild(div);
+          });
+        }
+      });
+    }
+    window.openUserProfile = openUserProfile;
+
+    document.getElementById('btnFavorites').addEventListener('click', async () => {
+      const modal = document.createElement('div'); modal.className = 'modal';
+      const favoritePoems = poems.filter(p => favorites.includes(p.id));
+      modal.innerHTML = `
+        <div class="modal-inner">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <h3 style="margin:0">⭐ القصائد المفضلة (${favoritePoems.length})</h3>
+            <button class="btn small" id="closeFavModal">✖️ إغلاق</button>
+          </div>
+          <div class="favorites-grid"></div>
+        </div>`;
+      document.body.appendChild(modal);
+      const grid = modal.querySelector('.favorites-grid');
+      if (favoritePoems.length === 0) {
+        grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div>لا توجد قصائد مفضلة</div></div>';
+      } else {
+        for (const poem of favoritePoems) {
+          const item = document.createElement('div'); item.className='favorite-item';
+          const likesCount = await getLikesCount(poem.id);
+          item.innerHTML = `
+            <h4 style="margin:0 0 8px 0;color:var(--accent)">${escapeHtml(poem.title)}</h4>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${poem.author ? '✒️ ' + escapeHtml(poem.author) : ''}</div>
+            <div style="font-size:12px;color:var(--muted)">❤️ ${likesCount}</div>`;
+          item.onclick = () => { modal.remove(); openModal(poem); };
+          grid.appendChild(item);
+        }
+      }
+      modal.querySelector('#closeFavModal').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    });
+
+    document.getElementById('btnFollowing').addEventListener('click', () => {
+      const modal = document.createElement('div'); modal.className='modal';
+      const followingUsers = allUsers.filter(u => following.includes(u.id));
+      modal.innerHTML = `
+        <div class="modal-inner">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+            <h3 style="margin:0">👥 المتابَعون (${followingUsers.length})</h3>
+            <button class="btn small" id="closeFollowingModal">✖️ إغلاق</button>
+          </div>
+          <div class="profile-list"></div>
+        </div>`;
+      document.body.appendChild(modal);
+      const list = modal.querySelector('.profile-list');
+      if (followingUsers.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">👥</div><div>لا تتابع أحداً بعد</div></div>';
+      } else {
+        followingUsers.forEach(user => {
+          const item = document.createElement('div'); item.className='profile-item';
+          const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`;
+          item.innerHTML = `
+            <div style="display:flex;align-items:center;gap:10px">
+              <img src="${avatarUrl}" class="avatar-small" alt="${user.username}">
+              <div>
+                <div class="profile-item-name">${escapeHtml(user.username)}</div>
+                ${user.email ? '<div class="profile-item-email">' + escapeHtml(user.email) + '</div>' : ''}
+              </div>
+            </div>`;
+          item.onclick = () => { modal.remove(); openUserProfile(user.id); };
+          list.appendChild(item);
+        });
+      }
+      modal.querySelector('#closeFollowingModal').addEventListener('click', () => modal.remove());
+      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    });
+
+    document.getElementById('btnDeleteProfile').addEventListener('click', () => {
+      showConfirm('⚠️ هل أنت متأكد من حذف ملفك الشخصي؟\n\n🔴 سيتم حذف جميع قصائدك والملفات المرفوعة من السحابة وحذف ملفك الشخصي.\n\n⚠️ هذا الإجراء لا يمكن التراجع عنه!', async () => {
+        try {
+          showSyncStatus('🔄 جاري حذف الملف...', 5000);
+          try {
+            const userMediaPath = `media/${currentUser.id}/`;
+            const userFolderRef = storageRef(storage, userMediaPath);
+            const filesList = await listAll(userFolderRef);
+            for (const fileRef of filesList.items) { try { await deleteObject(fileRef); } catch (error) { console.error('Error deleting file:', fileRef.fullPath, error); } }
+          } catch (error) { console.error('Error deleting user files:', error); }
+
+          poems = poems.filter(p => p.userId !== currentUser.id);
+          await savePoemsToFirebase();
+
+          try { await set(ref(database, 'users/' + currentUser.id), null); } catch (error) { console.error('Error deleting user from Firebase:', error); }
+
+          try {
+            const commentsSnapshot = await get(ref(database, 'comments'));
+            if (commentsSnapshot.exists()) {
+              const allComments = commentsSnapshot.val();
+              for (const poemId in allComments) {
+                for (const commentId in allComments[poemId]) {
+                  if (allComments[poemId][commentId].userId === currentUser.id) {
+                    await set(ref(database, `comments/${poemId}/${commentId}`), null);
+                  }
+                }
+              }
+            }
+          } catch (error) { console.error('Error deleting user comments:', error); }
+
+          allUsers = allUsers.filter(u => u.id !== currentUser.id);
+          saveAllUsers();
+
+          localStorage.removeItem(USER_KEY);
+          localStorage.removeItem(HIDDEN_KEY_PREFIX + '_' + currentUser.id);
+          localStorage.removeItem(FAVORITES_KEY + '_' + currentUser.id);
+          localStorage.removeItem(FOLLOWING_KEY + '_' + currentUser.id);
+
+          currentUser = null; hiddenPoems = []; favorites = []; following = [];
+          showSyncStatus('✅ تم حذف الملف بنجاح', 2000);
+          setTimeout(() => location.reload(), 2000);
+        } catch (error) { showAlert('❌ حدث خطأ أثناء حذف الملف: ' + error.message); }
+      });
+    });
+
+    function displayLoginProfiles() {
+      const list = document.getElementById('loginProfilesList');
+      list.innerHTML = '';
+      if (allUsers.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)">لا توجد حسابات محفوظة<br/>قم بإنشاء حساب جديد</div>';
+        return;
+      }
+      allUsers.forEach(user => {
+        const item = document.createElement('div'); item.className = 'profile-item';
+        const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`;
+        item.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="${avatarUrl}" class="avatar-small" alt="${user.username}">
+            <div>
+              <div class="profile-item-name">${escapeHtml(user.username)}</div>
+              ${user.email ? '<div class="profile-item-email">' + escapeHtml(user.email) + '</div>' : ''}
+            </div>
+          </div>`;
         item.onclick = () => {
           selectedUserForLogin = user;
           document.getElementById('loginUserName').textContent = user.username;
@@ -400,32 +2139,20 @@ import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, de
           document.getElementById('loginPassword').focus();
           document.getElementById('loginPasswordError').classList.remove('show');
         };
-        loginProfilesList.appendChild(item);
+        list.appendChild(item);
       });
     }
 
     document.getElementById('signupUsername').addEventListener('input', function() {
       const username = this.value.trim();
       const errorDiv = document.getElementById('usernameError');
-      
-      if (username && checkUserNameExists(username)) {
-        errorDiv.classList.add('show');
-      } else {
-        errorDiv.classList.remove('show');
-      }
+      if (username && checkUserNameExists(username)) errorDiv.classList.add('show'); else errorDiv.classList.remove('show');
     });
-
     document.getElementById('signupPassword').addEventListener('input', function() {
       const password = this.value.trim();
       const errorDiv = document.getElementById('passwordError');
-      
-      if (password && password.length < 4) {
-        errorDiv.classList.add('show');
-      } else {
-        errorDiv.classList.remove('show');
-      }
+      if (password && password.length < 4) errorDiv.classList.add('show'); else errorDiv.classList.remove('show');
     });
-
     document.getElementById('tabLogin').addEventListener('click', () => {
       document.getElementById('tabLogin').classList.add('active');
       document.getElementById('tabSignup').classList.remove('active');
@@ -434,7 +2161,6 @@ import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, de
       document.getElementById('passwordForm').style.display = 'none';
       displayLoginProfiles();
     });
-
     document.getElementById('tabSignup').addEventListener('click', () => {
       document.getElementById('tabSignup').classList.add('active');
       document.getElementById('tabLogin').classList.remove('active');
@@ -444,7 +2170,6 @@ import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, de
       document.getElementById('usernameError').classList.remove('show');
       document.getElementById('passwordError').classList.remove('show');
     });
-
     document.getElementById('btnBackToProfiles').addEventListener('click', () => {
       document.getElementById('passwordForm').style.display = 'none';
       document.getElementById('loginForm').style.display = 'block';
@@ -458,1132 +2183,67 @@ import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, de
       const password = document.getElementById('signupPassword').value.trim();
       const email = document.getElementById('signupEmail').value.trim();
       const bio = document.getElementById('signupBio').value.trim();
-
       document.getElementById('usernameError').classList.remove('show');
       document.getElementById('passwordError').classList.remove('show');
-
-      if (!username) {
-        showAlert('⚠️ يرجى إدخال اسم المستخدم');
-        return;
-      }
-
-      if (!password) {
-        document.getElementById('passwordError').classList.add('show');
-        return;
-      }
-
-      if (password.length < 4) {
-        document.getElementById('passwordError').classList.add('show');
-        return;
-      }
-
-      if (checkUserNameExists(username)) {
-        document.getElementById('usernameError').classList.add('show');
-        return;
-      }
-
-      currentUser = {
-        id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        username: username,
-        passwordHash: hashPassword(password),
-        email: email,
-        bio: bio,
-        createdAt: new Date().toISOString()
-      };
-
-      allUsers.push(currentUser);
-      saveAllUsers();
-      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-
+      if (!username) { showAlert('⚠️ يرجى إدخال اسم المستخدم'); return; }
+      if (!password || password.length < 4) { document.getElementById('passwordError').classList.add('show'); return; }
+      if (checkUserNameExists(username)) { document.getElementById('usernameError').classList.add('show'); return; }
+      currentUser = { id: Date.now() + '_' + Math.random().toString(36).substr(2, 9), username, passwordHash: hashPassword(password), email, bio, createdAt: new Date().toISOString() };
+      allUsers.push(currentUser); saveAllUsers(); localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
       await saveUserToFirebase();
-
       document.getElementById('authModal').style.display = 'none';
-      showUserInfo();
-      init();
-      showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
+      showUserInfo(); init(); showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
     });
-
     document.getElementById('btnLoginSubmit').addEventListener('click', () => {
       const password = document.getElementById('loginPassword').value.trim();
-
       document.getElementById('loginPasswordError').classList.remove('show');
-
-      if (!password) {
-        showAlert('⚠️ يرجى إدخال كلمة المرور');
-        return;
-      }
-
-      if (hashPassword(password) !== selectedUserForLogin.passwordHash) {
-        document.getElementById('loginPasswordError').classList.add('show');
-        return;
-      }
-
-      currentUser = selectedUserForLogin;
-      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-
+      if (!password) { showAlert('⚠️ يرجى إدخال كلمة المرور'); return; }
+      if (hashPassword(password) !== selectedUserForLogin.passwordHash) { document.getElementById('loginPasswordError').classList.add('show'); return; }
+      currentUser = selectedUserForLogin; localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
       document.getElementById('authModal').style.display = 'none';
-      showUserInfo();
-      init();
-      showSyncStatus('✅ تم تسجيل الدخول بنجاح!', 2000);
+      showUserInfo(); init(); showSyncStatus('✅ تم تسجيل الدخول بنجاح!', 2000);
     });
-
-    document.getElementById('loginPassword').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        document.getElementById('btnLoginSubmit').click();
-      }
-    });
+    document.getElementById('loginPassword').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnLoginSubmit').click(); });
 
     function checkAuth() {
       const stored = localStorage.getItem(USER_KEY);
-      if (stored) {
-        try {
-          currentUser = JSON.parse(stored);
-          showUserInfo();
-          return true;
-        } catch (e) {
-          localStorage.removeItem(USER_KEY);
-        }
-      }
-      
+      if (stored) { try { currentUser = JSON.parse(stored); showUserInfo(); return true; } catch { localStorage.removeItem(USER_KEY); } }
       displayLoginProfiles();
       document.getElementById('authModal').style.display = 'flex';
       return false;
     }
-
     function showUserInfo() {
       document.getElementById('currentUserName').textContent = currentUser.username;
       document.getElementById('userInfoDisplay').style.display = 'block';
     }
-
     document.getElementById('btnLogout').addEventListener('click', () => {
-      showConfirm('هل تريد تسجيل الخروج؟', () => {
-        localStorage.removeItem(USER_KEY);
-        location.reload();
-      });
+      showConfirm('هل تريد تسجيل الخروج؟', () => { localStorage.removeItem(USER_KEY); location.reload(); });
     });
 
-   document.getElementById('btnDeleteProfile').addEventListener('click', () => {
-      showConfirm('⚠️ هل أنت متأكد من حذف ملفك الشخصي؟\n\n🔴 سيتم حذف جميع قصائدك والملفات المرفوعة من السحابة وحذف ملفك الشخصي.\n\n⚠️ هذا الإجراء لا يمكن التراجع عنه!', async () => {
-        try {
-          showSyncStatus('🔄 جاري حذف الملف...', 5000);
-          
-          // Delete all uploaded files from Firebase Storage
-          try {
-            const userMediaPath = `media/${currentUser.id}/`;
-            const userFolderRef = storageRef(storage, userMediaPath);
-            const filesList = await listAll(userFolderRef);
-            
-            let deletedCount = 0;
-            for (const fileRef of filesList.items) {
-              try {
-                await deleteObject(fileRef);
-                deletedCount++;
-              } catch (error) {
-                console.error('Error deleting file:', fileRef.fullPath, error);
-              }
-            }
-            
-            if (deletedCount > 0) {
-              showSyncStatus(`🗑️ تم حذف ${deletedCount} ملف...`, 3000);
-            }
-          } catch (error) {
-            console.error('Error deleting user files from storage:', error);
-          }
-          
-          // Delete poems from database
-          poems = poems.filter(p => p.userId !== currentUser.id);
-          await savePoemsToFirebase();
-          
-          // Delete user from database
-          try {
-            await set(ref(database, 'users/' + currentUser.id), null);
-          } catch (error) {
-            console.error('Error deleting user from Firebase:', error);
-          }
-          
-          // Delete comments by this user
-          try {
-            const commentsSnapshot = await get(ref(database, 'comments'));
-            if (commentsSnapshot.exists()) {
-              const allComments = commentsSnapshot.val();
-              for (const poemId in allComments) {
-                for (const commentId in allComments[poemId]) {
-                  if (allComments[poemId][commentId].userId === currentUser.id) {
-                    await set(ref(database, `comments/${poemId}/${commentId}`), null);
-                  }
-                }
-              }
-            }
-          } catch (error) {
-            console.error('Error deleting user comments:', error);
-          }
-          
-          // Remove from local storage
-          allUsers = allUsers.filter(u => u.id !== currentUser.id);
-          saveAllUsers();
-          
-          localStorage.removeItem(USER_KEY);
-          const hiddenKey = HIDDEN_KEY_PREFIX + '_' + currentUser.id;
-          localStorage.removeItem(hiddenKey);
-          
-          currentUser = null;
-          hiddenPoems = [];
-          
-          showSyncStatus('✅ تم حذف الملف بنجاح', 2000);
-          
-          setTimeout(() => location.reload(), 2000);
-        } catch (error) {
-          console.error('Error deleting profile:', error);
-          showAlert('❌ حدث خطأ أثناء حذف الملف: ' + error.message);
-        }
-      });
-    });
-    async function saveUserToFirebase() {
-      try {
-        await set(ref(database, 'users/' + currentUser.id), currentUser);
-        console.log('✅ User saved to Firebase');
-      } catch (error) {
-        console.error('User save error:', error);
-      }
-    }
-
-    async function savePoemsToFirebase() {
-      if (isUpdatingFromFirebase) return;
-      try {
-        showSyncStatus('🔄 جاري المزامنة...');
-        await set(ref(database, 'poems'), poems);
-        showSyncStatus('✅ تم المزامنة بنجاح!');
-        console.log('✅ Poems synced');
-      } catch (error) {
-        console.error('Sync error:', error);
-        showSyncStatus('❌ فشلت المزامنة', 3000);
-      }
-    }
-
-    async function loadPoemsFromFirebase() {
-      try {
-        const snapshot = await get(ref(database, 'poems'));
-        if (snapshot.exists()) {
-          isUpdatingFromFirebase = true;
-          poems = snapshot.val() || [];
-          renderPoems();
-          isUpdatingFromFirebase = false;
-          console.log('✅ Poems loaded:', poems.length);
-        }
-      } catch (error) {
-        console.error('Load error:', error);
-      }
-    }
-
-    function setupFirebaseListener() {
-      const poemsRef = ref(database, 'poems');
-      onValue(poemsRef, (snapshot) => {
-        if (snapshot.exists() && !isUpdatingFromFirebase) {
-          isUpdatingFromFirebase = true;
-          poems = snapshot.val() || [];
-          renderPoems();
-          showSyncStatus('🔄 تحديث من مستخدم آخر!', 2000);
-          isUpdatingFromFirebase = false;
-        }
-      });
-    }
-
-async function loadFromGitHub() {
-      const urls = [
-        'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
-        'poems.json'
-      ];
-
-      for (let i = 0; i < urls.length; i++) {
-        try {
-          const response = await fetch(urls[i] + '?_=' + Date.now(), {cache: 'no-store'});
-          if (!response.ok) throw new Error('fetch failed: ' + response.status);
-          const data = await response.json();
-          if (!Array.isArray(data)) throw new Error('poems.json must be an array');
-          
-          // Convert "audio" to "audios" array for consistency
-          originalPoems = data.map(p => {
-            const poem = {...p};
-            
-            // Handle both "audio" (singular) and "audios" (plural)
-            if (poem.audio && !poem.audios) {
-              poem.audios = Array.isArray(poem.audio) ? poem.audio : [poem.audio];
-              delete poem.audio;
-            } else if (!poem.audios) {
-              poem.audios = [];
-            } else if (!Array.isArray(poem.audios)) {
-              poem.audios = [poem.audios];
-            }
-            
-            return poem;
-          });
-          
-          console.log('✅ GitHub poems loaded:', originalPoems.length);
-          return originalPoems;
-        } catch (error) {
-          console.warn('Failed to load from:', urls[i], error);
-        }
-      }
-      return null;
-    }
-    async function uploadFileToStorage(file) {
-      return new Promise((resolve, reject) => {
-        const timestamp = Date.now();
-        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const path = `media/${currentUser.id}/${timestamp}_${safeName}`;
-        
-        const fileRef = storageRef(storage, path);
-        const uploadTask = uploadBytesResumable(fileRef, file);
-
-        document.getElementById('uploadProgress').classList.add('show');
-        document.getElementById('uploadText').textContent = `جاري رفع: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
-
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            const fill = document.getElementById('progressFill');
-            fill.style.width = progress + '%';
-            fill.textContent = Math.round(progress) + '%';
-          },
-          (error) => {
-            console.error('Upload error:', error);
-            document.getElementById('uploadProgress').classList.remove('show');
-            showAlert('❌ فشل رفع الملف: ' + error.message);
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              document.getElementById('uploadProgress').classList.remove('show');
-              document.getElementById('progressFill').style.width = '0%';
-              showSyncStatus('✅ تم رفع الملف بنجاح!', 2000);
-             resolve({
-                url: downloadURL,
-                path: path,  // ← إضافة المسار الأصلي
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                uploadedBy: currentUser.username,
-                uploadedAt: new Date().toISOString()
-              });
-            } catch (error) {
-              reject(error);
-            }
-          }
-        );
-      });
-    }
-
-    document.getElementById('inputAudioFile').addEventListener('change', async function(e) {
-      const files = e.target.files;
-      for (const file of Array.from(files)) {
-        try {
-          const uploadedFile = await uploadFileToStorage(file);
-          currentAudios.push(uploadedFile);
-          renderAudiosInForm();
-        } catch (error) {
-          console.error('Upload failed:', error);
-        }
-      }
-      e.target.value = '';
-    });
-
-    document.getElementById('btnAddAudioLink').addEventListener('click', function() {
-      const link = document.getElementById('inputAudioLink').value.trim();
-      if (!link) {
-        showAlert('⚠️ يرجى إدخال رابط');
-        return;
-      }
-      
-      try {
-        new URL(link);
-        currentAudios.push({
-          type: 'link',
-          url: link,
-          addedBy: currentUser.username,
-          addedAt: new Date().toISOString()
-        });
-        renderAudiosInForm();
-        document.getElementById('inputAudioLink').value = '';
-        showSyncStatus('✅ تم إضافة الرابط', 1500);
-      } catch (e) {
-        showAlert('⚠️ الرابط غير صحيح');
-      }
-    });
-
-    function renderTagsInForm() {
-      const display = document.getElementById('tagsDisplay');
-      display.innerHTML = '';
-      currentTags.forEach((tag, index) => {
-        const badge = document.createElement('span');
-        badge.className = 'tag-badge';
-        badge.innerHTML = escapeHtml(tag) + ' <button type="button" onclick="window.removeTag(' + index + ')">×</button>';
-        display.appendChild(badge);
-      });
-    }
-
-    function addTag() {
-      const tag = document.getElementById('inputTagField').value.trim();
-      if (tag && !currentTags.includes(tag)) {
-        currentTags.push(tag);
-        renderTagsInForm();
-        document.getElementById('inputTagField').value = '';
-      }
-    }
-
-    window.removeTag = function(index) {
-      currentTags.splice(index, 1);
-      renderTagsInForm();
-    };
-
-    document.getElementById('inputTagField').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        addTag();
-      }
-    });
-
-    function renderAudiosInForm() {
-      const display = document.getElementById('audioDisplay');
-      display.innerHTML = '';
-      currentAudios.forEach((audio, index) => {
-        const item = document.createElement('div');
-        item.className = 'audio-item';
-        
-        let displayText = '';
-        let badge = '';
-        
-        if (audio.url && audio.type !== 'link') {
-          const sizeMB = audio.size ? (audio.size / 1024 / 1024).toFixed(2) : '?';
-          displayText = `📦 ${escapeHtml(audio.name)} (${sizeMB} MB)`;
-          badge = '<span style="background:#28a745;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">Firebase</span>';
-        } else if (audio.type === 'link') {
-          displayText = '🔗 ' + escapeHtml(audio.url.substring(0, 50) + (audio.url.length > 50 ? '...' : ''));
-          badge = '<span style="background:#4a90e2;color:#fff;padding:2px 6px;border-radius:4px;font-size:10px;margin-left:6px">Link</span>';
-        }
-        
-        item.innerHTML = badge + displayText + ' <button type="button" onclick="window.removeAudio(' + index + ')">حذف</button>';
-        display.appendChild(item);
-      });
-    }
-
-    window.removeAudio = function(index) {
-      currentAudios.splice(index, 1);
-      renderAudiosInForm();
-    };
-
-    document.getElementById('menuToggle').addEventListener('click', function(e) {
-      e.stopPropagation();
-      document.getElementById('dropdownMenu').classList.toggle('show');
-    });
-
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.menu-container')) {
-        document.getElementById('dropdownMenu').classList.remove('show');
-      }
-    });
-
-    document.querySelectorAll('.menu-item').forEach(item => {
-      item.addEventListener('click', () => {
-        document.getElementById('dropdownMenu').classList.remove('show');
-      });
-    });
-
-    function renderTags() {
-      const tagSet = new Set();
-      poems.forEach(p => {
-        if (!isPoemHidden(p.id)) {
-          (p.tags || []).forEach(t => tagSet.add(t));
-        }
-      });
-      const tagsWrapper = document.getElementById('tagsWrapper');
-      tagsWrapper.innerHTML = '';
-      const allBtn = document.createElement('button');
-      allBtn.className = 'tag';
-      allBtn.textContent = 'الكل';
-      if (!activeTag) allBtn.classList.add('active');
-      allBtn.addEventListener('click', () => {
-        activeTag = null;
-        document.getElementById('searchInput').value = '';
-        renderPoems();
-      });
-      tagsWrapper.appendChild(allBtn);
-      Array.from(tagSet).sort().forEach(tag => {
-        const btn = document.createElement('button');
-        btn.className = 'tag';
-        btn.textContent = tag;
-        if (activeTag === tag) btn.classList.add('active');
-        btn.addEventListener('click', () => {
-          activeTag = tag;
-          document.getElementById('searchInput').value = '';
-          renderPoems();
-        });
-        tagsWrapper.appendChild(btn);
-      });
-    }
-
-    function renderPoems() {
-      const poemGrid = document.getElementById('poemGrid');
-      const emptyState = document.getElementById('emptyState');
-      const searchInput = document.getElementById('searchInput');
-      const q = (searchInput.value || '').trim().toLowerCase();
-      poemGrid.innerHTML = '';
-
-      let filtered;
-      if (activeTag) {
-        filtered = poems.filter(p => (p.tags || []).includes(activeTag) && !isPoemHidden(p.id));
-      } else {
-        filtered = poems.filter(p => {
-          if (isPoemHidden(p.id)) return false;
-          if (!q) return true;
-          const s = (p.title + ' ' + p.text + ' ' + (p.excerpt || '') + ' ' + (p.tags||[]).join(' ')).toLowerCase();
-          return s.includes(q);
-        });
-      }
-
-      if (filtered.length === 0) {
-        emptyState.style.display = 'block';
-        renderTags();
-        return;
-      } else {
-        emptyState.style.display = 'none';
-      }
-
-      filtered.forEach(poem => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.dataset.id = poem.id || ('p-' + (Math.random()*1e9|0));
-
-        const tagsHtml = (poem.tags || []).slice(0,3).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
-const userIcon = poem.createdBy && poem.createdBy.toLowerCase().includes('mody') ? '✒️' : '👤';
-const userBadge = poem.createdBy ? '<span class="muted" style="font-size:11px">' + userIcon + ' ' + escapeHtml(poem.createdBy) + '</span>' : '';    
-        const audioCount = (poem.audios || []).length;
-        const mediaBadge = audioCount > 0 ? '<span class="card-tag" style="background:#4a90e2;color:#fff">🎵 ' + audioCount + '</span>' : '';
-
-        let authorDisplay = '';
-        if (poem.author) {
-          authorDisplay = '<span class="muted">✒️ ' + escapeHtml(poem.author) + '</span>';
-        }
-
-        card.innerHTML = `
-          <div class="drag-handle">☰</div>
-          <div class="content">
-            <h3>${escapeHtml(poem.title)}</h3>
-            <div class="excerpt">${escapeHtml(poem.excerpt || poem.text.slice(0,120) + (poem.text.length>120?'...':''))}</div>
-            <div class="card-footer">
-              <div>${authorDisplay} ${userBadge}</div>
-              <div class="card-tags">${tagsHtml} ${mediaBadge}</div>
-            </div>
-          </div>
-        `;
-
-        card.addEventListener('click', function(e) {
-          if (isDragging) return;
-          openModal(poem);
-        });
-
-        poemGrid.appendChild(card);
-      });
-
-      renderTags();
-    }
-
-    function getYouTubeEmbedUrl(url) {
-      try {
-        const urlObj = new URL(url);
-        let videoId = null;
-        
-        if (urlObj.hostname.includes('youtube.com')) {
-          videoId = urlObj.searchParams.get('v');
-        } else if (urlObj.hostname.includes('youtu.be')) {
-          videoId = urlObj.pathname.slice(1);
-        }
-        
-        if (videoId) {
-          return `https://www.youtube.com/embed/${videoId}`;
-        }
-      } catch (e) {
-        console.error('Invalid YouTube URL:', e);
-      }
-      return null;
-    }
-
-    function getSoundCloudEmbedUrl(url) {
-      if (url.includes('soundcloud.com')) {
-        return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
-      }
-      return null;
-    }
-function getAudioHtml(audio) {
-      if (!audio) return '';
-      
-      // Handle string URLs (common in poems.json)
-      let audioUrl = '';
-      if (typeof audio === 'string') {
-        audioUrl = audio;
-      } else if (audio.url) {
-        audioUrl = audio.url;
-      } else {
-        return '';
-      }
-      
-      // Check for YouTube
-      const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
-      if (youtubeEmbed) {
-        return `
-          <div class="media-item">
-            <iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-          </div>
-        `;
-      }
-      
-      // Check for SoundCloud
-      const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
-      if (soundcloudEmbed) {
-        return `
-          <div class="media-item">
-            <iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe>
-          </div>
-        `;
-      }
-      
-      // Check if it's a direct audio/video file
-      const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
-      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-      const lowerUrl = audioUrl.toLowerCase();
-      
-      const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
-      const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
-      
-      if (isDirectAudio) {
-        return `
-          <div class="media-item">
-            <audio controls>
-              <source src="${audioUrl}">
-              متصفحك لا يدعم تشغيل الملفات الصوتية
-            </audio>
-          </div>
-        `;
-      }
-      
-      if (isDirectVideo) {
-        return `
-          <div class="media-item">
-            <video controls>
-              <source src="${audioUrl}">
-              متصفحك لا يدعم تشغيل الفيديو
-            </video>
-          </div>
-        `;
-      }
-      
-      // For uploaded files from Firebase
-      if (audio.url && audio.type && audio.name) {
-        const isVideo = audio.type.startsWith('video/');
-        
-        if (isVideo) {
-          return `
-            <div class="media-item">
-              <video controls>
-                <source src="${audio.url}" type="${audio.type}">
-              </video>
-            </div>
-          `;
-        } else {
-          return `
-            <div class="media-item">
-              <audio controls>
-                <source src="${audio.url}" type="${audio.type}">
-              </audio>
-            </div>
-          `;
-        }
-      }
-      
-      // Default: show as clickable link
-      return `
-        <div class="media-item">
-          <div style="font-size:13px;color:var(--brown)">
-            🔗 <a href="${audioUrl}" target="_blank" style="color:var(--brown);text-decoration:underline">فتح الرابط</a>
-          </div>
-        </div>
-      `;
-    }
-    async function loadCommentsFromFirebase(poemId) {
-      try {
-        const snapshot = await get(ref(database, `comments/${poemId}`));
-        if (snapshot.exists()) {
-          return Object.values(snapshot.val());
-        }
-        return [];
-      } catch (error) {
-        console.error('Error loading comments:', error);
-        return [];
-      }
-    }
-
-    async function saveCommentToFirebase(poemId, comment) {
-      try {
-        const commentId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        await set(ref(database, `comments/${poemId}/${commentId}`), comment);
-        return true;
-      } catch (error) {
-        console.error('Error saving comment:', error);
-        return false;
-      }
-    }
-
-    async function deleteCommentFromFirebase(poemId, commentId) {
-      try {
-        await set(ref(database, `comments/${poemId}/${commentId}`), null);
-        return true;
-      } catch (error) {
-        console.error('Error deleting comment:', error);
-        return false;
-      }
-    }
-
-    function formatTimeAgo(dateString) {
-      const now = new Date();
-      const date = new Date(dateString);
-      const seconds = Math.floor((now - date) / 1000);
-      
-      if (seconds < 60) return 'الآن';
-      if (seconds < 3600) return Math.floor(seconds / 60) + ' دقيقة';
-      if (seconds < 86400) return Math.floor(seconds / 3600) + ' ساعة';
-      if (seconds < 604800) return Math.floor(seconds / 86400) + ' يوم';
-      if (seconds < 2592000) return Math.floor(seconds / 604800) + ' أسبوع';
-      return Math.floor(seconds / 2592000) + ' شهر';
-    }
-
-    async function renderComments(poemId, commentsContainer) {
-      const comments = await loadCommentsFromFirebase(poemId);
-      const commentsList = commentsContainer.querySelector('.comments-list');
-      commentsList.innerHTML = '';
-      
-      if (comments.length === 0) {
-        commentsList.innerHTML = '<div class="no-comments">لا توجد تعليقات بعد. كن أول من يعلق! 💬</div>';
-        return;
-      }
-      
-      comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      
-      comments.forEach(comment => {
-        const commentDiv = document.createElement('div');
-        commentDiv.className = 'comment';
-        
-        const canDelete = comment.userId === currentUser.id;
-        const deleteButton = canDelete ? `<button class="comment-action-btn" onclick="window.deleteComment('${poemId}', '${comment.id}')">🗑️ حذف</button>` : '';
-        
-        commentDiv.innerHTML = `
-          <div class="comment-header">
-            <span class="comment-author">${escapeHtml(comment.username)}</span>
-            <span class="comment-time">${formatTimeAgo(comment.createdAt)}</span>
-          </div>
-          <div class="comment-text">${escapeHtml(comment.text)}</div>
-          ${deleteButton ? '<div class="comment-actions">' + deleteButton + '</div>' : ''}
-        `;
-        
-        commentsList.appendChild(commentDiv);
-      });
-    }
-
-    window.deleteComment = async function(poemId, commentId) {
-      showConfirm('هل تريد حذف هذا التعليق؟', async () => {
-        const success = await deleteCommentFromFirebase(poemId, commentId);
-        if (success) {
-          const modal = document.querySelector('.modal');
-          const commentsContainer = modal.querySelector('.comments-section');
-          await renderComments(poemId, commentsContainer);
-          showSyncStatus('✅ تم حذف التعليق', 2000);
-        } else {
-          showAlert('❌ فشل حذف التعليق');
-        }
-      });
-    };
-
-    async function openModal(poem) {
-      const modal = document.createElement('div');
-      modal.className = 'modal';
-      
-      const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
-
-      const audiosHtml = (poem.audios || []).length > 0 
-        ? '<div class="media-container">' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>'
-        : '';
-
-const userIcon = poem.createdBy && poem.createdBy.toLowerCase().includes('mody') ? '✒️' : '👤';
-const userInfo = poem.createdBy ? '<div class="muted" style="margin-top:4px">' + userIcon + ' أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>' : '';
-      const canEdit = isOwnPoem(poem);
-      const canDelete = isOwnPoem(poem);
-
-      const editButton = canEdit ? '<button class="btn small" id="editPoem">✏️ تعديل</button>' : '';
-      const deleteButton = canDelete ? '<button class="btn small" id="deletePoem">🗑️ حذف</button>' : '';
-      const hideButton = !canEdit ? '<button class="btn small" id="hidePoem">🙈 إخفاء</button>' : '';
-
-      let authorDisplay = '';
-      if (poem.author) {
-        authorDisplay = '<div class="muted" style="margin-top:6px">✒️ ' + escapeHtml(poem.author) + '</div>';
-      }
-
-      modal.innerHTML = `
-        <div class="modal-inner">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-            <div style="flex:1">
-              <div class="modal-title">${escapeHtml(poem.title)}</div>
-              ${authorDisplay}
-              ${userInfo}
-              ${tagsHtml ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + tagsHtml + '</div>' : ''}
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
-              ${editButton}
-              ${deleteButton}
-              ${hideButton}
-              <button class="btn small" id="closeModal">✖️ إغلاق</button>
-            </div>
-          </div>
-          <div class="poem-text">${escapeHtml(poem.text)}</div>
-          ${audiosHtml}
-          
-          <div class="comments-section">
-            <div class="comments-header">
-              💬 التعليقات (<span id="commentsCount">0</span>)
-            </div>
-            <div class="comment-form">
-              <textarea class="comment-input" id="commentInput" placeholder="اكتب تعليقك هنا..."></textarea>
-              <button class="comment-submit" id="submitComment">إرسال التعليق</button>
-            </div>
-            <div class="comments-list"></div>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-
-      const commentsContainer = modal.querySelector('.comments-section');
-      await renderComments(poem.id, commentsContainer);
-      
-      const comments = await loadCommentsFromFirebase(poem.id);
-      modal.querySelector('#commentsCount').textContent = comments.length;
-
-      modal.querySelector('#submitComment').addEventListener('click', async function() {
-        const commentText = modal.querySelector('#commentInput').value.trim();
-        
-        if (!commentText) {
-          showAlert('⚠️ يرجى كتابة تعليق');
-          return;
-        }
-        
-        const comment = {
-          id: Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-          text: commentText,
-          username: currentUser.username,
-          userId: currentUser.id,
-          createdAt: new Date().toISOString()
-        };
-        
-        const success = await saveCommentToFirebase(poem.id, comment);
-        
-        if (success) {
-          modal.querySelector('#commentInput').value = '';
-          await renderComments(poem.id, commentsContainer);
-          const updatedComments = await loadCommentsFromFirebase(poem.id);
-          modal.querySelector('#commentsCount').textContent = updatedComments.length;
-          showSyncStatus('✅ تم إضافة التعليق', 2000);
-        } else {
-          showAlert('❌ فشل إضافة التعليق');
-        }
-      });
-
-      modal.querySelector('#commentInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter' && e.ctrlKey) {
-          modal.querySelector('#submitComment').click();
-        }
-      });
-
-      modal.querySelector('#closeModal').addEventListener('click', () => modal.remove());
-      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-      
-      if (canEdit) {
-        modal.querySelector('#editPoem').addEventListener('click', () => {
-          editingPoem = poem;
-          document.getElementById('inputTitle').value = poem.title || '';
-          document.getElementById('inputAuthor').value = poem.author || '';
-          document.getElementById('inputText').value = poem.text || '';
-          document.getElementById('inputExcerpt').value = poem.excerpt || '';
-          currentTags = poem.tags || [];
-          renderTagsInForm();
-          currentAudios = poem.audios || [];
-          renderAudiosInForm();
-          document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
-          document.getElementById('addModal').style.display = 'flex';
-          modal.remove();
-        });
-      }
-if (canDelete) {
-        modal.querySelector('#deletePoem').addEventListener('click', () => {
-          showConfirm('هل أنت متأكد من حذف هذه القصيدة؟\n\n⚠️ سيتم حذفها والملفات المرفوعة من السحابة لجميع المستخدمين!', async () => {
-            try {
-              showSyncStatus('🔄 جاري الحذف...', 5000);
-              
-              // Delete uploaded files from Storage
-              if (poem.audios && poem.audios.length > 0) {
-                let deletedFiles = 0;
-                let failedFiles = 0;
-                
-                for (const audio of poem.audios) {
-                  // Only delete files uploaded to Firebase Storage (not external links)
-                  if (audio.url && audio.url.includes('firebasestorage.googleapis.com')) {
-                    try {
-                      // Method 1: Extract path from URL
-                      const url = new URL(audio.url);
-                      let filePath = null;
-                      
-                      // Try to extract from pathname: /v0/b/bucket/o/path%2Fto%2Ffile
-                      const pathMatch = url.pathname.match(/\/o\/(.+?)(?:\?|$)/);
-                      if (pathMatch) {
-                        filePath = decodeURIComponent(pathMatch[1]);
-                      }
-                      
-                      // Alternative: if we have the original upload path stored
-                      if (!filePath && audio.path) {
-                        filePath = audio.path;
-                      }
-                      
-                      // Alternative: reconstruct path from known structure
-                      if (!filePath && audio.name && poem.userId) {
-                        // Try to find the file in user's media folder
-                        const userMediaPath = `media/${poem.userId}/`;
-                        const userFolderRef = storageRef(storage, userMediaPath);
-                        const filesList = await listAll(userFolderRef);
-                        
-                        // Find file by matching URL
-                        for (const fileRef of filesList.items) {
-                          const fileUrl = await getDownloadURL(fileRef);
-                          if (fileUrl === audio.url) {
-                            filePath = fileRef.fullPath;
-                            break;
-                          }
-                        }
-                      }
-                      
-                      if (filePath) {
-                        console.log('🔍 Attempting to delete file:', filePath);
-                        const fileRef = storageRef(storage, filePath);
-                        await deleteObject(fileRef);
-                        deletedFiles++;
-                        console.log('✅ Successfully deleted file:', filePath);
-                      } else {
-                        console.warn('⚠️ Could not extract file path from URL:', audio.url);
-                        failedFiles++;
-                      }
-                      
-                    } catch (error) {
-                      console.error('❌ Error deleting file:', audio.url, error);
-                      failedFiles++;
-                    }
-                  }
-                }
-                
-                if (deletedFiles > 0) {
-                  showSyncStatus(`🗑️ تم حذف ${deletedFiles} ملف من السحابة`, 2000);
-                }
-                
-                if (failedFiles > 0) {
-                  console.warn(`⚠️ فشل حذف ${failedFiles} ملف`);
-                }
-              }
-              
-              // Delete comments for this poem
-              try {
-                await set(ref(database, `comments/${poem.id}`), null);
-                console.log('✅ Deleted comments for poem:', poem.id);
-              } catch (error) {
-                console.error('Error deleting comments:', error);
-              }
-              
-              // Delete poem from local array
-              poems = poems.filter(p => p.id !== poem.id);
-              
-              // Save updated poems array to Firebase (this will remove the poem from database)
-              await savePoemsToFirebase();
-              
-              renderPoems();
-              modal.remove();
-              showSyncStatus('✅ تم حذف القصيدة والملفات من السحابة', 2500);
-            } catch (error) {
-              console.error('Error deleting poem:', error);
-              showAlert('❌ حدث خطأ أثناء الحذف: ' + error.message);
-            }
-          });
-        });
-      }
-      
-      if (!canEdit && modal.querySelector('#hidePoem')) {
-        modal.querySelector('#hidePoem').addEventListener('click', () => {
-          toggleHidePoem(poem.id);
-          renderPoems();
-          modal.remove();
-          showSyncStatus('✅ تم إخفاء القصيدة من جهازك', 2000);
-        });
-      }
-      
-      document.addEventListener('keydown', function esc(e){ 
-        if (e.key === 'Escape') { 
-          modal.remove(); 
-          document.removeEventListener('keydown', esc); 
-        }
-      });
-    }
-
-    let sortableInstance = null;
-    function initSortable() {
-      const poemGrid = document.getElementById('poemGrid');
-      if (!poemGrid) return;
-      if (sortableInstance && typeof sortableInstance.destroy === 'function') {
-        try { sortableInstance.destroy(); } catch(e){}
-      }
-      sortableInstance = new Sortable(poemGrid, {
-        animation: 200,
-        handle: '.drag-handle',
-        dataIdAttr: 'data-id',
-        onStart: () => { isDragging = true; },
-        onEnd: () => {
-          const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
-          const newOrder = [];
-          ids.forEach(id => {
-            const found = poems.find(p => p.id === id);
-            if (found) newOrder.push(found);
-          });
-          const missing = poems.filter(p => !ids.includes(p.id));
-          poems = newOrder.concat(missing);
-          savePoemsToFirebase();
-          setTimeout(() => isDragging = false, 80);
-        }
-      });
-    }
-
-    document.getElementById('searchInput').addEventListener('input', () => {
-      activeTag = null;
-      renderPoems();
-    });
-
-    document.getElementById('btnDownload').addEventListener('click', () => {
-      const a = document.createElement('a');
-      const blob = new Blob([JSON.stringify(poems, null, 2)], {type: 'application/json'});
-      a.href = URL.createObjectURL(blob);
-      a.download = 'mody_poems_' + Date.now() + '.json';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    });
-document.getElementById('btnReloadAndSort').addEventListener('click', async () => {
-      showConfirm('هل تريد جلب آخر قصائد مودي من GitHub؟', async () => {
-        showSyncStatus('🔄 جاري تحميل قصائد مودي...', 3000);
-        
-        const githubPoems = await loadFromGitHub();
-        
-        if (!githubPoems) {
-          showAlert('⚠️ لم يتم العثور على الملف على GitHub.');
-          return;
-        }
-        const currentMap = new Map(poems.map(p => [p.id, p]));
-        let added = 0;
-        let updated = 0;
-        let restored = 0;
-        
-        githubPoems.forEach(orig => {
-          // Restore hidden original poems
-          if (isPoemHidden(orig.id)) {
-            toggleHidePoem(orig.id);
-            restored++;
-          }
-          
-          if (!currentMap.has(orig.id)) {
-            // Add new poem from GitHub
-            poems.push({...orig});
-            added++;
-          } else {
-            // Update existing original Mody poems only
-            const existing = currentMap.get(orig.id);
-            if (isOriginalModyPoem(existing)) {
-              existing.title = orig.title;
-              existing.author = orig.author;
-              existing.text = orig.text;
-              existing.excerpt = orig.excerpt;
-              existing.tags = orig.tags || [];
-              existing.audios = orig.audios || [];
-              updated++;
-            }
-          }
-        });
-        
-        await savePoemsToFirebase();
-        renderPoems();
-        showAlert(`✅ تم بنجاح!\n\n🎉 أُضيف: ${added} قصيدة جديدة\n🔄 حُدّث: ${updated} قصيدة\n🔓 استُعيد: ${restored} قصيدة مخفية\n📋 عدد القصائد الكلي: ${poems.length}`);
-      });
-    });
-    document.getElementById('btnImportJSON').addEventListener('click', () => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      input.onchange = function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-          try {
-            const data = JSON.parse(evt.target.result);
-            if (!Array.isArray(data)) throw new Error('يجب أن يكون الملف مصفوفة');
-            const currentIds = new Set(poems.map(p => p.id));
-            let added = 0;
-            data.forEach(p => {
-              if (!p.id) p.id = 'p-' + Date.now() + Math.random();
-              if (!currentIds.has(p.id)) {
-                if (!p.createdBy) {
-                  p.createdBy = currentUser.username + ' (مستورد)';
-                  p.userId = currentUser.id;
-                  p.importedAt = new Date().toISOString();
-                }
-                poems.push({...p});
-                added++;
-              }
-            });
-            if (added > 0) {
-              savePoemsToFirebase();
-              renderPoems();
-            }
-            showAlert(`تمت إضافة ${added} قصيدة من الملف\n\n📝 جميع القصائد المستوردة تحمل اسمك: "${currentUser.username} (مستورد)"`);
-          } catch (err) {
-            showAlert('خطأ: ' + err.message);
-          }
-        };
-        reader.readAsText(file);
-      };
-      input.click();
-    });
-
+    // Fix: Add button should require auth
     document.getElementById('btnAdd').addEventListener('click', () => {
+      if (!currentUser) {
+        showAlert('⚠️ يرجى تسجيل الدخول أولاً لإضافة قصيدة');
+        document.getElementById('authModal').style.display = 'flex';
+        return;
+      }
       editingPoem = null;
       document.getElementById('poemForm').reset();
-      currentTags = [];
-      currentAudios = [];
-      renderTagsInForm();
-      renderAudiosInForm();
-      document.getElementById('modalFormTitle').textContent = '✍️ أضف قصيدة';
+      currentTags = []; currentAudios = []; currentImages = [];
+      renderTagsInForm(); renderAudiosInForm(); renderImagesPreview();
+      document.getElementById('modalFormTitle').textContent = '✏️ أضف قصيدة';
       document.getElementById('addModal').style.display = 'flex';
     });
-    
+
     document.getElementById('btnCancelAdd').addEventListener('click', () => {
       editingPoem = null;
       document.getElementById('addModal').style.display = 'none';
       document.getElementById('poemForm').reset();
-      currentTags = [];
-      currentAudios = [];
-      renderTagsInForm();
-      renderAudiosInForm();
+      currentTags = []; currentAudios = []; currentImages = [];
+      renderTagsInForm(); renderAudiosInForm(); renderImagesPreview();
     });
-    
-    document.getElementById('poemForm').addEventListener('submit', function(e) {
+
+    document.getElementById('poemForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       const poemData = {
         title: document.getElementById('inputTitle').value.trim() || 'بدون عنوان',
@@ -1592,42 +2252,69 @@ document.getElementById('btnReloadAndSort').addEventListener('click', async () =
         excerpt: document.getElementById('inputExcerpt').value.trim(),
         tags: currentTags,
         audios: currentAudios,
+        images: currentImages,
         createdBy: currentUser.username,
         userId: currentUser.id,
         createdAt: new Date().toISOString()
       };
-      
+
       if (editingPoem) {
         const index = poems.findIndex(p => p.id === editingPoem.id);
-        if (index !== -1) {
-          poems[index] = { ...poemData, id: editingPoem.id };
-        }
+        if (index !== -1) poems[index] = { ...poemData, id: editingPoem.id };
         editingPoem = null;
+        showSyncStatus('✅ تم تحديث القصيدة', 2000);
       } else {
         poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         poems.unshift(poemData);
+
+        currentUser.poemsCount = (currentUser.poemsCount || 0) + 1;
+        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+        if (userIndex > -1) allUsers[userIndex].poemsCount = currentUser.poemsCount;
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        await set(ref(database, `users/${currentUser.id}/poemsCount`), currentUser.poemsCount);
+        saveAllUsers();
+
+        showSyncStatus('✅ تم نشر القصيدة', 2000);
+
+        allUsers.forEach(user => {
+          if (user.id !== currentUser.id) {
+            const userFollowing = localStorage.getItem(FOLLOWING_KEY + '_' + user.id);
+            if (userFollowing) {
+              try {
+                const followingList = JSON.parse(userFollowing);
+                if (followingList.includes(currentUser.id)) {
+                  addNotification(user.id, {
+                    type: 'new_poem',
+                    from: currentUser.username,
+                    fromId: currentUser.id,
+                    poemId: poemData.id,
+                    poemTitle: poemData.title,
+                    timestamp: new Date().toISOString()
+                  });
+                }
+              } catch {}
+            }
+          }
+        });
       }
-      
-      savePoemsToFirebase();
-      renderPoems();
+
+      await savePoemsToFirebase();
       document.getElementById('addModal').style.display = 'none';
       this.reset();
-      currentTags = [];
-      currentAudios = [];
-      renderTagsInForm();
-      renderAudiosInForm();
+      currentTags = []; currentAudios = []; currentImages = [];
+      renderTagsInForm(); renderAudiosInForm(); renderImagesPreview();
     });
 
     async function init() {
       loadAllUsers();
       await loadAllUsersFromFirebase();
-      
-      if (!checkAuth()) {
-        return;
-      }
-      
+      if (!checkAuth()) return;
       loadHiddenPoems();
+      loadFavorites();
+      loadFollowing();
       await loadPoemsFromFirebase();
+      await loadNotifications();
+      await loadDMConversations();
       setupFirebaseListener();
       renderPoems();
       initSortable();
