@@ -224,15 +224,15 @@
     display: flex !important;
     align-items: center;
     justify-content: center;
-    
+
     width: auto !important;
-    min-width: 40px; 
+    min-width: 40px;
     height: 40px; /* تحديد الارتفاع */
     padding: 0 8px; /* مسافة داخلية أفقية */
     border-radius: 20px; /* لجعله بيضاويًا */
 
     /* التأكد من استخدام نفس الحدود */
-    border: 1.5px solid var(--border); 
+    border: 1.5px solid var(--border);
     background: var(--card);
 }
 
@@ -262,7 +262,7 @@
   </div>
         <div>
           <h1>Mody Poetry</h1>
-          <p class="muted">منصة شاملة للشعر والأدب</p>
+          <p class="muted">قصائد مودي الذهبية - أقرأ شارك واستمتع</p>
         </div>
       </div>
       <nav>
@@ -442,7 +442,7 @@
     </div>
   </div>
 
-  <footer>© <span id="year"></span> مجنون الشعر – Powered by Firebase 🔥</footer>
+  <footer>© <span id="year"></span> مجنون الشعر </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script type="module">
@@ -1564,7 +1564,7 @@
     ☰
   </button>
   <div class="actions-dropdown" id="actionsDropdown">
- 
+
                   <button class="action-item" id="favoritePoem">${isFav ?
 '⭐ إزالة من المفضلة' : '☆ إضافة للمفضلة'}</button>
                   ${(poem.userId && poem.userId !== currentUser?.id) ?
@@ -1844,11 +1844,6 @@
       const isOwnProfile = user.id === currentUser.id;
       const isFollowingUser = isFollowing(user.id);
 
-      const userPoemsCount = user.poemsCount || 0;
-      const userCommentsCount = user.commentsCount || 0;
-      const totalLikes = user.likesCount || 0;
-      const followersCount = user.followersCount || 0;
-
       const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=120`;
 
       const followBtn = !isOwnProfile ? `
@@ -1879,40 +1874,20 @@
               ${user.bio ? '<div class="profile-bio" style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:15px;padding:10px;background:rgba(139,94,60,0.03);border-radius:6px">' + escapeHtml(user.bio) + '</div>' : '<div class="muted">لا توجد نبذة</div>'}
               ${followBtn}
 
-              <div class="profile-stats">
-                <div class="stat-item"><div class="stat-number">${userPoemsCount}</div><div class="stat-label">🪶 القصائد</div></div>
-                <div class="stat-item"><div class="stat-number">${userCommentsCount}</div><div class="stat-label">💬 التعليقات</div></div>
-                <div class="stat-item"><div class="stat-number">${totalLikes}</div><div class="stat-label">❤️ الإعجابات</div></div>
-                <div class="stat-item"><div class="stat-number">${followersCount}</div><div class="stat-label">👥 المتابعون</div></div>
-              </div>
+
             </div>
           </div>
 
-          <div class="tabs">
-            <button class="tab active" data-tab="poems">🪶 القصائد <span>(${userPoemsCount})</span></button>
-            <button class="tab" data-tab="comments">💬 التعليقات <span>(${userCommentsCount})</span></button>
-          </div>
 
-          <div class="tab-content active" id="tabPoems">
-            <div class="grid" style="margin-top:0"></div>
-          </div>
-          <div class="tab-content" id="tabComments">
-            <div class="comments-list"></div>
-          </div>
+      <div style="margin-top:20px">
+  <h4 style="margin-bottom:15px;color:var(--accent);font-size:18px">🪶 القصائد</h4>
+  <div class="grid" style="margin-top:0"></div>
+</div>
         </div>
       `;
 
       document.body.appendChild(modal);
 
-      modal.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-          modal.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-          modal.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-          this.classList.add('active');
-          const tabName = this.dataset.tab;
-          modal.querySelector('#tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
-        });
-      });
 
       if (!isOwnProfile) {
         modal.querySelector('#followBtn').addEventListener('click', function() {
@@ -1957,7 +1932,7 @@
       get(ref(database, 'poems')).then(snapshot => {
         const allPoems = Object.values(snapshot.val() || {});
         const userPoems = allPoems.filter(p => p.userId === userId);
-        const poemsGrid = modal.querySelector('#tabPoems .grid');
+        const poemsGrid = modal.querySelector('.grid');
         if (userPoems.length === 0) {
           poemsGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><div>لا توجد قصائد</div></div>';
         } else {
@@ -1974,34 +1949,7 @@
         }
       });
 
-      get(ref(database, 'comments')).then(snapshot => {
-        const allComments = snapshot.val() || {};
-        const userComments = [];
-        for (const poemId in allComments) {
-          for (const cId in allComments[poemId]) {
-            if (allComments[poemId][cId].userId === userId) {
-              userComments.push(allComments[poemId][cId]);
-            }
-          }
-        }
-        const commentsList = modal.querySelector('#tabComments .comments-list');
-        if (userComments.length === 0) {
-          commentsList.innerHTML = '<div class="no-comments">لا توجد تعليقات</div>';
-        } else {
-          userComments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          userComments.forEach(comment => {
-            const div = document.createElement('div');
-            div.className = 'comment';
-            div.innerHTML = `
-              <div class="comment-header">
-                <span class="comment-time">${formatTimeAgo(comment.createdAt)}</span>
-              </div>
-              <div class="comment-text">${escapeHtml(comment.text)}</div>
-            `;
-            commentsList.appendChild(div);
-          });
-        }
-      });
+
     }
     window.openUserProfile = openUserProfile;
 
@@ -2270,12 +2218,7 @@
         poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         poems.unshift(poemData);
 
-        currentUser.poemsCount = (currentUser.poemsCount || 0) + 1;
-        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-        if (userIndex > -1) allUsers[userIndex].poemsCount = currentUser.poemsCount;
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-        await set(ref(database, `users/${currentUser.id}/poemsCount`), currentUser.poemsCount);
-        saveAllUsers();
+
 
         showSyncStatus('✅ تم نشر القصيدة', 2000);
 
