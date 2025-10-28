@@ -1750,21 +1750,21 @@
   handle: '.drag-handle',
   draggable: '.card',
   dataIdAttr: 'data-id',
-  onStart: () => { 
-    isDragging = true; 
+  onStart: () => {
+    isDragging = true;
   },
   onEnd: async () => {
     const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
     const newOrder = [];
-    ids.forEach(id => { 
-      const found = poems.find(p => p.id === id); 
-      if (found) newOrder.push(found); 
+    ids.forEach(id => {
+      const found = poems.find(p => p.id === id);
+      if (found) newOrder.push(found);
     });
     const missing = poems.filter(p => !ids.includes(p.id));
     poems = newOrder.concat(missing);
     await savePoemsToFirebase();
-    setTimeout(() => { 
-      isDragging = false; 
+    setTimeout(() => {
+      isDragging = false;
     }, 300);
   }
 });
@@ -1877,8 +1877,18 @@
             <div class="profile-info" style="flex:1">
               <div class="profile-name" style="font-size:24px;font-weight:700;color:var(--accent);margin-bottom:5px">${escapeHtml(user.username)}</div>
               ${user.email ? '<div class="profile-username" style="font-size:14px;color:var(--muted);margin-bottom:10px">📧 ' + escapeHtml(user.email) + '</div>' : ''}
-              ${user.bio ? '<div class="profile-bio" style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:15px;padding:10px;background:rgba(139,94,60,0.03);border-radius:6px">' + escapeHtml(user.bio) + '</div>' : '<div class="muted">لا توجد نبذة</div>'}
-              ${followBtn}
+<div style="position:relative">
+  ${isOwnProfile ? '<button class="btn small" id="editBioBtn" style="position:absolute;top:0;left:0;padding:4px 8px;font-size:12px">✏️ تعديل</button>' : ''}
+  <div id="bioDisplay" class="profile-bio" style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:15px;padding:10px;background:rgba(139,94,60,0.03);border-radius:6px;${isOwnProfile ? 'padding-top:35px' : ''}">${user.bio ? escapeHtml(user.bio) : '<span class="muted">لا توجد نبذة</span>'}</div>
+  <div id="bioEdit" style="display:none">
+    <textarea id="bioInput" style="width:100%;min-height:100px;margin-bottom:10px;font-size:14px;padding:10px;border-radius:6px;border:1.5px solid var(--border)">${escapeHtml(user.bio || '')}</textarea>
+    <div style="display:flex;gap:8px">
+      <button class="btn small" id="saveBioBtn">💾 حفظ</button>
+      <button class="btn small" id="cancelBioBtn">❌ إلغاء</button>
+    </div>
+  </div>
+</div>
+${followBtn}
 
 
             </div>
@@ -1929,9 +1939,54 @@
               showAlert('❌ فشل رفع الصورة: ' + error.message);
             }
           });
+          
         }
-      }
+        const editBioBtn = modal.querySelector('#editBioBtn');
+  const bioDisplay = modal.querySelector('#bioDisplay');
+  const bioEdit = modal.querySelector('#bioEdit');
+  const bioInput = modal.querySelector('#bioInput');
+  const saveBioBtn = modal.querySelector('#saveBioBtn');
+  const cancelBioBtn = modal.querySelector('#cancelBioBtn');
 
+  if (editBioBtn) {
+    editBioBtn.addEventListener('click', () => {
+      bioDisplay.style.display = 'none';
+      bioEdit.style.display = 'block';
+      bioInput.focus();
+    });
+
+    cancelBioBtn.addEventListener('click', () => {
+      bioEdit.style.display = 'none';
+      bioDisplay.style.display = 'block';
+      bioInput.value = user.bio || '';
+    });
+
+    saveBioBtn.addEventListener('click', async () => {
+      const newBio = bioInput.value.trim();
+      try {
+        currentUser.bio = newBio;
+        user.bio = newBio;
+        
+        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+        if (userIndex > -1) {
+          allUsers[userIndex].bio = newBio;
+        }
+        
+        saveAllUsers();
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        await saveUserToFirebase();
+        
+        bioDisplay.innerHTML = newBio ? escapeHtml(newBio) : '<span class="muted">لا توجد نبذة</span>';
+        bioEdit.style.display = 'none';
+        bioDisplay.style.display = 'block';
+        
+        showSyncStatus('✅ تم تحديث النبذة بنجاح', 2000);
+      } catch (error) {
+        showAlert('❌ فشل تحديث النبذة: ' + error.message);
+      }
+    });
+  }
+}
       modal.querySelector('#closeProfileModal').addEventListener('click', () => modal.remove());
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
