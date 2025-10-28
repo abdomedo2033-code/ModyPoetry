@@ -487,8 +487,7 @@
 
     let isRendering = false;
 
-    document.getElementById('year').textContent = new Date().getFullYear();
-
+ 
     function initTheme() {
       const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
