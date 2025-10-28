@@ -993,19 +993,18 @@
         }
       } catch (error) { console.error('Load error:', error); }
     }
-    function setupFirebaseListener() {
-      const poemsRef = ref(database, 'poems');
-      onValue(poemsRef, async (snapshot) => {
-        if (snapshot.exists()) {
-          isUpdatingFromFirebase = true;
-          const data = snapshot.val();
-          poems = Array.isArray(data) ? data : (data ? Object.values(data) : []);
-          renderPoems();
-          isUpdatingFromFirebase = false;
-        }
-      });
+  function setupFirebaseListener() {
+  const poemsRef = ref(database, 'poems');
+  onValue(poemsRef, async (snapshot) => {
+    if (snapshot.exists() && !isDragging) {
+      isUpdatingFromFirebase = true;
+      const data = snapshot.val();
+      poems = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+      renderPoems();
+      isUpdatingFromFirebase = false;
     }
-
+  });
+}
     async function loadFromGitHub() {
       const urls = [
         'https://raw.githubusercontent.com/abdomedo2033-code/ModyPoetry/main/poems.json',
@@ -1746,22 +1745,29 @@
       const poemGrid = document.getElementById('poemGrid');
       if (!poemGrid) return;
       if (sortableInstance && typeof sortableInstance.destroy === 'function') { try { sortableInstance.destroy(); } catch(e){} }
-      sortableInstance = new Sortable(poemGrid, {
-        animation: 200,
-        handle: '.drag-handle',
-        draggable: '.card',
-        dataIdAttr: 'data-id',
-        onStart: () => { isDragging = true; },
-        onEnd: () => {
-          const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
-          const newOrder = [];
-          ids.forEach(id => { const found = poems.find(p => p.id === id); if (found) newOrder.push(found); });
-          const missing = poems.filter(p => !ids.includes(p.id));
-          poems = newOrder.concat(missing);
-          savePoemsToFirebase();
-          setTimeout(() => isDragging = false, 80);
-        }
-      });
+    sortableInstance = new Sortable(poemGrid, {
+  animation: 200,
+  handle: '.drag-handle',
+  draggable: '.card',
+  dataIdAttr: 'data-id',
+  onStart: () => { 
+    isDragging = true; 
+  },
+  onEnd: async () => {
+    const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
+    const newOrder = [];
+    ids.forEach(id => { 
+      const found = poems.find(p => p.id === id); 
+      if (found) newOrder.push(found); 
+    });
+    const missing = poems.filter(p => !ids.includes(p.id));
+    poems = newOrder.concat(missing);
+    await savePoemsToFirebase();
+    setTimeout(() => { 
+      isDragging = false; 
+    }, 300);
+  }
+});
     }
 
     document.getElementById('btnDownload').addEventListener('click', () => {
@@ -2214,11 +2220,9 @@
         if (index !== -1) poems[index] = { ...poemData, id: editingPoem.id };
         editingPoem = null;
         showSyncStatus('✅ تم تحديث القصيدة', 2000);
-      } else {
-        poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        poems.unshift(poemData);
-
-
+    } else {
+  poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  poems.push(poemData);
 
         showSyncStatus('✅ تم نشر القصيدة', 2000);
 
