@@ -12,7 +12,7 @@
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow-x:hidden}
     body{font-family:'Cairo',system-ui,sans-serif;background:linear-gradient(135deg,var(--bg-gradient-1) 0%,var(--bg-gradient-2) 100%);background-attachment:fixed;color:var(--text);line-height:1.7;padding:0;transition:background 0.3s ease,color 0.3s ease}
-    
+
       /* Professional Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 12px;
@@ -43,7 +43,7 @@
   scrollbar-width: thin;
   scrollbar-color: var(--brown) var(--bg-gradient-2);
 }
-    
+
     .container{max-width:1200px;margin:0 auto;padding:20px}
     header{background:linear-gradient(180deg,var(--header-dark) 0%, var(--header-dark-2) 100%);border-bottom:1px solid rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;box-shadow:0 6px 28px rgba(0,0,0,0.08);transition:all 0.3s ease}
     .header-content{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -61,10 +61,32 @@
     .small{padding:6px 10px;font-size:13px}
     .icon-btn{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:18px;position:relative;border:1.4px solid var(--brown);background:var(--card);color:var(--text)}
     .menu-container{position:relative}
-    .dropdown-menu{position:absolute;top:calc(100% + 8px);left:0;background:var(--card);border-radius:10px;box-shadow:0 12px 32px var(--shadow-lg);border:1px solid var(--border);min-width:240px;display:none;z-index:200;padding:6px;max-height:500px;overflow-y:auto}
-    .dropdown-menu.show{display:block}
-    .menu-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s ease;border:none;background:transparent;width:100%;text-align:right}
-    .menu-item:hover{background:rgba(139,94,60,0.1)}
+.dropdown-menu{
+      position:absolute;top:calc(100% + 8px);left:0;
+      background:var(--card);
+      border-radius:10px;
+      box-shadow:0 12px 32px var(--shadow-lg);
+      border:2px solid var(--brown);
+      min-width:240px;
+      max-width:320px;
+      display:none;
+      z-index:200;
+      padding:8px;
+      max-height:500px;
+      overflow-y:auto
+    }    .dropdown-menu.show{display:block}
+.menu-item{
+      display:flex;align-items:center;gap:10px;padding:10px 12px;
+      border-radius:8px;font-size:14px;font-weight:600;color:var(--text);
+      cursor:pointer;transition:all .2s ease;border:none;
+      background:transparent;width:100%;text-align:right;
+      border-bottom:1px solid transparent;
+    }
+    .menu-item:hover{
+      background:rgba(139,94,60,0.15);
+      border-bottom-color:var(--border);
+    }
+    
     .menu-divider{height:1px;background:var(--border);margin:6px 0}
     .hero{background:var(--card);border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
     input[type="search"],input[type="text"],input[type="email"],input[type="url"],input[type="password"],textarea,select{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:15px;background:var(--card);color:var(--text);width:100%;font-family:'Cairo',sans-serif;transition:border 0.2s ease}
@@ -102,8 +124,19 @@
     }
     .drag-handle:active{cursor:grabbing}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:18px;z-index:1200;overflow-y:auto}
-    .modal-inner{background:var(--card);max-width:900px;width:100%;border-radius:12px;padding:20px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 60px rgba(0,0,0,.4);border:1px solid var(--border)}
-    .modal-title{font-family:'Amiri',serif;font-size:24px;margin-bottom:8px;color:var(--accent)}
+.modal-inner{
+  background:var(--card);
+  max-width:900px;
+  width:100%;
+  border-radius:12px;
+  padding:20px;
+  max-height:90vh;
+  overflow-y:auto;
+  box-shadow:0 30px 60px rgba(0,0,0,.4);
+  border:1px solid var(--border);
+  position:relative;
+  overflow-x:hidden;
+}    .modal-title{font-family:'Amiri',serif;font-size:24px;margin-bottom:8px;color:var(--accent)}
     .poem-text{font-family:'Amiri',serif;white-space:pre-line;font-size:18px;line-height:2;margin-top:12px;color:var(--text);padding:15px;background:rgba(139,94,60,0.03);border-radius:8px;border-right:4px solid var(--brown)}
     .media-container{margin-top:16px;border-top:1px solid var(--border);padding-top:16px}
     .media-item{margin-bottom:12px;background:rgba(139,94,60,0.03);padding:10px;border-radius:8px;border:1px solid var(--border)}
@@ -201,22 +234,50 @@
     .tab-content.active { display: block; }
 
     /* Modal action menu (kebab) */
+/* Modal action menu (kebab) */
     .actions-menu-container{position:relative}
     .actions-trigger{
       background:var(--card); border:1.5px solid var(--border); color:var(--text);
       padding:6px 10px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:6px
     }
     .actions-dropdown{
-      position:absolute; top:calc(100% + 8px); right:0; background:var(--card); border:1px solid var(--border);
-      border-radius:10px; box-shadow:0 12px 32px var(--shadow-lg); min-width:220px; z-index:1500; display:none; padding:6px
+      position:fixed;
+      background:var(--card); 
+      border:2px solid var(--brown);
+      border-radius:10px; 
+      box-shadow:0 12px 32px var(--shadow-lg); 
+      width:180px;
+      max-height:280px;
+      overflow-y:auto;
+      overflow-x:hidden;
+      z-index:9999; 
+      display:none; 
+      padding:4px;
     }
     .actions-dropdown.show{display:block}
-    .action-item{
-      display:flex; align-items:center; gap:8px; width:100%; padding:8px 10px; border-radius:8px; cursor:pointer;
-      background:transparent; border:none; font-size:14px; font-weight:600; color:var(--text); text-align:right
+.action-item{
+      display:block;
+      width:100%; 
+      padding:10px 12px; 
+      border-radius:6px; 
+      cursor:pointer;
+      background:transparent; 
+      border:none; 
+      font-size:13px; 
+      font-weight:600; 
+      color:var(--text); 
+      text-align:right;
+      transition:all 0.2s ease;
+      white-space:nowrap;
+      border-bottom:1px solid var(--border);
     }
-    .action-item:hover{background:rgba(139,94,60,0.1)}
-
+    .action-item:last-child{
+      border-bottom:none;
+    }
+    .action-item:hover{
+      background:var(--brown);
+      color:#fff;
+    }
     @media (max-width:768px){
       .grid{grid-template-columns:1fr}
       .dropdown-menu{right:0;left:auto}
@@ -1724,7 +1785,7 @@ window.deleteComment = async function(poemId, commentId) {
       const userLiked = await isLiked(poem.id);
 
       // FIX 2: كتلة HTML مصححة وخالية من التكرار
-      modal.innerHTML = `
+   modal.innerHTML = `
         <div class="modal-inner">
 
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
@@ -1769,7 +1830,6 @@ window.deleteComment = async function(poemId, commentId) {
           ${imagesHtml}
           ${audiosHtml}
 
-
           <div class="comments-section">
             <div class="comments-header">
               💬 تعليقات <span id="commentsCount"></span>
@@ -1784,15 +1844,39 @@ window.deleteComment = async function(poemId, commentId) {
         </div>
       `;
       // ... باقي الدالة (مثل document.body.appendChild(modal);) يجب أن يأتي هنا.
-      document.body.appendChild(modal);
+document.body.appendChild(modal);
 
-      // Actions menu toggle
+      // Actions menu toggle with smart positioning
       const trigger = modal.querySelector('#actionsTrigger');
       const dropdown = modal.querySelector('#actionsDropdown');
       trigger.addEventListener('click', (e) => {
         e.stopPropagation();
+        
+        // Calculate position
+        const rect = trigger.getBoundingClientRect();
+        const dropdownWidth = 180;
+        const dropdownHeight = 280;
+        
+        // Position below button, aligned to right
+        let top = rect.bottom + 5;
+        let left = rect.right - dropdownWidth;
+        
+        // Check if it goes off screen on right
+        if (left < 10) left = 10;
+        if (left + dropdownWidth > window.innerWidth - 10) {
+          left = window.innerWidth - dropdownWidth - 10;
+        }
+        
+        // Check if it goes off screen on bottom
+        if (top + dropdownHeight > window.innerHeight - 10) {
+          top = rect.top - dropdownHeight - 5;
+        }
+        
+        dropdown.style.top = top + 'px';
+        dropdown.style.left = left + 'px';
         dropdown.classList.toggle('show');
       });
+      
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.actions-menu-container')) dropdown.classList.remove('show');
       });
@@ -1812,8 +1896,7 @@ window.deleteComment = async function(poemId, commentId) {
   if (countSpan) {
     countSpan.textContent = newCount > 0 ? newCount : '';
   }
-
-  this.title = newLiked ? 'إزالة الإعجاب' : 'أعجبني';
+this.title = newLiked ? 'إزالة الإعجاب' : 'أعجبني';
   showSyncStatus(newLiked ? '❤️ تم الإعجاب' : '💔 تم إزالة الإعجاب', 1500);
   dropdown.classList.remove('show');
 });
@@ -1846,13 +1929,14 @@ setupMentionAutocomplete(commentInput, commentsSection);
       });
       modal.querySelector('#commentInput').addEventListener('keypress', function(e) { if (e.key === 'Enter' && e.ctrlKey) modal.querySelector('#submitComment').click(); });
 
-      // Favorites
+      
+    // Favorites
+   // Favorites
       modal.querySelector('#favoritePoem').addEventListener('click', () => {
         toggleFavorite(poem.id);
         modal.querySelector('#favoritePoem').textContent = isFavorite(poem.id) ? '⭐ إزالة من المفضلة' : '☆ إضافة للمفضلة';
         dropdown.classList.remove('show');
       });
-
       // DM writer
       if (poem.userId && poem.userId !== currentUser?.id && modal.querySelector('#dmPoet')) {
         modal.querySelector('#dmPoet').addEventListener('click', () => {
