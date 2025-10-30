@@ -86,7 +86,7 @@
       background:rgba(139,94,60,0.15);
       border-bottom-color:var(--border);
     }
-    
+
     .menu-divider{height:1px;background:var(--border);margin:6px 0}
     .hero{background:var(--card);border-radius:14px;padding:16px;margin:18px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
     input[type="search"],input[type="text"],input[type="email"],input[type="url"],input[type="password"],textarea,select{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:15px;background:var(--card);color:var(--text);width:100%;font-family:'Cairo',sans-serif;transition:border 0.2s ease}
@@ -159,8 +159,23 @@
     .comment-actions{margin-top:8px;display:flex;gap:8px}
     .comment-action-btn{background:none;border:none;color:var(--brown);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all .2s}
     .comment-action-btn:hover{background:rgba(139,94,60,0.1)}
-    .no-comments{text-align:center;padding:30px;color:var(--muted);font-size:14px}
-    .sync-status{position:fixed;bottom:20px;right:20px;padding:10px 16px;background:var(--brown);color:#fff;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px var(--shadow-lg);z-index:1000;display:none}
+.no-comments{text-align:center;padding:30px;color:var(--muted);font-size:14px}
+    .notification-item {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .notification-item:hover {
+      background: rgba(139,94,60,0.08);
+    }
+    .notification-item.unread {
+      background: rgba(139,94,60,0.05);
+      border-left: 3px solid var(--brown);
+    }    .sync-status{position:fixed;bottom:20px;right:20px;padding:10px 16px;background:var(--brown);color:#fff;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 12px var(--shadow-lg);z-index:1000;display:none}
     .sync-status.show{display:flex}
     .confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;padding:18px;z-index:1400}
     .confirm-modal.show{display:flex}
@@ -242,30 +257,30 @@
     }
     .actions-dropdown{
       position:fixed;
-      background:var(--card); 
+      background:var(--card);
       border:2px solid var(--brown);
-      border-radius:10px; 
-      box-shadow:0 12px 32px var(--shadow-lg); 
+      border-radius:10px;
+      box-shadow:0 12px 32px var(--shadow-lg);
       width:180px;
       max-height:280px;
       overflow-y:auto;
       overflow-x:hidden;
-      z-index:9999; 
-      display:none; 
+      z-index:9999;
+      display:none;
       padding:4px;
     }
     .actions-dropdown.show{display:block}
 .action-item{
       display:block;
-      width:100%; 
-      padding:10px 12px; 
-      border-radius:6px; 
+      width:100%;
+      padding:10px 12px;
+      border-radius:6px;
       cursor:pointer;
-      background:transparent; 
-      border:none; 
-      font-size:13px; 
-      font-weight:600; 
-      color:var(--text); 
+      background:transparent;
+      border:none;
+      font-size:13px;
+      font-weight:600;
+      color:var(--text);
       text-align:right;
       transition:all 0.2s ease;
       white-space:nowrap;
@@ -783,13 +798,13 @@
         else if (notif.type === 'message') { icon = '💌'; text = `${notif.from} أرسل لك رسالة: "${notif.messagePreview}"`; }
         else if (notif.type === 'new_poem') { icon = '🪶'; text = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`; }
 
-        div.innerHTML = `
+    div.innerHTML = `
           <div class="notification-content" style="flex:1;display:flex;align-items:center;gap:10px">
             <span style="font-size:20px">${icon}</span>
             <div class="notification-text" style="flex:1">${text}</div>
             <div class="notification-time" style="font-size:12px;color:var(--muted)">${formatTimeAgo(notif.timestamp)}</div>
           </div>
-          <button class="notification-delete" onclick="event.stopPropagation();window.deleteNotification('${notif.id}')">×</button>
+          <button class="icon-btn" style="width:28px;height:28px;font-size:16px;flex-shrink:0" title="حذف الإشعار" onclick="event.stopPropagation();window.deleteNotification('${notif.id}')">×</button>
         `;
         div.onclick = async () => {
           if (!notif.read) await markNotificationAsRead(notif.id);
@@ -1851,32 +1866,32 @@ document.body.appendChild(modal);
       const dropdown = modal.querySelector('#actionsDropdown');
       trigger.addEventListener('click', (e) => {
         e.stopPropagation();
-        
+
         // Calculate position
         const rect = trigger.getBoundingClientRect();
         const dropdownWidth = 180;
         const dropdownHeight = 280;
-        
+
         // Position below button, aligned to right
         let top = rect.bottom + 5;
         let left = rect.right - dropdownWidth;
-        
+
         // Check if it goes off screen on right
         if (left < 10) left = 10;
         if (left + dropdownWidth > window.innerWidth - 10) {
           left = window.innerWidth - dropdownWidth - 10;
         }
-        
+
         // Check if it goes off screen on bottom
         if (top + dropdownHeight > window.innerHeight - 10) {
           top = rect.top - dropdownHeight - 5;
         }
-        
+
         dropdown.style.top = top + 'px';
         dropdown.style.left = left + 'px';
         dropdown.classList.toggle('show');
       });
-      
+
       document.addEventListener('click', (e) => {
         if (!e.target.closest('.actions-menu-container')) dropdown.classList.remove('show');
       });
@@ -1929,7 +1944,7 @@ setupMentionAutocomplete(commentInput, commentsSection);
       });
       modal.querySelector('#commentInput').addEventListener('keypress', function(e) { if (e.key === 'Enter' && e.ctrlKey) modal.querySelector('#submitComment').click(); });
 
-      
+
     // Favorites
    // Favorites
       modal.querySelector('#favoritePoem').addEventListener('click', () => {
