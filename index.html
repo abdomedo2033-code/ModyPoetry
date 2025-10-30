@@ -12,6 +12,38 @@
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow-x:hidden}
     body{font-family:'Cairo',system-ui,sans-serif;background:linear-gradient(135deg,var(--bg-gradient-1) 0%,var(--bg-gradient-2) 100%);background-attachment:fixed;color:var(--text);line-height:1.7;padding:0;transition:background 0.3s ease,color 0.3s ease}
+    
+      /* Professional Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-gradient-2);
+  border-radius: 10px;
+  margin: 2px;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--brown) 0%, var(--brown-hover) 100%);
+  border-radius: 10px;
+  border: 2px solid var(--bg-gradient-2);
+  transition: all 0.3s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--brown-hover) 0%, var(--brown) 100%);
+  border-color: var(--brown);
+  box-shadow: 0 0 6px var(--brown);
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--brown) var(--bg-gradient-2);
+}
+    
     .container{max-width:1200px;margin:0 auto;padding:20px}
     header{background:linear-gradient(180deg,var(--header-dark) 0%, var(--header-dark-2) 100%);border-bottom:1px solid rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;box-shadow:0 6px 28px rgba(0,0,0,0.08);transition:all 0.3s ease}
     .header-content{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -251,6 +283,37 @@
 
 /* ... باقي الـ CSS الخاص بـ .actions-dropdown و @media ... */
 /* يجب ألا يتم مسحها، يجب فقط استبدال الأجزاء التي عدلناها */
+
+.mention-dropdown {
+  position: absolute;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow-lg);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 2000;
+  display: none;
+}
+.mention-dropdown.show { display: block; }
+.mention-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+.mention-item:hover {
+  background: rgba(139,94,60,0.1);
+}
+.mention-item img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
   </style>
 </head>
 <body>
@@ -833,10 +896,14 @@
         const withUser = allUsers.find(u => u.id === withUserId);
         const convId = getConversationId(currentUser.id, withUserId);
         headerEl.innerHTML = `
-          <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" />
-          <div style="font-weight:700;color:var(--accent)">${escapeHtml(withUser?.username || '')}</div>
-          <span class="muted" style="margin-right:auto;font-size:12px">محادثة خاصة</span>
-        `;
+  <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')" />
+  <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
+  <span class="muted" style="margin-right:auto;font-size:12px">محادثة خاصة</span>
+`;
+
+
+
+
         messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارٍ التحميل...</div>';
         const msgsSnap = await get(ref(database, `dm_messages/${convId}`));
         messagesEl.innerHTML = '';
@@ -854,6 +921,10 @@
         }
         await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
 
+
+        const dmTextarea = modal.querySelector('#dmText');
+const dmContent = modal.querySelector('.dm-content');
+setupMentionAutocomplete(dmTextarea, dmContent);
         const sendBtn = modal.querySelector('#dmSend');
         sendBtn.onclick = async () => {
           const textEl = modal.querySelector('#dmText');
@@ -943,7 +1014,105 @@
       btns.appendChild(cancel); btns.appendChild(ok);
       document.getElementById('confirmModal').classList.add('show');
     }
-    function escapeHtml(text) { const d=document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
+function escapeHtml(text) { const d=document.createElement('div'); d.textContent = text || ''; return d.innerHTML; }
+
+function setupMentionAutocomplete(inputElement, containerElement) {
+  let dropdown = null;
+  let currentMentionStart = -1;
+
+  function createDropdown() {
+    dropdown = document.createElement('div');
+    dropdown.className = 'mention-dropdown';
+    containerElement.style.position = 'relative';
+    containerElement.appendChild(dropdown);
+  }
+
+  function positionDropdown() {
+    if (!dropdown) return;
+    const rect = inputElement.getBoundingClientRect();
+    const containerRect = containerElement.getBoundingClientRect();
+    dropdown.style.top = (rect.bottom - containerRect.top + 5) + 'px';
+    dropdown.style.left = (rect.left - containerRect.left) + 'px';
+    dropdown.style.minWidth = rect.width + 'px';
+  }
+
+  function showMentions(query) {
+    if (!dropdown) createDropdown();
+
+    const filtered = allUsers.filter(u =>
+      u.username.toLowerCase().includes(query.toLowerCase())
+    ).slice(0, 10);
+
+    if (filtered.length === 0) {
+      dropdown.classList.remove('show');
+      return;
+    }
+
+    dropdown.innerHTML = '';
+    filtered.forEach(user => {
+      const item = document.createElement('div');
+      item.className = 'mention-item';
+      const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=24`;
+      item.innerHTML = `
+        <img src="${avatarUrl}" alt="${user.username}">
+        <span style="font-weight:600">${escapeHtml(user.username)}</span>
+      `;
+      item.onclick = () => {
+        const text = inputElement.value;
+        const before = text.substring(0, currentMentionStart);
+        const after = text.substring(inputElement.selectionStart);
+        inputElement.value = before + '@' + user.username + ' ' + after;
+        const newPos = (before + '@' + user.username + ' ').length;
+        inputElement.setSelectionRange(newPos, newPos);
+        inputElement.focus();
+        dropdown.classList.remove('show');
+        currentMentionStart = -1;
+      };
+      dropdown.appendChild(item);
+    });
+
+    positionDropdown();
+    dropdown.classList.add('show');
+  }
+
+  inputElement.addEventListener('input', function(e) {
+    const text = this.value;
+    const cursorPos = this.selectionStart;
+
+    let mentionStart = -1;
+    for (let i = cursorPos - 1; i >= 0; i--) {
+      if (text[i] === '@') {
+        mentionStart = i;
+        break;
+      }
+      if (text[i] === ' ' || text[i] === '\n') {
+        break;
+      }
+    }
+
+    if (mentionStart !== -1) {
+      const query = text.substring(mentionStart + 1, cursorPos);
+      currentMentionStart = mentionStart;
+      showMentions(query);
+    } else {
+      if (dropdown) dropdown.classList.remove('show');
+      currentMentionStart = -1;
+    }
+  });
+
+  inputElement.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && dropdown) {
+      dropdown.classList.remove('show');
+      currentMentionStart = -1;
+    }
+  });
+
+  document.addEventListener('click', function(e) {
+    if (dropdown && !dropdown.contains(e.target) && e.target !== inputElement) {
+      dropdown.classList.remove('show');
+    }
+  });
+}
 
     window.resizeMedia = function(mediaId) {
       const element = document.getElementById(mediaId);
@@ -1214,8 +1383,12 @@
       renderPoems();
     };
 
-    document.getElementById('searchInput').addEventListener('input', () => { renderPoems(); });
-    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+document.getElementById('searchInput').addEventListener('input', () => { renderPoems(); });
+setupMentionAutocomplete(
+  document.getElementById('searchInput'),
+  document.querySelector('.hero')
+);
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         const query = document.getElementById('searchInput').value.trim();
         if (query.startsWith('@')) {
@@ -1429,31 +1602,29 @@ filtered.sort((a, b) => {
       try { const snapshot = await get(ref(database, `comments/${poemId}`)); if (snapshot.exists()) return Object.values(snapshot.val()); return []; }
       catch (error) { console.error('Error loading comments:', error); return []; }
     }
-    async function saveCommentToFirebase(poemId, comment) {
-      try {
-        const commentId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        await set(ref(database, `comments/${poemId}/${commentId}`), comment);
-        const poem = poems.find(p => p.id === poemId);
-        if (poem && poem.userId && poem.userId !== currentUser.id) {
-          await addNotification(poem.userId, { type: 'comment', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
-        }
-        const mentions = comment.text.match(/@(\w+)/g);
-        if (mentions) {
-          for (const mention of mentions) {
-            const username = mention.substring(1);
-            const mentionedUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
-            if (mentionedUser && mentionedUser.id !== currentUser.id) {
-              await addNotification(mentionedUser.id, { type: 'mention', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
-            }
-          }
-        }
-        return true;
-      } catch (error) { console.error('Error saving comment:', error); return false; }
+    async function saveCommentToFirebase(poemId, comment)  {
+  try {
+    const commentId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const commentWithId = { ...comment, id: commentId };
+    await set(ref(database, `comments/${poemId}/${commentId}`), commentWithId);
+    const poem = poems.find(p => p.id === poemId);
+    if (poem && poem.userId && poem.userId !== currentUser.id) {
+      await addNotification(poem.userId, { type: 'comment', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
     }
-    async function deleteCommentFromFirebase(poemId, commentId) {
-      try { await set(ref(database, `comments/${poemId}/${commentId}`), null); return true; }
-      catch (error) { console.error('Error deleting comment:', error); return false; }
+    const mentions = comment.text.match(/@(\w+)/g);
+    if (mentions) {
+      for (const mention of mentions) {
+        const username = mention.substring(1);
+        const mentionedUser = allUsers.find(u => u.username.toLowerCase() === username.toLowerCase());
+        if (mentionedUser && mentionedUser.id !== currentUser.id) {
+          await addNotification(mentionedUser.id, { type: 'mention', from: currentUser.username, fromId: currentUser.id, poemId, poemTitle: poem.title, timestamp: new Date().toISOString() });
+        }
+      }
     }
+    return true;
+  } catch (error) { console.error('Error saving comment:', error); return false; }
+}
+
     async function renderComments(poemId, commentsContainer) {
       const comments = await loadCommentsFromFirebase(poemId);
       const commentsList = commentsContainer.querySelector('.comments-list');
@@ -1486,20 +1657,27 @@ filtered.sort((a, b) => {
         commentsList.appendChild(commentDiv);
       });
     }
-    window.deleteComment = async function(poemId, commentId) {
-      showConfirm('هل تريد حذف هذا التعليق؟', async () => {
-        const success = await deleteCommentFromFirebase(poemId, commentId);
-        if (success) {
-          const modal = document.querySelector('.modal');
-          const commentsContainer = modal.querySelector('.comments-section');
+window.deleteComment = async function(poemId, commentId) {
+  showConfirm('هل تريد حذف هذا التعليق؟', async () => {
+    try {
+      await set(ref(database, `comments/${poemId}/${commentId}`), null);
+      const modal = document.querySelector('.modal');
+      if (modal) {
+        const commentsContainer = modal.querySelector('.comments-section');
+        if (commentsContainer) {
           await renderComments(poemId, commentsContainer);
           const count = await getCommentsCount(poemId);
-          modal.querySelector('#commentsCount').textContent = count;
-          showSyncStatus('✅ تم حذف التعليق', 2000);
-        } else { showAlert('❌ فشل حذف التعليق'); }
-      });
-    };
-
+          const countEl = modal.querySelector('#commentsCount');
+          if (countEl) countEl.textContent = count;
+        }
+      }
+      showSyncStatus('✅ تم حذف التعليق', 2000);
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      showAlert('❌ فشل حذف التعليق: ' + error.message);
+    }
+  });
+};
     async function openModal(poem) {
       const modal = document.createElement('div'); modal.className = 'modal';
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
@@ -1644,6 +1822,10 @@ filtered.sort((a, b) => {
       await renderComments(poem.id, commentsContainer);
       const count = await getCommentsCount(poem.id);
       modal.querySelector('#commentsCount').textContent = count;
+
+const commentInput = modal.querySelector('#commentInput');
+const commentsSection = modal.querySelector('.comments-section');
+setupMentionAutocomplete(commentInput, commentsSection);
 
       modal.querySelector('#submitComment').addEventListener('click', async function() {
         const commentText = modal.querySelector('#commentInput').value.trim();
