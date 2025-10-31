@@ -1,7 +1,7 @@
 // firebase-messaging-sw.js
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.5.0/firebase-messaging-compat.js");
-
+ 
 firebase.initializeApp({
   apiKey: "BH1rxDUeea6grr0gIXTI19kSWTMa50nHwu-GIShvIBKBndborG647a1A4xnHJ8KjB8iQkn5SuLbIOKdm_PXqIV8",
   projectId: "modypoems",
