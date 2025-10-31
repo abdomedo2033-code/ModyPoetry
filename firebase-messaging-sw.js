@@ -1,4 +1,3 @@
-// firebase-messaging-sw.js
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
@@ -14,49 +13,62 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Handle background messages
+// استقبال الإشعارات في الخلفية
 messaging.onBackgroundMessage((payload) => {
-  console.log('Received background message:', payload);
-
+  console.log('📬 إشعار جديد:', payload);
+  
   const notificationTitle = payload.notification?.title || 'Mody Poetry';
   const notificationOptions = {
     body: payload.notification?.body || 'لديك إشعار جديد',
     icon: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
     badge: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
-    tag: payload.data?.id || 'mody-poetry',
+    tag: payload.data?.id || 'notification',
     data: payload.data,
-    requireInteraction: false,
-    vibrate: [200, 100, 200]
+    vibrate: [200, 100, 200],
+    requireInteraction: false
   };
 
   return self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-// Handle notification clicks
+// عند النقر على الإشعار
 self.addEventListener('notificationclick', (event) => {
+  console.log('🔔 تم النقر على الإشعار');
   event.notification.close();
   
-  const urlToOpen = event.notification.data?.url || '/';
+  const data = event.notification.data || {};
   
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
-        // Check if there's already a window open
-        for (let i = 0; i < clientList.length; i++) {
-          const client = clientList[i];
+        // ابحث عن نافذة مفتوحة
+        for (let client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            return client.focus().then(() => {
-              client.postMessage({
-                type: 'NOTIFICATION_CLICK',
-                data: event.notification.data
-              });
+            // أرسل رسالة للصفحة
+            client.postMessage({
+              type: 'NOTIFICATION_CLICK',
+              data: data
             });
+            return client.focus();
           }
         }
-        // If not, open a new window
+        // إذا لم توجد نافذة، افتح واحدة جديدة
         if (clients.openWindow) {
-          return clients.openWindow(urlToOpen);
+          return clients.openWindow(data.url || '/');
         }
       })
   );
 });
+
+// تفعيل Service Worker
+self.addEventListener('activate', (event) => {
+  console.log('✅ Service Worker مُفعَّل');
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('install', (event) => {
+  console.log('📥 Service Worker يتم التثبيت...');
+  self.skipWaiting();
+});
+
+console.log('🚀 Service Worker جاهز!');
