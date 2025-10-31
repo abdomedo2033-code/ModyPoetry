@@ -889,62 +889,62 @@
 }
 
     async function addNotification(userId, notification)   {
-      try {
-        const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        await set(ref(database, `notifications/${userId}/${notifId}`), { ...notification, id: notifId, read: false });
-        
-        // Get target user's FCM token
-        const targetUserSnapshot = await get(ref(database, `users/${userId}/fcmToken`));
-        const fcmToken = targetUserSnapshot.exists() ? targetUserSnapshot.val() : null;
-        
-        // Prepare notification content
-        let title = 'Mody Poetry';
-        let body = '';
-        
-        if (notification.type === 'like') {
-          title = 'إعجاب جديد ❤️';
-          body = `${notification.from} أعجب بقصيدتك "${notification.poemTitle}"`;
-        } else if (notification.type === 'comment') {
-          title = 'تعليق جديد 💬';
-          body = `${notification.from} علق على قصيدتك "${notification.poemTitle}"`;
-        } else if (notification.type === 'follow') {
-          title = 'متابع جديد 👥';
-          body = `${notification.from} بدأ بمتابعتك`;
-        } else if (notification.type === 'mention') {
-          title = 'ذكرك في تعليق 📢';
-          body = `${notification.from} ذكرك في تعليق`;
-        } else if (notification.type === 'message') {
-          title = 'رسالة جديدة 💌';
-          body = `${notification.from}: ${notification.messagePreview}`;
-        } else if (notification.type === 'new_poem') {
-          title = 'قصيدة جديدة 🪶';
-          body = `${notification.from} نشر قصيدة جديدة "${notification.poemTitle}"`;
-        }
-        
-        // Show browser notification if it's for the current user (foreground)
-        if (currentUser && userId === currentUser.id) {
-          showBrowserNotification(title, body, notification);
-        }
-        
-        // Send FCM notification for background delivery
-        if (fcmToken) {
-          // Store notification request for Cloud Function to process
-          await set(ref(database, `fcm_queue/${notifId}`), {
-            token: fcmToken,
-            notification: {
-              title: title,
-              body: body
-            },
-            data: {
-              ...notification,
-              url: window.location.origin
-            },
-            timestamp: new Date().toISOString()
-          });
-        }
-        
-      } catch (error) { console.error('Error adding notification:', error); }
+  try {
+    const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    
+    // حفظ في Database
+    await set(ref(database, `notifications/${userId}/${notifId}`), { 
+      ...notification, 
+      id: notifId, 
+      read: false 
+    });
+    
+    // جلب FCM Token للمستخدم
+    const targetUserSnapshot = await get(ref(database, `users/${userId}/fcmToken`));
+    const fcmToken = targetUserSnapshot.exists() ? targetUserSnapshot.val() : null;
+    
+    if (!fcmToken) {
+      console.log('المستخدم ليس لديه FCM Token');
+      return;
     }
+    
+    // تحضير محتوى الإشعار
+    let title = 'Mody Poetry';
+    let body = '';
+    
+    if (notification.type === 'like') {
+      title = 'إعجاب جديد ❤️';
+      body = `${notification.from} أعجب بقصيدتك "${notification.poemTitle}"`;
+    } else if (notification.type === 'comment') {
+      title = 'تعليق جديد 💬';
+      body = `${notification.from} علق على قصيدتك "${notification.poemTitle}"`;
+    } else if (notification.type === 'follow') {
+      title = 'متابع جديد 👥';
+      body = `${notification.from} بدأ بمتابعتك`;
+    } else if (notification.type === 'mention') {
+      title = 'ذكرك في تعليق 📢';
+      body = `${notification.from} ذكرك في تعليق`;
+    } else if (notification.type === 'message') {
+      title = 'رسالة جديدة 💌';
+      body = `${notification.from}: ${notification.messagePreview}`;
+    } else if (notification.type === 'new_poem') {
+      title = 'قصيدة جديدة 🪶';
+      body = `${notification.from} نشر قصيدة جديدة "${notification.poemTitle}"`;
+    }
+    
+    // إرسال إشعار FCM مباشرة
+    // ملاحظة: هذا يعمل فقط للمستخدم الحالي المفتوح
+    // للإشعارات الخلفية الكاملة، نحتاج Server-side API
+    
+    // عرض إشعار محلي إذا كان المستخدم هو الحالي
+    if (currentUser && userId === currentUser.id) {
+      showBrowserNotification(title, body, notification);
+    }
+    
+  } catch (error) { 
+    console.error('خطأ في إضافة الإشعار:', error); 
+  }
+}
  async function loadNotifications() {
       if (!currentUser) return;
       try {
