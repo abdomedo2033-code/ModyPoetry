@@ -434,9 +434,11 @@
         <div class="menu-container">
           <button class="btn small" id="menuToggle">☰ القائمة</button>
           <div class="dropdown-menu" id="dropdownMenu">
-            <button class="menu-item" id="btnMyProfile">👤 ملفي الشخصي</button>
+         <button class="menu-item" id="btnMyProfile">👤 ملفي الشخصي</button>
             <button class="menu-item" id="btnFavorites">⭐ القصائد المفضلة</button>
             <button class="menu-item" id="btnFollowing">👥 المتابَعون</button>
+            <div class="menu-divider"></div>
+            <button class="menu-item" id="btnEnableNotifications">🔔 تفعيل الإشعارات</button>
             <div class="menu-divider"></div>
             <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي</button>
             <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
@@ -761,11 +763,94 @@
       try { const snapshot = await get(ref(database, `likes/${poemId}/${currentUser.id}`)); return snapshot.exists(); }
       catch { return false; }
     }
+// Browser Notification Support
+    async function requestNotificationPermission() {
+      if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        return false;
+      }
+      
+      if (Notification.permission === 'granted') {
+        return true;
+      }
+      
+      if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+      }
+      
+      return false;
+    }
+
+    function showBrowserNotification(title, body, data = {}) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') {
+        return;
+      }
+
+      const options = {
+        body: body,
+        icon: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+        badge: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+        tag: data.id || 'mody-poetry',
+        requireInteraction: false,
+        silent: false,
+        data: data
+      };
+
+      const notification = new Notification(title, options);
+
+      notification.onclick = function(event) {
+        event.preventDefault();
+        window.focus();
+        notification.close();
+        
+        if (data.poemId) {
+          const poem = poems.find(p => p.id === data.poemId);
+          if (poem) openModal(poem);
+        } else if (data.fromId) {
+          if (data.type === 'message') {
+            openDMWindow(data.fromId);
+          } else if (data.type === 'follow') {
+            openUserProfile(data.fromId);
+          }
+        }
+      };
+
+      setTimeout(() => notification.close(), 8000);
+    }
 
     async function addNotification(userId, notification) {
       try {
         const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         await set(ref(database, `notifications/${userId}/${notifId}`), { ...notification, id: notifId, read: false });
+        
+        // Show browser notification if it's for the current user
+        if (currentUser && userId === currentUser.id) {
+          let title = 'Mody Poetry';
+          let body = '';
+          
+          if (notification.type === 'like') {
+            title = 'إعجاب جديد ❤️';
+            body = `${notification.from} أعجب بقصيدتك "${notification.poemTitle}"`;
+          } else if (notification.type === 'comment') {
+            title = 'تعليق جديد 💬';
+            body = `${notification.from} علق على قصيدتك "${notification.poemTitle}"`;
+          } else if (notification.type === 'follow') {
+            title = 'متابع جديد 👥';
+            body = `${notification.from} بدأ بمتابعتك`;
+          } else if (notification.type === 'mention') {
+            title = 'ذكرك في تعليق 📢';
+            body = `${notification.from} ذكرك في تعليق`;
+          } else if (notification.type === 'message') {
+            title = 'رسالة جديدة 💌';
+            body = `${notification.from}: ${notification.messagePreview}`;
+          } else if (notification.type === 'new_poem') {
+            title = 'قصيدة جديدة 🪶';
+            body = `${notification.from} نشر قصيدة جديدة "${notification.poemTitle}"`;
+          }
+          
+          showBrowserNotification(title, body, notification);
+        }
       } catch (error) { console.error('Error adding notification:', error); }
     }
     async function loadNotifications() {
@@ -2127,8 +2212,18 @@ setupMentionAutocomplete(commentInput, commentsSection);
       };
       input.click();
     });
+document.getElementById('btnMyProfile').addEventListener('click', async () => { openUserProfile(currentUser.id); });
 
-    document.getElementById('btnMyProfile').addEventListener('click', async () => { openUserProfile(currentUser.id); });
+    // Enable browser notifications
+    document.getElementById('btnEnableNotifications').addEventListener('click', async () => {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        showAlert('✅ تم تفعيل الإشعارات!\n\nسوف تتلقى إشعارات عند:\n• الإعجاب بقصائدك\n• التعليق على قصائدك\n• متابعة جديدة\n• ذكرك في تعليق\n• رسالة جديدة\n• قصيدة جديدة من متابَع');
+        showBrowserNotification('✅ تم تفعيل الإشعارات', 'سوف تتلقى إشعارات فورية عند التفاعلات الجديدة');
+      } else {
+        showAlert('⚠️ لم يتم منح صلاحية الإشعارات\n\nيرجى السماح بالإشعارات من إعدادات المتصفح');
+      }
+    });
 
     async function openUserProfile(userId) {
       const user = allUsers.find(u => u.id === userId);
@@ -2600,11 +2695,15 @@ ${followBtn}
       renderTagsInForm(); renderAudiosInForm(); renderImagesPreview();
     });
 
-    async function init() {
+  async function init() {
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
-      loadHiddenPoems();
+      
+      // Request notification permission on first login
+      await requestNotificationPermission();
+      
+       loadHiddenPoems();
       loadFavorites();
       loadFollowing();
       await loadPoemsFromFirebase();
