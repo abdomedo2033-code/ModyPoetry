@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
@@ -589,8 +589,9 @@
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
     import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+    import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
 
-    const app = initializeApp({
+  const app = initializeApp({
       apiKey: "AIzaSyANYJJ3gTxEgeaj731npdx37OHd4Xf3t70",
       authDomain: "modypoems.firebaseapp.com",
       databaseURL: "https://modypoems-default-rtdb.firebaseio.com",
@@ -602,7 +603,10 @@
 
     const database = getDatabase(app);
     const storage = getStorage(app);
+    const messaging = getMessaging(app);
 
+    const FCM_VAPID_KEY = 'BH1rxDUeea6grr0gIXTI19kSWTMa50nHwu-GIShvIBKBndborG647a1A4xnHJ8KjB8iQkn5SuLbIOKdm_PXqIV8';
+    
     const USER_KEY = 'mody_current_user';
     const HIDDEN_KEY_PREFIX = 'mody_hidden_poems';
     const ALL_USERS_KEY = 'mody_all_users';
@@ -764,67 +768,136 @@
       catch { return false; }
     }
 // Browser Notification Support
+// Register Service Worker and get FCM token
+    async function registerServiceWorkerAndGetToken() {
+      try {
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          console.log('Service Worker registered:', registration);
+          
+          const token = await getToken(messaging, {
+            vapidKey: FCM_VAPID_KEY,
+            serviceWorkerRegistration: registration
+          });
+          
+          if (token) {
+            console.log('FCM Token:', token);
+            // Save token to user profile
+            if (currentUser) {
+              currentUser.fcmToken = token;
+              await set(ref(database, `users/${currentUser.id}/fcmToken`), token);
+              localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            }
+            return token;
+          }
+        }
+      } catch (error) {
+        console.error('Error getting FCM token:', error);
+      }
+      return null;
+    }
+
+    // Listen for foreground messages
+    onMessage(messaging, (payload) => {
+      console.log('Foreground message received:', payload);
+      
+      const title = payload.notification?.title || 'Mody Poetry';
+      const body = payload.notification?.body || 'لديك إشعار جديد';
+      
+      showBrowserNotification(title, body, payload.data || {});
+    });
+
+    // Handle messages from service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'NOTIFICATION_CLICK') {
+          const data = event.data.data;
+          
+          if (data.poemId) {
+            const poem = poems.find(p => p.id === data.poemId);
+            if (poem) openModal(poem);
+          } else if (data.fromId) {
+            if (data.type === 'message') {
+              openDMWindow(data.fromId);
+            } else if (data.type === 'follow') {
+              openUserProfile(data.fromId);
+            }
+          }
+        }
+      });
+    }
+
+    // Browser Notification Support (enhanced with FCM)
     async function requestNotificationPermission() {
       if (!('Notification' in window)) {
         console.log('This browser does not support notifications');
         return false;
       }
-
+      
       if (Notification.permission === 'granted') {
+        await registerServiceWorkerAndGetToken();
         return true;
       }
-
+      
       if (Notification.permission !== 'denied') {
         const permission = await Notification.requestPermission();
-        return permission === 'granted';
+        if (permission === 'granted') {
+          await registerServiceWorkerAndGetToken();
+          return true;
+        }
       }
-
+      
       return false;
     }
 
-    function showBrowserNotification(title, body, data = {}) {
-      if (!('Notification' in window) || Notification.permission !== 'granted') {
-        return;
+   function showBrowserNotification(title, body, data = {}) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    return;
+  }
+
+  const options = {
+    body: body,
+    icon: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+    badge: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+    tag: data.id || 'mody-poetry',
+    requireInteraction: false,
+    silent: false,
+    vibrate: [200, 100, 200],
+    data: data
+  };
+
+  const notification = new Notification(title, options);
+
+  notification.onclick = function(event) {
+    event.preventDefault();
+    window.focus();
+    notification.close();
+
+    if (data.poemId) {
+      const poem = poems.find(p => p.id === data.poemId);
+      if (poem) openModal(poem);
+    } else if (data.fromId) {
+      if (data.type === 'message') {
+        openDMWindow(data.fromId);
+      } else if (data.type === 'follow') {
+        openUserProfile(data.fromId);
       }
-
-      const options = {
-        body: body,
-        icon: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
-        badge: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
-        tag: data.id || 'mody-poetry',
-        requireInteraction: false,
-        silent: false,
-        data: data
-      };
-
-      const notification = new Notification(title, options);
-
-      notification.onclick = function(event) {
-        event.preventDefault();
-        window.focus();
-        notification.close();
-
-        if (data.poemId) {
-          const poem = poems.find(p => p.id === data.poemId);
-          if (poem) openModal(poem);
-        } else if (data.fromId) {
-          if (data.type === 'message') {
-            openDMWindow(data.fromId);
-          } else if (data.type === 'follow') {
-            openUserProfile(data.fromId);
-          }
-        }
-      };
-
-      setTimeout(() => notification.close(), 8000);
     }
+  };
 
-    async function addNotification(userId, notification) { 
+  setTimeout(() => notification.close(), 8000);
+}
+
+    async function addNotification(userId, notification)   {
       try {
         const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         await set(ref(database, `notifications/${userId}/${notifId}`), { ...notification, id: notifId, read: false });
         
-        // Show browser notification regardless of current user - will show when they're online
+        // Get target user's FCM token
+        const targetUserSnapshot = await get(ref(database, `users/${userId}/fcmToken`));
+        const fcmToken = targetUserSnapshot.exists() ? targetUserSnapshot.val() : null;
+        
+        // Prepare notification content
         let title = 'Mody Poetry';
         let body = '';
         
@@ -848,10 +921,28 @@
           body = `${notification.from} نشر قصيدة جديدة "${notification.poemTitle}"`;
         }
         
-        // Show browser notification immediately if it's for the current user
+        // Show browser notification if it's for the current user (foreground)
         if (currentUser && userId === currentUser.id) {
           showBrowserNotification(title, body, notification);
         }
+        
+        // Send FCM notification for background delivery
+        if (fcmToken) {
+          // Store notification request for Cloud Function to process
+          await set(ref(database, `fcm_queue/${notifId}`), {
+            token: fcmToken,
+            notification: {
+              title: title,
+              body: body
+            },
+            data: {
+              ...notification,
+              url: window.location.origin
+            },
+            timestamp: new Date().toISOString()
+          });
+        }
+        
       } catch (error) { console.error('Error adding notification:', error); }
     }
  async function loadNotifications() {
