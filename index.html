@@ -583,12 +583,13 @@
     </div>
   </div>
 
- 
+
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
     import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
 
     const app = initializeApp({
       apiKey: "AIzaSyANYJJ3gTxEgeaj731npdx37OHd4Xf3t70",
@@ -602,6 +603,214 @@
 
     const database = getDatabase(app);
     const storage = getStorage(app);
+const messaging = getMessaging(app);
+
+// VAPID key
+const VAPID_KEY = 'BH1rxDUeea6grr0gIXTI19kSWTMa50nHwu-GIShvIBKBndborG647a1A4xnHJ8KjB8iQkn5SuLbIOKdm_PXqIV8';
+
+// Function to request notification permission and get FCM token
+async function initializeFCM() {// Function to request notification permission and get FCM token
+
+  try {
+    console.log('🔵 initializeFCM called');
+    console.log('🔵 Current user:', currentUser);
+
+    if (!currentUser) {
+      console.log('❌ No current user - cannot save FCM token');
+      return false;
+    }
+
+    if (!('Notification' in window)) {
+      console.log('❌ This browser does not support notifications');
+      return false;
+    }
+
+    // Request notification permission
+    const permission = await Notification.requestPermission();
+    console.log('🔵 Notification permission:', permission);
+
+    if (permission === 'granted') {
+      console.log('✅ Notification permission granted');
+
+      try {
+        // Register service worker first if not already registered
+        if ('serviceWorker' in navigator) {
+          try {
+            const registration = await navigator.serviceWorker.register('/service-worker.js');
+            console.log('✅ Service Worker registered:', registration);
+
+            // Wait for service worker to be ready
+            await navigator.serviceWorker.ready;
+            console.log('✅ Service Worker ready');
+          } catch (error) {
+            console.error('❌ Service Worker registration failed:', error);
+          }
+        }
+
+        console.log('🔵 Attempting to get FCM token...');
+        console.log('🔵 VAPID Key:', VAPID_KEY);
+
+        // Get FCM token
+        const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+
+        if (token) {
+          console.log('✅ FCM Token received:', token);
+          console.log('🔵 Saving token for user:', currentUser.id);
+
+          // Save token to Firebase for current user
+          if (currentUser && currentUser.id) {
+            const tokenData = {
+              token: token,
+              username: currentUser.username,
+              userId: currentUser.id,
+              updatedAt: new Date().toISOString()
+            };
+
+            console.log('🔵 Token data to save:', tokenData);
+
+            await set(ref(database, `fcm_tokens/${currentUser.id}`), tokenData);
+            console.log('✅ Token saved to Firebase at path: fcm_tokens/' + currentUser.id);
+
+            // Verify it was saved
+            const verifySnapshot = await get(ref(database, `fcm_tokens/${currentUser.id}`));
+            if (verifySnapshot.exists()) {
+              console.log('✅ Token verified in database:', verifySnapshot.val());
+            } else {
+              console.error('❌ Token not found in database after save!');
+            }
+          } else {
+            console.error('❌ Cannot save token - currentUser or currentUser.id is missing');
+          }
+          return true;
+        } else {
+          console.log('❌ No registration token available');
+          return false;
+        }
+      } catch (error) {
+        console.error('❌ Error getting FCM token:', error);
+        console.error('Error stack:', error.stack);
+        // Fallback to basic notifications
+        return true;
+      }
+    } else {
+      console.log('❌ Notification permission denied');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error initializing FCM:', error);
+    console.error('Error stack:', error.stack);
+    return false;
+  }
+}
+
+// Enhanced sendPushNotification with debugging
+async function sendPushNotification(userId, notificationData) {
+  try {
+    console.log('🔵 sendPushNotification called for user:', userId);
+    console.log('🔵 Notification data:', notificationData);
+
+    // Check if user has FCM token
+    const tokenPath = `fcm_tokens/${userId}`;
+    console.log('🔵 Checking for token at path:', tokenPath);
+
+    const tokenSnapshot = await get(ref(database, tokenPath));
+
+    if (!tokenSnapshot.exists()) {
+      console.log('❌ No FCM token found for user:', userId);
+      console.log('🔵 Available FCM tokens in database:');
+
+      // List all available tokens for debugging
+      const allTokensSnapshot = await get(ref(database, 'fcm_tokens'));
+      if (allTokensSnapshot.exists()) {
+        console.log('Available tokens:', Object.keys(allTokensSnapshot.val()));
+      } else {
+        console.log('No tokens in database at all');
+      }
+
+      // Just add to notifications list
+      await addNotification(userId, notificationData);
+      return;
+    }
+
+    const tokenData = tokenSnapshot.val();
+    const fcmToken = tokenData.token;
+
+    console.log('✅ Found FCM token for user:', userId);
+    console.log('🔵 Token data:', tokenData);
+
+    // Store pending notification for backend to send
+    const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+    const pendingNotif = {
+      token: fcmToken,
+      notification: {
+        title: notificationData.title || 'Mody Poetry',
+        body: notificationData.body || 'لديك إشعار جديد'
+      },
+      data: {
+        type: notificationData.type || 'general',
+        poemId: notificationData.poemId || '',
+        fromId: notificationData.fromId || '',
+        from: notificationData.from || '',
+        timestamp: notificationData.timestamp || new Date().toISOString()
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('🔵 Queuing notification:', pendingNotif);
+
+    await set(ref(database, `pending_notifications/${userId}/${notifId}`), pendingNotif);
+
+    console.log('✅ Notification queued for sending');
+
+    // Also add to regular notifications
+    await addNotification(userId, notificationData);
+
+  } catch (error) {
+    console.error('❌ Error queuing push notification:', error);
+    console.error('Error stack:', error.stack);
+    // Fallback to regular notification
+    await addNotification(userId, notificationData);
+  }
+}
+
+// Listen for foreground messages
+onMessage(messaging, (payload) => {
+  console.log('📨 Foreground message received:', payload);
+
+  const notificationTitle = payload.notification?.title || 'Mody Poetry';
+  const notificationBody = payload.notification?.body || 'لديك إشعار جديد';
+
+  // Show browser notification
+  if (Notification.permission === 'granted') {
+    const notification = new Notification(notificationTitle, {
+      body: notificationBody,
+      icon: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+      badge: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+      tag: payload.data?.tag || 'mody-poetry',
+      data: payload.data || {},
+      requireInteraction: false
+    });
+
+    notification.onclick = function(event) {
+      event.preventDefault();
+      window.focus();
+      notification.close();
+
+      // Handle notification click
+      if (payload.data?.poemId) {
+        const poem = poems.find(p => p.id === payload.data.poemId);
+        if (poem) openModal(poem);
+      }
+    };
+  }
+
+  // Reload notifications
+  if (currentUser) {
+    loadNotifications();
+    updateNotificationBadge();
+  }
+});
 
     const USER_KEY = 'mody_current_user';
     const HIDDEN_KEY_PREFIX = 'mody_hidden_poems';
@@ -628,7 +837,7 @@
 
     let isRendering = false;
 
- 
+
     function initTheme() {
       const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -819,48 +1028,61 @@
       setTimeout(() => notification.close(), 8000);
     }
 
-    async function addNotification(userId, notification) { 
-      try {
-        const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        await set(ref(database, `notifications/${userId}/${notifId}`), { ...notification, id: notifId, read: false });
-        
-        // Show browser notification regardless of current user - will show when they're online
-        let title = 'Mody Poetry';
-        let body = '';
-        
-        if (notification.type === 'like') {
-          title = 'إعجاب جديد ❤️';
-          body = `${notification.from} أعجب بقصيدتك "${notification.poemTitle}"`;
-        } else if (notification.type === 'comment') {
-          title = 'تعليق جديد 💬';
-          body = `${notification.from} علق على قصيدتك "${notification.poemTitle}"`;
-        } else if (notification.type === 'follow') {
-          title = 'متابع جديد 👥';
-          body = `${notification.from} بدأ بمتابعتك`;
-        } else if (notification.type === 'mention') {
-          title = 'ذكرك في تعليق 📢';
-          body = `${notification.from} ذكرك في تعليق`;
-        } else if (notification.type === 'message') {
-          title = 'رسالة جديدة 💌';
-          body = `${notification.from}: ${notification.messagePreview}`;
-        } else if (notification.type === 'new_poem') {
-          title = 'قصيدة جديدة 🪶';
-          body = `${notification.from} نشر قصيدة جديدة "${notification.poemTitle}"`;
-        }
-        
-        // Show browser notification immediately if it's for the current user
-        if (currentUser && userId === currentUser.id) {
-          showBrowserNotification(title, body, notification);
-        }
-      } catch (error) { console.error('Error adding notification:', error); }
+    async function addNotification(userId, notification)   {
+  try {
+    const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+    // Prepare notification titles and bodies
+    let title = 'Mody Poetry';
+    let body = '';
+
+    if (notification.type === 'like') {
+      title = 'إعجاب جديد ❤️';
+      body = `${notification.from} أعجب بقصيدتك "${notification.poemTitle}"`;
+    } else if (notification.type === 'comment') {
+      title = 'تعليق جديد 💬';
+      body = `${notification.from} علق على قصيدتك "${notification.poemTitle}"`;
+    } else if (notification.type === 'follow') {
+      title = 'متابع جديد 👥';
+      body = `${notification.from} بدأ بمتابعتك`;
+    } else if (notification.type === 'mention') {
+      title = 'ذكرك في تعليق 📢';
+      body = `${notification.from} ذكرك في تعليق`;
+    } else if (notification.type === 'message') {
+      title = 'رسالة جديدة 💌';
+      body = `${notification.from}: ${notification.messagePreview}`;
+    } else if (notification.type === 'new_poem') {
+      title = 'قصيدة جديدة 🪶';
+      body = `${notification.from} نشر قصيدة جديدة "${notification.poemTitle}"`;
     }
+
+    // Add notification to database
+    await set(ref(database, `notifications/${userId}/${notifId}`), {
+      ...notification,
+      id: notifId,
+      read: false,
+      title: title,
+      body: body
+    });
+
+    // Try to send FCM push notification
+    await sendPushNotification(userId, {
+      ...notification,
+      title: title,
+      body: body
+    });
+
+  } catch (error) {
+    console.error('Error adding notification:', error);
+  }
+}
  async function loadNotifications() {
       if (!currentUser) return;
       try {
         const snapshot = await get(ref(database, `notifications/${currentUser.id}`));
         if (snapshot.exists()) {
           const newNotifications = Object.values(snapshot.val());
-          
+
           // Check for new unread notifications and show browser notifications
           if (notifications.length > 0) {
             newNotifications.forEach(notif => {
@@ -869,7 +1091,7 @@
                 // This is a new notification or still unread
                 let title = 'Mody Poetry';
                 let body = '';
-                
+
                 if (notif.type === 'like') {
                   title = 'إعجاب جديد ❤️';
                   body = `${notif.from} أعجب بقصيدتك "${notif.poemTitle}"`;
@@ -889,14 +1111,14 @@
                   title = 'قصيدة جديدة 🪶';
                   body = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`;
                 }
-                
+
                 if (!existing && !notif.read) {
                   showBrowserNotification(title, body, notif);
                 }
               }
             });
           }
-          
+
           notifications = newNotifications;
           renderNotifications();
           updateNotificationBadge();
@@ -1654,7 +1876,7 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
       });
 
   // Sort by manual order first, then by date
-  
+
 filtered.sort((a, b) => {
   if (a.manualOrder !== undefined && b.manualOrder !== undefined) {
     return a.manualOrder - b.manualOrder;
@@ -2167,18 +2389,18 @@ setupMentionAutocomplete(commentInput, commentsSection);
   onEnd: async () => {
   const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
   const newOrder = [];
-  ids.forEach((id, index) => { 
-    const found = poems.find(p => p.id === id); 
+  ids.forEach((id, index) => {
+    const found = poems.find(p => p.id === id);
     if (found) {
       found.manualOrder = index; // Add order property
-      newOrder.push(found); 
+      newOrder.push(found);
     }
   });
   const missing = poems.filter(p => !ids.includes(p.id));
   poems = newOrder.concat(missing);
   await savePoemsToFirebase();
-  setTimeout(() => { 
-    isDragging = false; 
+  setTimeout(() => {
+    isDragging = false;
   }, 300);
 }
 });
@@ -2252,18 +2474,46 @@ setupMentionAutocomplete(commentInput, commentsSection);
       input.click();
     });
 document.getElementById('btnMyProfile').addEventListener('click', async () => { openUserProfile(currentUser.id); });
+// Enable browser notifications
+document.getElementById('btnEnableNotifications').addEventListener('click', async () => {
+  console.log('🔵 Enable Notifications button clicked');
+  console.log('🔵 Current user:', currentUser);
 
-    // Enable browser notifications
-    document.getElementById('btnEnableNotifications').addEventListener('click', async () => {
-      const granted = await requestNotificationPermission();
-      if (granted) {
-        showAlert('✅ تم تفعيل الإشعارات!\n\nسوف تتلقى إشعارات عند:\n• الإعجاب بقصائدك\n• التعليق على قصائدك\n• متابعة جديدة\n• ذكرك في تعليق\n• رسالة جديدة\n• قصيدة جديدة من متابَع');
-        showBrowserNotification('✅ تم تفعيل الإشعارات', 'سوف تتلقى إشعارات فورية عند التفاعلات الجديدة');
-      } else {
-        showAlert('⚠️ لم يتم منح صلاحية الإشعارات\n\nيرجى السماح بالإشعارات من إعدادات المتصفح');
-      }
-    });
+  if (!currentUser) {
+    showAlert('⚠️ يرجى تسجيل الدخول أولاً');
+    return;
+  }
 
+  // Initialize FCM
+  const granted = await initializeFCM();
+
+  console.log('🔵 initializeFCM result:', granted);
+
+  if (granted) {
+    showAlert(
+      '✅ تم تفعيل الإشعارات!' +
+      '\n🔔 سوف تتلقى إشعارات حتى عند إغلاق الموقع عن:' +
+      '\n• الإعجاب بقصائدك' +
+      '\n• التعليق على قصائدك' +
+      '\n• متابعة جديدة' +
+      '\n• ذكرك في تعليق' +
+      '\n• رسالة جديدة' +
+      '\n• قصيدة جديدة من متابَع' +
+      '\n💡 يمكنك الآن إغلاق الموقع وسيصلك الإشعار!'
+    );
+
+    // Test notification
+    if (Notification.permission === 'granted') {
+      new Notification('✅ تم التفعيل بنجاح!', {
+        body: 'سوف تتلقى إشعارات فورية عند التفاعلات الجديدة',
+        icon: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png',
+        badge: 'https://cdn-icons-png.flaticon.com/512/9087/9087118.png'
+      });
+    }
+  } else {
+    showAlert('⚠️ لم يتم منح صلاحية الإشعارات\n\nيرجى السماح بالإشعارات من إعدادات المتصفح');
+  }
+});
     async function openUserProfile(userId) {
       const user = allUsers.find(u => u.id === userId);
       if (!user) return;
@@ -2635,9 +2885,19 @@ ${followBtn}
       document.getElementById('loginPasswordError').classList.remove('show');
       if (!password) { showAlert('⚠️ يرجى إدخال كلمة المرور'); return; }
       if (hashPassword(password) !== selectedUserForLogin.passwordHash) { document.getElementById('loginPasswordError').classList.add('show'); return; }
-      currentUser = selectedUserForLogin; localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-      document.getElementById('authModal').style.display = 'none';
-      showUserInfo(); init(); showSyncStatus('✅ تم تسجيل الدخول بنجاح!', 2000);
+      // After successful login in btnLoginSubmit
+currentUser = selectedUserForLogin;
+localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+document.getElementById('authModal').style.display = 'none';
+showUserInfo();
+
+// Initialize FCM for logged in user
+setTimeout(() => {
+  initializeFCM().catch(err => console.log('FCM init error:', err));
+}, 1000);
+
+init();
+showSyncStatus('✅ تم تسجيل الدخول بنجاح!', 2000);
     });
     document.getElementById('loginPassword').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnLoginSubmit').click(); });
 
@@ -2735,10 +2995,19 @@ ${followBtn}
     });
 
 async function init() {
-      loadAllUsers();
-      await loadAllUsersFromFirebase();
-      if (!checkAuth()) return;
-      
+  loadAllUsers();
+  await loadAllUsersFromFirebase();
+  if (!checkAuth()) return;
+
+  // Initialize FCM automatically for logged in users
+  if (currentUser) {
+    setTimeout(() => {
+      initializeFCM().catch(err => console.log('FCM init error:', err));
+    }, 2000);
+  }
+
+      ;
+
       // Request notification permission on first login
       const hasPermission = await requestNotificationPermission();
       if (hasPermission) {
@@ -2746,7 +3015,7 @@ async function init() {
       } else {
         console.log('⚠️ Notification permission denied or not supported');
       }
-      
+
        loadHiddenPoems();
       loadFavorites();
       loadFollowing();
@@ -2754,13 +3023,13 @@ async function init() {
       await loadNotifications();
       await loadDMConversations();
       setupFirebaseListener();
-      
+
       // Listen for new notifications in real-time
       const notifRef = ref(database, `notifications/${currentUser.id}`);
       onValue(notifRef, (snapshot) => {
         if (snapshot.exists()) {
           const newNotifications = Object.values(snapshot.val());
-          
+
           // Find new notifications that aren't in our current list
           newNotifications.forEach(notif => {
             const existing = notifications.find(n => n.id === notif.id);
@@ -2768,7 +3037,7 @@ async function init() {
               // This is a brand new notification - show browser notification
               let title = 'Mody Poetry';
               let body = '';
-              
+
               if (notif.type === 'like') {
                 title = 'إعجاب جديد ❤️';
                 body = `${notif.from} أعجب بقصيدتك "${notif.poemTitle}"`;
@@ -2788,17 +3057,17 @@ async function init() {
                 title = 'قصيدة جديدة 🪶';
                 body = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`;
               }
-              
+
               showBrowserNotification(title, body, notif);
             }
           });
-          
+
           notifications = newNotifications;
           renderNotifications();
           updateNotificationBadge();
         }
       });
-      
+
       renderPoems();
       initSortable();
       showSyncStatus('✅متصل ', 2000);
