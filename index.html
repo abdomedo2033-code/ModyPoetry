@@ -540,9 +540,9 @@
 }
  .dm-action-btn{background:var(--card);border:1px solid var(--border);cursor:pointer;font-size:14px;padding:6px 8px;border-radius:6px;transition:all 0.2s;color:var(--text)}
 .dm-action-btn:hover{background:var(--brown);color:#fff;transform:scale(1.1)}
-.dm-reply-indicator{font-size:12px;color:var(--muted);margin-bottom:4px;padding:4px 8px;background:rgba(139,94,60,0.05);border-left:2px solid var(--brown);border-radius:4px}
-.dm-editing-indicator{background:rgba(255,193,7,0.1);border-left:2px solid #ffc107;padding:8px;border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
-.dm-replying-indicator{background:rgba(139,94,60,0.08);border-left:2px solid var(--brown);padding:8px;border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.dm-reply-indicator{font-size:12px;color:var(--muted);margin-bottom:4px;padding:4px 8px;background:rgba(139,94,60,0.05);border-left:2px solid var(--brown);border-radius:4px;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-editing-indicator{background:rgba(255,193,7,0.1);border-left:2px solid #ffc107;padding:8px;border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;max-width:60px}
+.dm-replying-indicator{background:rgba(139,94,60,0.08);border-left:2px solid var(--brown);padding:8px;border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;max-width:240px}
 .dm-input {
   display: flex;
   gap: 8px;
@@ -2714,11 +2714,15 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
   // Sort by manual order first, then by date
 
 filtered.sort((a, b) => {
+  // If both have manual order, respect it
   if (a.manualOrder !== undefined && b.manualOrder !== undefined) {
     return a.manualOrder - b.manualOrder;
   }
+  // Manual order always comes first
   if (a.manualOrder !== undefined) return -1;
   if (b.manualOrder !== undefined) return 1;
+
+  // NEW: Sort by date - newest first (reversed the comparison)
   return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 });
       if (filtered.length === 0) {
@@ -3129,7 +3133,7 @@ window.editMessage = function(messageId) {
     }
 
     indicator.innerHTML = `
-      <span>✏️ تعديل الرسالة</span>
+      <span>✏️  </span>
       <button type="button" onclick="cancelEditing()" style="background:none;border:none;cursor:pointer;color:var(--brown)">✖️</button>
     `;
   }
@@ -3183,7 +3187,7 @@ window.replyToMessage = function(messageId) {
     }
 
     const author = isMyMessage ? 'أنت' : 'المستخدم';
-    const preview = messageText.substring(0, 50) + (messageText.length > 50 ? '...' : '');
+    const preview = messageText.substring(0, 25) + (messageText.length > 20 ? '...' : '');
 
     indicator.innerHTML = `
       <span>↩️ رد على ${author}: ${escapeHtml(preview)}</span>
