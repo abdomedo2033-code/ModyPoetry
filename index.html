@@ -312,18 +312,26 @@
   transition: all 0.2s;
   display: block;
   width: fit-content;
-   background: transparent;
-
-
+  background: transparent;
 }
+
 .dm-message:not(.me) {
   margin-right: auto;
   margin-left: 0;
   text-align: left;
 }
 
-.dm-message:not(.me):not(:has(img)) {
-  padding: 0 400px 0 0;
+.dm-message:not(.me):not(:has(img)):hover::after,
+.dm-message:not(.me):not(:has(img)).active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  width: 400px;
+  background: rgba(139,94,60,0.04);
+  z-index: -1;
+  border-radius: 0 12px 12px 0;
 }
 
 .dm-message.me {
@@ -332,29 +340,31 @@
   text-align: right;
 }
 
-.dm-message.me:not(:has(img)) {
-  padding: 0 0 0 400px;
-}
-.dm-message:hover {
+.dm-message.me:not(:has(img)):hover::after,
+.dm-message.me:not(:has(img)).active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 100%;
+  width: 400px;
   background: rgba(139,94,60,0.04);
-}
-
-.dm-message.active {
-  background: rgba(139,94,60,0.04);
+  z-index: -1;
+  border-radius: 12px 0 0 12px;
 }
 
 .dm-message .bubble {
   display: inline-block;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(139,94,60,0.05); /* Opponent messages - lighter in light mode */
+  background: rgba(139,94,60,0.05);
   position: relative;
   word-break: break-word;
   max-width: 100%;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   transition: all 0.2s;
+  z-index: 1;
 }
-
 .dm-message.me .bubble {
   background: var(--brown);
   color: #fff;
