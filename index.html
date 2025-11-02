@@ -3186,11 +3186,21 @@ window.replyToMessage = function(messageId) {
       dmInput.insertBefore(indicator, dmInput.firstChild);
     }
 
-    const author = isMyMessage ? 'أنت' : 'المستخدم';
-    const preview = messageText.substring(0, 25) + (messageText.length > 20 ? '...' : '');
+    // Get username from the message element or header
+    let author;
+    if (isMyMessage) {
+      author = 'نفسك';
+    } else {
+      // Try to get username from the DM header
+      const headerEl = modal.querySelector('#dmHeader');
+      const headerText = headerEl ? headerEl.textContent.trim() : '';
+      author = headerText || 'مستخدم';
+    }
+
+    const preview = messageText.substring(0, 25) + (messageText.length > 25 ? '...' : '');
 
     indicator.innerHTML = `
-      <span>↩️ رد على ${author}: ${escapeHtml(preview)}</span>
+      <span>↩️ رد على ${author}:<br> ${escapeHtml(preview)}</span>
       <button type="button" onclick="cancelReplying()" style="background:none;border:none;cursor:pointer;color:var(--brown)">✖️</button>
     `;
   }
