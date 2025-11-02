@@ -1891,7 +1891,12 @@ dmTextarea.addEventListener('input', function() {
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
  const sendBtn = modal.querySelector('#dmSend');
+let isSending = false; // Flag to prevent multiple sends
+
 sendBtn.onclick = async () => {
+  // Prevent multiple clicks
+  if (isSending) return;
+  
   const textEl = modal.querySelector('#dmText');
   const text = textEl.value.trim();
 
@@ -1899,6 +1904,14 @@ sendBtn.onclick = async () => {
     showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
     return;
   }
+
+  // Disable button and set flag
+  isSending = true;
+  sendBtn.disabled = true;
+  sendBtn.style.opacity = '0.5';
+  sendBtn.style.cursor = 'not-allowed';
+  const originalText = sendBtn.textContent;
+  sendBtn.textContent = 'جاري الإرسال...';
 
   if (editingMessageId) {
     try {
@@ -1931,6 +1944,16 @@ sendBtn.onclick = async () => {
     } catch (error) {
       showAlert('❌ فشل تعديل الرسالة');
     }
+    
+    // Re-enable button after 1 second
+    setTimeout(() => {
+      isSending = false;
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
+      sendBtn.style.cursor = 'pointer';
+      sendBtn.textContent = originalText;
+    }, 1000);
+    
     return;
   }
 
@@ -1953,6 +1976,16 @@ sendBtn.onclick = async () => {
       modal.querySelector('#dmImagePreview').innerHTML = '';
     } catch (error) {
       showAlert('❌ فشل رفع الوسائط');
+      
+      // Re-enable button
+      setTimeout(() => {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.textContent = originalText;
+      }, 1000);
+      
       return;
     }
   }
@@ -1963,40 +1996,52 @@ sendBtn.onclick = async () => {
     document.getElementById('dmReplyingIndicator')?.remove();
   }
 
-  await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+  try {
+    await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
 
-  const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
+    const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
 
-  await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
-    id: convId, userId: withUserId, username: withUser?.username || '',
-    lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
-  });
+    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+      id: convId, userId: withUserId, username: withUser?.username || '',
+      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
+    });
 
-  const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
-  const theirMetaSnap = await get(theirMetaRef);
-  const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
-  await set(theirMetaRef, {
-    id: convId, userId: currentUser.id, username: currentUser.username,
-    lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
-  });
+    const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+    const theirMetaSnap = await get(theirMetaRef);
+    const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+    await set(theirMetaRef, {
+      id: convId, userId: currentUser.id, username: currentUser.username,
+      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
+    });
 
-  await addNotification(withUserId, {
-    type: 'message', from: currentUser.username, fromId: currentUser.id,
-    messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
-    timestamp: payload.timestamp
-  });
+    await addNotification(withUserId, {
+      type: 'message', from: currentUser.username, fromId: currentUser.id,
+      messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
+      timestamp: payload.timestamp
+    });
 
+    await loadConversation(withUserId);
+    textEl.value = '';
+    textEl.style.height = '20px';
+    showSyncStatus('✅ تم إرسال الرسالة', 1500);
+    await loadDMConversations();
+    renderDMList();
 
-
-  await loadConversation(withUserId);
-  textEl.value = '';
-  textEl.style.height = '20px';
-  showSyncStatus('✅ تم إرسال الرسالة', 1500);
-  await loadDMConversations();
-  renderDMList();
-
-  await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+  } catch (error) {
+    showAlert('❌ فشل إرسال الرسالة');
+  }
+  
+  // Re-enable button after 1 second
+  setTimeout(() => {
+    isSending = false;
+    sendBtn.disabled = false;
+    sendBtn.style.opacity = '1';
+    sendBtn.style.cursor = 'pointer';
+    sendBtn.textContent = originalText;
+  }, 1000);
 };
+ 
   }
 
   toggleBtn.addEventListener('click', () => {
