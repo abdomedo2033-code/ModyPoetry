@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/9087/9087118.png">
    <style>
-    :root{--bg-gradient-1:#fff8f0;--bg-gradient-2:#fef3e8;--card:#ffffff;--muted:#8b7355;--accent:#3a1f0b;--brown:#8b5e3c;--brown-hover:#a67c52;--text:#2e1a0f;--shadow:rgba(58,31,11,0.08);--shadow-lg:rgba(58,31,11,0.12);--border:#e8dcc8;--header-dark:#e8d2bf;--header-dark-2:#d9c0a6;--success:#28a745;--danger:#dc3545;--info:#17a2b8;--warning:#ffc107}
+    :root{--bg-gradient-1:#fff8f0;--bg-gradient-2:#fef3e8;--card:#ffffff;--muted:#8b7355;--accent:#3a1f0b;--brown: rgba(156, 113, 86, 0.4);--brown-hover:#a67c52;--text:#2e1a0f;--shadow:rgba(58,31,11,0.08);--shadow-lg:rgba(58,31,11,0.12);--border:#e8dcc8;--header-dark:#e8d2bf;--header-dark-2:#d9c0a6;--success:#28a745;--danger:#dc3545;--info:#17a2b8;--warning:#ffc107}
     [data-theme="dark"]{--bg-gradient-1:#1a1a1a;--bg-gradient-2:#2d2d2d;--card:#2a2a2a;--muted:#b8a088;--accent:#f4e4d7;--brown:#c9966b;--brown-hover:#e0b080;--text:#e8dcc8;--shadow:rgba(0,0,0,0.3);--shadow-lg:rgba(0,0,0,0.5);--border:#4a4a4a;--header-dark:#3a3a3a;--header-dark-2:#2a2a2a}
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow-x:hidden}
@@ -904,15 +904,7 @@
 
   </style>
 
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "f337777f-bd34-49f0-9e56-7386bf90efa8",
-    });
-  });
-</script>
+
 
 </head>
 <body>
@@ -1662,18 +1654,18 @@ modal.innerHTML = `
           <div class="dm-typing-indicator" id="dmTypingIndicator">
             <span class="dm-typing-dots">...</span> يكتب
           </div>
-          <div class="dm-input">
-            <div class="dm-image-upload" style="display:none" id="dmImageUploadPreview">
-              <img id="dmImagePreview" style="max-width:100px;max-height:100px;border-radius:8px">
-              <button class="btn small" id="dmCancelImage">✖️</button>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center">
-              <input type="file" id="dmImageInput" accept="image/*" style="display:none">
-              <button class="btn small" id="dmImageBtn" title="إرفاق صورة">🖼️</button>
-              <textarea id="dmText" placeholder="اكتب رسالتك..." style="flex:1"></textarea>
-              <button class="btn small" id="dmSend">إرسال</button>
-            </div>
-          </div>
+    <div class="dm-input">
+  <div class="dm-image-upload" style="display:none" id="dmImageUploadPreview">
+    <div id="dmImagePreview"></div>
+    <button class="btn small" id="dmCancelImage">✖️</button>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center">
+    <input type="file" id="dmImageInput" accept="image/*,video/*,audio/*" style="display:none">
+    <button class="btn small" id="dmImageBtn" title="إرفاق وسائط">📎</button>
+    <textarea id="dmText" placeholder="اكتب رسالتك... (الصق رابط لمعاينة تلقائية)" style="flex:1"></textarea>
+    <button class="btn small" id="dmSend">إرسال</button>
+  </div>
+</div>
         </div>
       </div>
     </div>
@@ -1787,80 +1779,111 @@ modal.innerHTML = `
           lastDate = msgDate;
         }
 
-     const div = document.createElement('div');
+const div = document.createElement('div');
 div.className = 'dm-message' + (m.fromId === currentUser.id ? ' me' : '');
 div.dataset.messageId = m.id;
 div.dataset.conversationId = convId;
 div.id = 'msg-' + m.id;
 
-       let replyHtml = '';
-        if (m.replyTo) {
-          const replyMsg = messages.find(msg => msg.id === m.replyTo);
-          if (replyMsg) {
-            const replyFromMe = replyMsg.fromId === currentUser.id;
-            const replyAuthor = replyFromMe ? 'أنت' : withUser?.username || 'مستخدم';
-            const replyText = replyMsg.text?.substring(0, 30) || (replyMsg.imageUrl ? '🖼️ صورة' : '');
-            replyHtml = `<div class="dm-reply-indicator" onclick="(function(){ const el = document.getElementById('msg-${m.replyTo}'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.boxShadow='0 0 0 3px var(--brown)'; setTimeout(()=>el.style.boxShadow='', 2000); } })()">↩️ رد على ${replyAuthor}: ${escapeHtml(replyText)}${(replyMsg.text?.length || 0) > 30 ? '...' : ''}</div>`;
-          }
-        }
+let replyHtml = '';
+if (m.replyTo) {
+  const replyMsg = messages.find(msg => msg.id === m.replyTo);
+  if (replyMsg) {
+    const replyFromMe = replyMsg.fromId === currentUser.id;
+    const replyAuthor = replyFromMe ? 'أنت' : withUser?.username || 'مستخدم';
+    const replyText = replyMsg.text?.substring(0, 30) || (replyMsg.imageUrl ? '🖼️ صورة' : '');
+    replyHtml = `<div class="dm-reply-indicator" onclick="(function(){ const el = document.getElementById('msg-${m.replyTo}'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.boxShadow='0 0 0 3px var(--brown)'; setTimeout(()=>el.style.boxShadow='', 2000); } })()">↩️ رد على ${replyAuthor}: ${escapeHtml(replyText)}${(replyMsg.text?.length || 0) > 30 ? '...' : ''}</div>`;
+  }
+}
 
 const editedLabel = m.edited ? '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>' : '';
-        let imageHtml = '';
-        if (m.imageUrl) {
-          imageHtml = `<img src="${m.imageUrl}" class="dm-image-preview" onclick="window.open('${m.imageUrl}','_blank')">`;
-        }
 
-        let reactionsHtml = '';
-        if (m.reactions && Object.keys(m.reactions).length > 0) {
-          const reactionCounts = {};
-          Object.values(m.reactions).forEach(r => {
-            reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
-          });
-          reactionsHtml = '<div class="dm-message-reactions">';
-          for (const [emoji, count] of Object.entries(reactionCounts)) {
-            const hasReacted = m.reactions[currentUser.id]?.emoji === emoji;
-            reactionsHtml += `<span class="dm-reaction ${hasReacted ? 'reacted' : ''}" onclick="window.toggleReaction('${convId}','${m.id}','${emoji}')">${emoji} <span class="dm-reaction-count">${count}</span></span>`;
-          }
-          reactionsHtml += '</div>';
-        }
+// Media rendering
+let mediaHtml = '';
+if (m.imageUrl) {
+  const fileType = m.fileType || '';
 
-  let bubbleContent = '';
+  if (fileType.startsWith('video/')) {
+    mediaHtml = `<video controls style="max-width:300px;max-height:300px;border-radius:8px;margin-top:8px"><source src="${m.imageUrl}" type="${fileType}"></video>`;
+  } else if (fileType.startsWith('audio/')) {
+    mediaHtml = `<audio controls style="max-width:300px;margin-top:8px"><source src="${m.imageUrl}" type="${fileType}"></audio>`;
+  } else {
+    // Image or GIF
+    mediaHtml = `<img src="${m.imageUrl}" class="dm-image-preview" onclick="window.open('${m.imageUrl}','_blank')" style="max-width:300px;max-height:300px;border-radius:8px;margin-top:8px;cursor:pointer">`;
+  }
+}
+
+// Text with link previews
+let textHtml = '';
 if (m.text && m.text.trim()) {
-  bubbleContent = `<div class="bubble">${escapeHtml(m.text)}${editedLabel}</div>`;
+  const links = extractLinks(m.text);
+  let processedText = escapeHtml(m.text);
+
+  // Replace links with clickable versions
+  links.forEach(link => {
+    const escapedLink = escapeHtml(link);
+    processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
+  });
+
+  textHtml = `<div class="bubble">${processedText}${editedLabel}</div>`;
+
+  // Add link previews
+  if (links.length > 0) {
+    links.forEach(link => {
+      const preview = renderLinkPreview(link);
+      if (preview && !preview.startsWith('<a href')) {
+        textHtml += preview;
+      }
+    });
+  }
+}
+
+let reactionsHtml = '';
+if (m.reactions && Object.keys(m.reactions).length > 0) {
+  const reactionCounts = {};
+  Object.values(m.reactions).forEach(r => {
+    reactionCounts[r.emoji] = (reactionCounts[r.emoji] || 0) + 1;
+  });
+  reactionsHtml = '<div class="dm-message-reactions">';
+  for (const [emoji, count] of Object.entries(reactionCounts)) {
+    const hasReacted = m.reactions[currentUser.id]?.emoji === emoji;
+    reactionsHtml += `<span class="dm-reaction ${hasReacted ? 'reacted' : ''}" onclick="window.toggleReaction('${convId}','${m.id}','${emoji}')">${emoji} <span class="dm-reaction-count">${count}</span></span>`;
+  }
+  reactionsHtml += '</div>';
 }
 
 div.innerHTML = `
   ${replyHtml}
-  ${bubbleContent}
-  ${imageHtml}
+  ${textHtml}
+  ${mediaHtml}
   ${reactionsHtml}
   <div class="muted" style="font-size:11px;margin-top:4px">${formatTimeAgo(m.timestamp)}</div>
-          ${m.fromId === currentUser.id ? `
-            <div class="dm-message-actions">
-              <button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button>
-              <button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button>
-              <button class="dm-action-btn" onclick="window.editMessage('${m.id}')" title="تعديل">✏️</button>
-              <button class="dm-action-btn" onclick="window.deleteMessage('${convId}', '${m.id}')" title="حذف">🗑️</button>
-            </div>
-          ` : `
-            <div class="dm-message-actions">
-              <button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button>
-              <button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button>
-            </div>
-          `}
-        `;
+  ${m.fromId === currentUser.id ? `
+    <div class="dm-message-actions">
+      <button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button>
+      <button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button>
+      <button class="dm-action-btn" onclick="window.editMessage('${m.id}')" title="تعديل">✏️</button>
+      <button class="dm-action-btn" onclick="window.deleteMessage('${convId}', '${m.id}')" title="حذف">🗑️</button>
+    </div>
+  ` : `
+    <div class="dm-message-actions">
+      <button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button>
+      <button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button>
+    </div>
+  `}
+`;
 
-        div.addEventListener('click', function(e) {
-          if (e.target.closest('.dm-message-actions')) return;
+div.addEventListener('click', function(e) {
+  if (e.target.closest('.dm-message-actions')) return;
+  if (e.target.tagName === 'A' || e.target.tagName === 'IFRAME') return;
 
-          document.querySelectorAll('.dm-message.active').forEach(msg => {
-            if (msg !== div) msg.classList.remove('active');
-          });
+  document.querySelectorAll('.dm-message.active').forEach(msg => {
+    if (msg !== div) msg.classList.remove('active');
+  });
 
-          div.classList.toggle('active');
+  div.classList.toggle('active');
+});
 
-
-        });
 
         messagesEl.appendChild(div);
       });
@@ -1879,103 +1902,113 @@ dmTextarea.addEventListener('input', function() {
   this.style.height = '20px';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
-    const sendBtn = modal.querySelector('#dmSend');
-    sendBtn.onclick = async () => {
-      const textEl = modal.querySelector('#dmText');
-      const text = textEl.value.trim();
+ const sendBtn = modal.querySelector('#dmSend');
+sendBtn.onclick = async () => {
+  const textEl = modal.querySelector('#dmText');
+  const text = textEl.value.trim();
 
-      if (!text && !selectedImage) {
-        showAlert('⚠️ يرجى كتابة رسالة أو اختيار صورة');
-        return;
-      }
-
-    if (editingMessageId) {
-  try {
-    await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
-    await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
-    await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
-
-    // Update UI immediately
-    const messageEl = document.querySelector(`[data-message-id="${editingMessageId}"]`);
-    if (messageEl) {
-      const bubble = messageEl.querySelector('.bubble');
-      if (bubble) {
-        const editedLabel = '<span style="font-size:10px;color:var(--muted);margin-left:4px">(معدّل)</span>';
-        bubble.innerHTML = escapeHtml(text) + editedLabel;
-      }
-    }
-
-    editingMessageId = null;
-    textEl.value = '';
-    document.getElementById('dmEditingIndicator')?.remove();
-
-    // Reset textarea height
-    textEl.style.height = '20px';
-
-    showSyncStatus('✅ تم تعديل الرسالة', 1500);
-  } catch (error) {
-    showAlert('❌ فشل تعديل الرسالة');
+  if (!text && !selectedImage) {
+    showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
+    return;
   }
-  return;
-}
 
-      const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
-      const payload = {
-        id: msgId, convId, text,
-        from: currentUser.username, fromId: currentUser.id, toId: withUserId,
-        timestamp: new Date().toISOString()
-      };
+  if (editingMessageId) {
+    try {
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
 
-      if (selectedImage) {
-        try {
-          showSyncStatus('🔄 جاري رفع الصورة...', 3000);
-          const uploaded = await uploadFileToStorage(selectedImage.file);
-          payload.imageUrl = uploaded.url;
-          selectedImage = null;
-          modal.querySelector('#dmImageInput').value = '';
-          modal.querySelector('#dmImageUploadPreview').style.display = 'none';
-        } catch (error) {
-          showAlert('❌ فشل رفع الصورة');
-          return;
+      const messageEl = document.querySelector(`[data-message-id="${editingMessageId}"]`);
+      if (messageEl) {
+        const bubble = messageEl.querySelector('.bubble');
+        if (bubble) {
+          const links = extractLinks(text);
+          let processedText = escapeHtml(text);
+          links.forEach(link => {
+            const escapedLink = escapeHtml(link);
+            processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
+          });
+
+          const editedLabel = '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>';
+          bubble.innerHTML = processedText + editedLabel;
         }
       }
 
-      if (replyingToMessage) {
-        payload.replyTo = replyingToMessage.id;
-        replyingToMessage = null;
-        document.getElementById('dmReplyingIndicator')?.remove();
-      }
-
-      await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
-      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
-        id: convId, userId: withUserId, username: withUser?.username || '',
-        lastMessage: text || '📷 صورة', updatedAt: payload.timestamp, unreadCount: 0
-      });
-
-      const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
-      const theirMetaSnap = await get(theirMetaRef);
-      const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
-      await set(theirMetaRef, {
-        id: convId, userId: currentUser.id, username: currentUser.username,
-        lastMessage: text || '📷 صورة', updatedAt: payload.timestamp, unreadCount: theirUnread
-      });
-
-      await addNotification(withUserId, {
-        type: 'message', from: currentUser.username, fromId: currentUser.id,
-        messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : '📷 صورة',
-        timestamp: payload.timestamp
-      });
-
-      playNotificationSound();
-
-      await loadConversation(withUserId);
+      editingMessageId = null;
       textEl.value = '';
-      showSyncStatus('✅ تم إرسال الرسالة', 1500);
-      await loadDMConversations();
-      renderDMList();
+      document.getElementById('dmEditingIndicator')?.remove();
+      textEl.style.height = '20px';
 
-      await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
-    };
+      showSyncStatus('✅ تم تعديل الرسالة', 1500);
+    } catch (error) {
+      showAlert('❌ فشل تعديل الرسالة');
+    }
+    return;
+  }
+
+  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+  const payload = {
+    id: msgId, convId, text,
+    from: currentUser.username, fromId: currentUser.id, toId: withUserId,
+    timestamp: new Date().toISOString()
+  };
+
+  if (selectedImage) {
+    try {
+      showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
+      const uploaded = await uploadFileToStorage(selectedImage.file);
+      payload.imageUrl = uploaded.url;
+      payload.fileType = selectedImage.type;
+      selectedImage = null;
+      modal.querySelector('#dmImageInput').value = '';
+      modal.querySelector('#dmImageUploadPreview').style.display = 'none';
+      modal.querySelector('#dmImagePreview').innerHTML = '';
+    } catch (error) {
+      showAlert('❌ فشل رفع الوسائط');
+      return;
+    }
+  }
+
+  if (replyingToMessage) {
+    payload.replyTo = replyingToMessage.id;
+    replyingToMessage = null;
+    document.getElementById('dmReplyingIndicator')?.remove();
+  }
+
+  await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+
+  const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
+
+  await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+    id: convId, userId: withUserId, username: withUser?.username || '',
+    lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
+  });
+
+  const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+  const theirMetaSnap = await get(theirMetaRef);
+  const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+  await set(theirMetaRef, {
+    id: convId, userId: currentUser.id, username: currentUser.username,
+    lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
+  });
+
+  await addNotification(withUserId, {
+    type: 'message', from: currentUser.username, fromId: currentUser.id,
+    messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
+    timestamp: payload.timestamp
+  });
+
+  playNotificationSound();
+
+  await loadConversation(withUserId);
+  textEl.value = '';
+  textEl.style.height = '20px';
+  showSyncStatus('✅ تم إرسال الرسالة', 1500);
+  await loadDMConversations();
+  renderDMList();
+
+  await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+};
   }
 
   toggleBtn.addEventListener('click', () => {
@@ -1994,27 +2027,45 @@ dmTextarea.addEventListener('input', function() {
     modal.querySelector('#dmImageInput').click();
   });
 
-  modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      showAlert('⚠️ يرجى اختيار صورة');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      selectedImage = { file, dataUrl: event.target.result };
-      modal.querySelector('#dmImagePreview').src = event.target.result;
-      modal.querySelector('#dmImageUploadPreview').style.display = 'flex';
-    };
-    reader.readAsDataURL(file);
-  });
+modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
 
-  modal.querySelector('#dmCancelImage').addEventListener('click', () => {
-    selectedImage = null;
-    modal.querySelector('#dmImageInput').value = '';
-    modal.querySelector('#dmImageUploadPreview').style.display = 'none';
-  });
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  const isAudio = file.type.startsWith('audio/');
+
+  if (!isImage && !isVideo && !isAudio) {
+    showAlert('⚠️ يرجى اختيار صورة، فيديو، أو ملف صوتي');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    selectedImage = { file, dataUrl: event.target.result, type: file.type };
+
+    const preview = modal.querySelector('#dmImageUploadPreview');
+    const previewContainer = modal.querySelector('#dmImagePreview');
+
+    if (isVideo) {
+      previewContainer.innerHTML = `<video controls style="max-width:100px;max-height:100px;border-radius:8px"><source src="${event.target.result}" type="${file.type}"></video>`;
+    } else if (isAudio) {
+      previewContainer.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(139,94,60,0.1);border-radius:8px"><span>🎵</span><span style="font-size:12px">${file.name}</span></div>`;
+    } else {
+      previewContainer.innerHTML = `<img src="${event.target.result}" style="max-width:100px;max-height:100px;border-radius:8px">`;
+    }
+
+    preview.style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+});
+modal.querySelector('#dmCancelImage').addEventListener('click', () => {
+  selectedImage = null;
+  modal.querySelector('#dmImageInput').value = '';
+  const preview = modal.querySelector('#dmImageUploadPreview');
+  preview.style.display = 'none';
+  modal.querySelector('#dmImagePreview').innerHTML = '';
+});
 
   modal.querySelector('#dmText').addEventListener('input', async function() {
     if (!currentConversationId) return;
@@ -2619,16 +2670,24 @@ filtered.sort((a, b) => {
       } catch { return 0; }
     }
 
-    function getYouTubeEmbedUrl(url) {
-      try {
-        const urlObj = new URL(url);
-        let videoId = null;
-        if (urlObj.hostname.includes('youtube.com')) videoId = urlObj.searchParams.get('v');
-        else if (urlObj.hostname.includes('youtu.be')) videoId = urlObj.pathname.slice(1);
-        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
-      } catch {}
-      return null;
+   function getYouTubeEmbedUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    let videoId = null;
+    if (urlObj.hostname.includes('youtube.com')) {
+      videoId = urlObj.searchParams.get('v');
+    } else if (urlObj.hostname.includes('youtu.be')) {
+      videoId = urlObj.pathname.slice(1).split('?')[0];
     }
+
+    if (videoId) {
+      // إزالة أي معاملات إضافية من videoId
+      videoId = videoId.split('&')[0];
+      return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}`;
+    }
+  } catch {}
+  return null;
+}
     function getSoundCloudEmbedUrl(url) {
       if (url.includes('soundcloud.com')) return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
       return null;
@@ -2689,7 +2748,86 @@ filtered.sort((a, b) => {
 
       return '';
     }
+    // Link preview functions
+function isYouTubeLink(url) {
+  return url.includes('youtube.com') || url.includes('youtu.be');
+}
 
+function isSpotifyLink(url) {
+  return url.includes('spotify.com');
+}
+
+function isSoundCloudLink(url) {
+  return url.includes('soundcloud.com');
+}
+
+function isGiphyLink(url) {
+  return url.includes('giphy.com') || url.includes('tenor.com');
+}
+
+function getYouTubeEmbedId(url) {
+  const urlObj = new URL(url);
+  if (urlObj.hostname.includes('youtube.com')) {
+    return urlObj.searchParams.get('v');
+  } else if (urlObj.hostname.includes('youtu.be')) {
+    return urlObj.pathname.slice(1);
+  }
+  return null;
+}
+
+function getSpotifyEmbedUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        const pathMatch = urlObj.pathname.match(/\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
+        if (pathMatch) {
+          return `https://open.spotify.com/embed/${pathMatch[1]}/${pathMatch[2]}`;
+        }
+      } catch {}
+      return null;
+    }
+function extractLinks(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.match(urlRegex) || [];
+}
+
+function renderLinkPreview(url) {
+  try {
+    if (isYouTubeLink(url)) {
+      const videoId = getYouTubeEmbedId(url);
+      if (videoId) {
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+ return `
+          <div style="position:relative;margin-top:8px;max-width:400px;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:block;position:relative;text-decoration:none">
+              <img src="${thumbnailUrl}" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'" style="width:100%;display:block">
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:56px;background:rgba(255,0,0,0.9);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.2s" onmouseover="this.style.background='rgba(255,0,0,1)';this.style.transform='translate(-50%,-50%) scale(1.1)'" onmouseout="this.style.background='rgba(255,0,0,0.9)';this.style.transform='translate(-50%,-50%) scale(1)'">
+                <div style="width:0;height:0;border-top:14px solid transparent;border-bottom:14px solid transparent;border-left:24px solid #fff;margin-left:6px"></div>
+              </div>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top, rgba(0,0,0,0.8), transparent);padding:12px;color:#fff">
+                <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span style="font-size:20px">▶️</span>
+                  <span>مشاهدة على YouTube</span>
+                </div>
+              </div>
+            </a>
+          </div>
+        `;
+      }
+    } else if (isSpotifyLink(url)) {
+      const embedUrl = getSpotifyEmbedUrl(url);
+      if (embedUrl) {
+        return `<div style="margin-top:8px;max-width:400px"><iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:12px"></iframe></div>`;
+      }
+    } else if (isSoundCloudLink(url)) {
+      return `<div style="margin-top:8px;max-width:400px"><iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" style="border-radius:8px"></iframe></div>`;
+    }
+
+    // Regular clickable link
+    return `<a href="${url}" target="_blank" onclick="event.stopPropagation();" style="color:var(--brown);text-decoration:underline;word-break:break-all">${url}</a>`;
+  } catch (e) {
+    return `<a href="${url}" target="_blank" onclick="event.stopPropagation();" style="color:var(--brown);text-decoration:underline;word-break:break-all">${url}</a>`;
+  }
+}
     async function loadCommentsFromFirebase(poemId) {
       try { const snapshot = await get(ref(database, `comments/${poemId}`)); if (snapshot.exists()) return Object.values(snapshot.val()); return []; }
       catch (error) { console.error('Error loading comments:', error); return []; }
