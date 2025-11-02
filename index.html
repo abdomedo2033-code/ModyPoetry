@@ -214,7 +214,7 @@
 }
 
 .modal-inner.dm-modal {
-  max-height: 95vh;
+  max-height: 90vh;
   height: auto;
   overflow: hidden;
   display: flex;
@@ -314,21 +314,25 @@
 
 
 }
-
 .dm-message:not(.me) {
-  padding: 0 400px 0 0;
   margin-right: auto;
   margin-left: 0;
   text-align: left;
 }
 
+.dm-message:not(.me):not(:has(img)) {
+  padding: 0 400px 0 0;
+}
+
 .dm-message.me {
-  padding: 0 0 0 400px;
   margin-left: auto;
   margin-right: 0;
   text-align: right;
 }
 
+.dm-message.me:not(:has(img)) {
+  padding: 0 0 0 400px;
+}
 .dm-message:hover {
   background: rgba(139,94,60,0.04);
 }
