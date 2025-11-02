@@ -700,15 +700,7 @@
     .poem-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
     .poem-images-grid img { width: 100%; height: 300px; object-fit: cover; border-radius: 8px; transition: transform 0.2s ease; }
     .poem-images-grid img:hover { transform: scale(1.02); }
-    .media-resizable { position: relative; display: inline-block; max-width: 100%; margin-bottom: 15px; }
-    .media-resizable img, .media-resizable video { display: block; border-radius: 8px; box-shadow: 0 4px 12px var(--shadow); }
-    .media-size-controls { position: absolute; top: 10px; right: 10px; z-index: 10; }
-    .media-size-btn {
-      background: rgba(0,0,0,0.75); color: white; border: 1px solid rgba(255,255,255,0.3);
-      padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600;
-      transition: all 0.2s; backdrop-filter: blur(4px);
-    }
-    .media-size-btn:hover { background: rgba(139,94,60,0.9); transform: scale(1.05); }
+
     .media-item video { max-height: 500px; width: auto; max-width: 100%; }
     .media-item audio { width: 100%; max-width: 600px; margin: 0 auto; display: block; }
 
@@ -899,6 +891,33 @@
 .dm-message .muted {
   padding: 0 4px;
   margin-top: 4px;
+}
+
+.media-resizable {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin-bottom: 15px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.media-resizable img, .media-resizable video {
+  display: block;
+  border-radius: 8px;
+}
+.media-size-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+}
+.media-size-btn {
+  background:rgba(0,0,0,0);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700;
+}
+.media-size-btn:hover {
+  background: rgba(139,94,60,0.4);
+  transform: scale(1.05);
 }
 
   </style>
@@ -1787,20 +1806,35 @@ if (m.replyTo) {
 const editedLabel = m.edited ? '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>' : '';
 
 // Media rendering
+// Media rendering with resize controls
 let mediaHtml = '';
 if (m.imageUrl) {
   const fileType = m.fileType || '';
+  const mediaId = 'dm-media-' + m.id;
 
   if (fileType.startsWith('video/')) {
-    mediaHtml = `<video controls style="max-width:300px;max-height:300px;border-radius:8px;margin-top:8px"><source src="${m.imageUrl}" type="${fileType}"></video>`;
+    mediaHtml = `
+      <div style="position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;display:inline-block;margin-top:8px;max-width:100%">
+        <div style="position:absolute;top:8px;right:8px;z-index:10">
+          <button onclick="window.resizeMedia('${mediaId}')" class="media-size-btn">🔍</button>
+        </div>
+        <video id="${mediaId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px"><source src="${m.imageUrl}" type="${fileType}"></video>
+      </div>
+    `;
   } else if (fileType.startsWith('audio/')) {
-    mediaHtml = `<audio controls style="max-width:300px;margin-top:8px"><source src="${m.imageUrl}" type="${fileType}"></audio>`;
+    mediaHtml = `<audio controls style="max-width:100%;margin-top:8px"><source src="${m.imageUrl}" type="${fileType}"></audio>`;
   } else {
-    // Image or GIF
-    mediaHtml = `<img src="${m.imageUrl}" class="dm-image-preview" onclick="window.open('${m.imageUrl}','_blank')" style="max-width:300px;max-height:300px;border-radius:8px;margin-top:8px;cursor:pointer">`;
+    // Image or GIF with resize button
+    mediaHtml = `
+      <div style="position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;display:inline-block;margin-top:8px;max-width:100%">
+        <div style="position:absolute;top:8px;right:8px;z-index:10">
+          <button onclick="window.resizeMedia('${mediaId}')" class="media-size-btn">🔍</button>
+        </div>
+        <img id="${mediaId}" src="${m.imageUrl}" onclick="window.open('${m.imageUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+      </div>
+    `;
   }
 }
-
 // Text with link previews
 let textHtml = '';
 if (m.text && m.text.trim()) {
@@ -1963,13 +1997,20 @@ sendBtn.onclick = async () => {
     from: currentUser.username, fromId: currentUser.id, toId: withUserId,
     timestamp: new Date().toISOString()
   };
-
-  if (selectedImage) {
+if (selectedImage) {
     try {
-      showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-      const uploaded = await uploadFileToStorage(selectedImage.file);
-      payload.imageUrl = uploaded.url;
-      payload.fileType = selectedImage.type;
+      // Check if it's a link or file upload
+      if (selectedImage.url && selectedImage.type === 'image/link') {
+        // It's a link - use directly
+        payload.imageUrl = selectedImage.url;
+        payload.fileType = 'image/link';
+      } else {
+        // It's a file upload - upload to Firebase
+        showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
+        const uploaded = await uploadFileToStorage(selectedImage.file);
+        payload.imageUrl = uploaded.url;
+        payload.fileType = selectedImage.type;
+      }
       selectedImage = null;
       modal.querySelector('#dmImageInput').value = '';
       modal.querySelector('#dmImageUploadPreview').style.display = 'none';
@@ -2091,6 +2132,39 @@ modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
     preview.style.display = 'flex';
   };
   reader.readAsDataURL(file);
+});
+
+// NEW: Auto-detect image/GIF links in textarea and show preview
+const dmTextarea = modal.querySelector('#dmText');
+let linkPreviewTimeout;
+
+dmTextarea.addEventListener('input', function() {
+  clearTimeout(linkPreviewTimeout);
+
+  linkPreviewTimeout = setTimeout(() => {
+    const text = this.value.trim();
+    const urls = text.match(/(https?:\/\/[^\s]+)/g);
+
+    if (urls && urls.length > 0) {
+      const lastUrl = urls[urls.length - 1];
+
+      // Check if it's an image/GIF link
+      const isImageLink = lastUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ||
+                          lastUrl.includes('giphy.com') ||
+                          lastUrl.includes('tenor.com');
+
+      if (isImageLink && !selectedImage) {
+        const preview = modal.querySelector('#dmImageUploadPreview');
+        const previewContainer = modal.querySelector('#dmImagePreview');
+
+        previewContainer.innerHTML = `<img src="${lastUrl}" style="max-width:100px;max-height:100px;border-radius:8px" onerror="this.parentElement.parentElement.style.display='none'">`;
+        preview.style.display = 'flex';
+
+        // Store as link (not file upload)
+        selectedImage = { url: lastUrl, type: 'image/link' };
+      }
+    }
+  }, 500); // Wait 500ms after typing stops
 });
 modal.querySelector('#dmCancelImage').addEventListener('click', () => {
   selectedImage = null;
@@ -2289,25 +2363,33 @@ function setupMentionAutocomplete(inputElement, containerElement) {
     }
   });
 }
+window.resizeMedia = function(mediaId) {
+  const element = document.getElementById(mediaId);
+  if (!element) return;
 
-    window.resizeMedia = function(mediaId) {
-      const element = document.getElementById(mediaId);
-      if (!element) return;
+  const container = element.parentElement;
+  const btn = container.querySelector('button');
 
-      const sizes = ['400px', '600px', '900px', '100%'];
-      const labels = ['صغير', 'متوسط', 'كبير', 'ملء'];
+  // Get current width
+  const currentWidth = element.style.width;
 
-      let currentIndex = parseInt(element.dataset.sizeIndex || '1');
-      currentIndex = (currentIndex + 1) % sizes.length;
-
-      element.style.width = sizes[currentIndex];
-      element.style.height = 'auto';
-      element.dataset.sizeIndex = currentIndex;
-
-      const btn = document.querySelector(`[onclick*="${mediaId}"]`);
-      if (btn) { btn.textContent = `📐 ${labels[currentIndex]}`; }
-    };
-
+  // Cycle through: 300px -> 100% -> back to 300px
+  if (currentWidth === '300px' || currentWidth === '') {
+    // Go to full size
+    element.style.width = '100%';
+    container.style.width = '100%';
+    container.style.maxWidth = '100%';
+    container.style.display = 'block';
+    if (btn) btn.textContent = '🔍';
+  } else {
+    // Go back to small size
+    element.style.width = '300px';
+    container.style.width = 'auto';
+    container.style.maxWidth = '100%';
+    container.style.display = 'inline-block';
+    if (btn) btn.textContent = '🔍';
+  }
+};
     function formatTimeAgo(dateString) {
       const now = new Date(), date = new Date(dateString); const seconds = Math.floor((now - date)/1000);
       if (seconds < 60) return 'الآن';
@@ -2725,62 +2807,100 @@ filtered.sort((a, b) => {
       if (url.includes('soundcloud.com')) return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
       return null;
     }
-    function getAudioHtml(audio) {
-      if (!audio) return '';
-      let audioUrl = '';
-      if (typeof audio === 'string') audioUrl = audio;
-      else if (audio.url) audioUrl = audio.url;
-      else return '';
 
-      const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
-      if (youtubeEmbed) {
-        return `<div class="media-item"><iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
-      }
-      const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
-      if (soundcloudEmbed) {
-        return `<div class="media-item"><iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe></div>`;
-      }
-
-      const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
-      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-      const lowerUrl = audioUrl.toLowerCase();
-      const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
-      const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
-
-      if (isDirectAudio) {
-        return `<div class="media-item"><audio controls><source src="${audioUrl}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
-      }
-      if (isDirectVideo) {
-        const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
-        return `<div class="media-item media-resizable">
-          <div class="media-size-controls">
-            <button class="media-size-btn" onclick="window.resizeMedia('${videoId}')">📐 متوسط</button>
-          </div>
-          <video id="${videoId}" data-size-index="1" controls style="width:600px;height:auto;max-width:100%">
-            <source src="${audioUrl}">متصفحك لا يدعم تشغيل الفيديو
-          </video>
-        </div>`;
-      }
-
-      if (audio.url && audio.type && audio.name) {
-        const isVideo = audio.type.startsWith('video/');
-        if (isVideo) {
-          const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
-          return `<div class="media-item media-resizable">
-            <div class="media-size-controls">
-              <button class="media-size-btn" onclick="window.resizeMedia('${videoId}')">📐 متوسط</button>
-            </div>
-            <video id="${videoId}" data-size-index="1" controls style="width:600px;height:auto;max-width:100%">
-              <source src="${audio.url}" type="${audio.type}">
-            </video>
-          </div>`;
-        } else {
-          return `<div class="media-item"><audio controls><source src="${audio.url}" type="${audio.type}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
+    function getGifEmbedUrl(url) {
+      // Giphy links
+      if (url.includes('giphy.com')) {
+        const giphyMatch = url.match(/giphy\.com\/gifs\/.*?-([a-zA-Z0-9]+)$/);
+        if (giphyMatch) {
+          return `https://media.giphy.com/media/${giphyMatch[1]}/giphy.gif`;
         }
       }
 
-      return '';
+      // Tenor links
+      if (url.includes('tenor.com')) {
+        const tenorMatch = url.match(/tenor\.com\/view\/.*?-(\d+)$/);
+        if (tenorMatch) {
+          return url; // Tenor links work directly
+        }
+      }
+
+      // Direct GIF links
+      if (url.toLowerCase().endsWith('.gif')) {
+        return url;
+      }
+
+      return null;
     }
+ function getAudioHtml(audio) {
+  if (!audio) return '';
+  let audioUrl = '';
+  if (typeof audio === 'string') audioUrl = audio;
+  else if (audio.url) audioUrl = audio.url;
+  else return '';
+
+  const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
+  if (youtubeEmbed) {
+    return `<div class="media-item"><iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+  }
+
+  // GIF with resize controls
+  const gifEmbed = getGifEmbedUrl(audioUrl);
+  if (gifEmbed) {
+    const imgId = 'gif-' + Math.random().toString(36).substr(2, 9);
+    return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+      <div style="position:absolute;top:8px;right:8px;z-index:10">
+        <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
+      </div>
+      <img id="${imgId}" src="${gifEmbed}" onclick="window.open('${audioUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block">
+    </div>`;
+  }
+
+  const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
+  if (soundcloudEmbed) {
+    return `<div class="media-item"><iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe></div>`;
+  }
+
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
+  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
+  const lowerUrl = audioUrl.toLowerCase();
+  const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
+  const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
+
+  if (isDirectAudio) {
+    return `<div class="media-item"><audio controls><source src="${audioUrl}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
+  }
+  if (isDirectVideo) {
+    const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
+    return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+      <div style="position:absolute;top:8px;right:8px;z-index:10">
+        <button onclick="window.resizeMedia('${videoId}')" class="media-size-btn">🔍</button>
+      </div>
+      <video id="${videoId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+        <source src="${audioUrl}">متصفحك لا يدعم تشغيل الفيديو
+      </video>
+    </div>`;
+  }
+
+  if (audio.url && audio.type && audio.name) {
+    const isVideo = audio.type.startsWith('video/');
+    if (isVideo) {
+      const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
+      return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+        <div style="position:absolute;top:8px;right:8px;z-index:10">
+          <button onclick="window.resizeMedia('${videoId}')" class="media-size-btn">🔍</button>
+        </div>
+        <video id="${videoId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+          <source src="${audio.url}" type="${audio.type}">
+        </video>
+      </div>`;
+    } else {
+      return `<div class="media-item"><audio controls><source src="${audio.url}" type="${audio.type}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
+    }
+  }
+
+  return '';
+}
     // Link preview functions
 function isYouTubeLink(url) {
   return url.includes('youtube.com') || url.includes('youtu.be');
@@ -2824,13 +2944,26 @@ function extractLinks(text) {
 }
 
 function renderLinkPreview(url) {
+
   try {
+    // GIF preview
+    if (url.toLowerCase().endsWith('.gif') || url.includes('giphy.com') || url.includes('tenor.com')) {
+      const imgId = 'gif-' + Math.random().toString(36).substr(2, 9);
+      return `
+        <div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+          <div style="position:absolute;top:8px;right:8px;z-index:10">
+            <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
+          </div>
+          <img id="${imgId}" src="${url}" onclick="window.open('${url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block" onerror="this.parentElement.style.display='none'">
+        </div>
+      `;
+    }
     if (isYouTubeLink(url)) {
       const videoId = getYouTubeEmbedId(url);
       if (videoId) {
         const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
- return `
-          <div style="position:relative;margin-top:8px;max-width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+        return `
+          <div style="position:relative;margin-top:8px;max-width:90%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
             <a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:block;position:relative;text-decoration:none">
               <img src="${thumbnailUrl}" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'" style="width:100%;display:block">
               <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:56px;background:rgba(255,0,0,0.9);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.2s" onmouseover="this.style.background='rgba(255,0,0,1)';this.style.transform='translate(-50%,-50%) scale(1.1)'" onmouseout="this.style.background='rgba(255,0,0,0.9)';this.style.transform='translate(-50%,-50%) scale(1)'">
@@ -2849,10 +2982,11 @@ function renderLinkPreview(url) {
     } else if (isSpotifyLink(url)) {
       const embedUrl = getSpotifyEmbedUrl(url);
       if (embedUrl) {
- return `
-         <div style="position:relative;margin-top:8px;max-width:100%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">        <iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:12px;display:block"></iframe>
-      </div>
-    `;
+        return `
+         <div style="position:relative;margin-top:8px;max-width:90%;max-height:70%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:12px;display:block"></iframe>
+        </div>
+      `;
       }
     } else if (isSoundCloudLink(url)) {
       return `<div style="margin-top:8px;max-width:400px"><iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" style="border-radius:8px"></iframe></div>`;
@@ -3187,16 +3321,19 @@ window.toggleReaction = async function(convId, messageId, emoji) {
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
       const audiosHtml = (poem.audios || []).length > 0
         ? '<div class="media-container"><h4 style="margin-bottom:10px">🎵 الوسائط</h4>' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>' : '';
-      const imagesHtml = (poem.images || []).length > 0
-        ? '<div class="media-container"><h4 style="margin-bottom:10px">🖼️ الصور</h4>' +
-          (poem.images || []).map((img, idx) => `
-            <div class="media-resizable">
-              <div class="media-size-controls">
-                <button class="media-size-btn" onclick="window.resizeMedia('img-${idx}')">📐 متوسط</button>
-              </div>
-              <img id="img-${idx}" data-size-index="1" src="${img.url}" onclick="window.open('${img.url}','_blank')" style="cursor:pointer;width:600px;height:auto;max-width:100%">
-            </div>
-          `).join('') + '</div>' : '';
+const imagesHtml = (poem.images || []).length > 0
+  ? '<div class="media-container"><h4 style="margin-bottom:10px">🖼️ الصور</h4><div style="display:flex;gap:12px;flex-wrap:wrap">' +
+    (poem.images || []).map((img, idx) => {
+      const imgId = 'poem-img-' + poem.id + '-' + idx;
+      return `
+        <div style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden">
+          <div style="position:absolute;top:10px;right:10px;z-index:10">
+            <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
+          </div>
+          <img id="${imgId}" src="${img.url}" onclick="window.open('${img.url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+        </div>
+      `;
+    }).join('') + '</div></div>' : '';
 
       let userInfoDisplay = '';
       if (poem.userId) {
