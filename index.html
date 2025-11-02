@@ -252,7 +252,8 @@
   left: 0;
   width: 320px;
   max-height: 100%;
-  border: 2px solid var(--brown);
+  border: none;
+
   border-radius: 10px;
   background: var(--card);
   overflow: auto;
@@ -271,7 +272,8 @@
 }
 /* Main content takes full width */
 .dm-content {
-  border: 2px solid var(--brown);
+  border: none;
+
   border-radius: 10px;
   background: var(--card);
   height: 100%;
@@ -1659,7 +1661,7 @@ modal.innerHTML = `
               <input type="file" id="dmImageInput" accept="image/*" style="display:none">
               <button class="btn small" id="dmImageBtn" title="إرفاق صورة">🖼️</button>
               <textarea id="dmText" placeholder="اكتب رسالتك..." style="flex:1"></textarea>
-              <button class="btn btn-primary" id="dmSend">إرسال</button>
+              <button class="btn small" id="dmSend">إرسال</button>
             </div>
           </div>
         </div>
@@ -1739,8 +1741,7 @@ modal.innerHTML = `
     headerEl.innerHTML = `
       <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')" />
       <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
-      <span class="muted" style="margin-right:auto;font-size:12px">محادثة خاصة</span>
-    `;
+     `;
 
     messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
 
