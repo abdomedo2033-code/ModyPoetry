@@ -2711,18 +2711,22 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
         return true;
       });
 
-  // Sort by manual order first, then by date
+// Sort: manually ordered poems keep their position, new poems (no manualOrder) go to top
 
 filtered.sort((a, b) => {
+  const aHasOrder = a.manualOrder !== undefined;
+  const bHasOrder = b.manualOrder !== undefined;
+
   // If both have manual order, respect it
-  if (a.manualOrder !== undefined && b.manualOrder !== undefined) {
+  if (aHasOrder && bHasOrder) {
     return a.manualOrder - b.manualOrder;
   }
-  // Manual order always comes first
-  if (a.manualOrder !== undefined) return -1;
-  if (b.manualOrder !== undefined) return 1;
 
-  // NEW: Sort by date - newest first (reversed the comparison)
+  // If only one has manual order, the one WITHOUT manual order (newer) comes first
+  if (aHasOrder && !bHasOrder) return 1;  // b (new) before a (old)
+  if (!aHasOrder && bHasOrder) return -1; // a (new) before b (old)
+
+  // If neither has manual order, sort by date - newest first
   return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 });
       if (filtered.length === 0) {
