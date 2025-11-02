@@ -1793,13 +1793,14 @@ div.dataset.messageId = m.id;
 div.dataset.conversationId = convId;
 div.id = 'msg-' + m.id;
 
-        let replyHtml = '';
+       let replyHtml = '';
         if (m.replyTo) {
           const replyMsg = messages.find(msg => msg.id === m.replyTo);
           if (replyMsg) {
             const replyFromMe = replyMsg.fromId === currentUser.id;
             const replyAuthor = replyFromMe ? 'أنت' : withUser?.username || 'مستخدم';
-            replyHtml = `<div class="dm-reply-indicator" onclick="document.getElementById('msg-${m.replyTo}')?.scrollIntoView({behavior:'smooth',block:'center'})">↩️ رد على ${replyAuthor}: ${escapeHtml(replyMsg.text?.substring(0, 30) || '')}${(replyMsg.text?.length || 0) > 30 ? '...' : ''}</div>`;
+            const replyText = replyMsg.text?.substring(0, 30) || (replyMsg.imageUrl ? '🖼️ صورة' : '');
+            replyHtml = `<div class="dm-reply-indicator" onclick="(function(){ const el = document.getElementById('msg-${m.replyTo}'); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.boxShadow='0 0 0 3px var(--brown)'; setTimeout(()=>el.style.boxShadow='', 2000); } })()">↩️ رد على ${replyAuthor}: ${escapeHtml(replyText)}${(replyMsg.text?.length || 0) > 30 ? '...' : ''}</div>`;
           }
         }
 
@@ -2898,7 +2899,7 @@ window.cancelReplying = function() {
 };
 
 window.dmReact = function(messageId) {
-  const emojis = ['🤍', '👍', '😂', '😮', '😭', '💩', '💀'];
+  const emojis = ['🤍', '👍', '😂', '😮', '😭', '💩'];
   const modal = document.querySelector('.dm-modal');
   if (!modal) return;
 
