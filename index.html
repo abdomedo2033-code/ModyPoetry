@@ -613,7 +613,7 @@
 }
 
 .dm-message.me .dm-message-reactions {
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .dm-message:not(.me) .dm-message-reactions {
@@ -2898,7 +2898,7 @@ window.cancelReplying = function() {
 };
 
 window.dmReact = function(messageId) {
-  const emojis = ['🤍', '👍', '😂', '😮', '😭', '💩', '💀'];
+  const emojis = ['🤍', '👍', '😂', '😮', '😭', '💩'];
   const modal = document.querySelector('.dm-modal');
   if (!modal) return;
 
