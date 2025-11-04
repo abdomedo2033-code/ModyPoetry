@@ -675,16 +675,7 @@
 .dm-image-preview:hover {
   transform: scale(1.02);
 }
-.dm-message-date {
-  text-align: center;
-  padding: 10px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
 
-  border-radius: 8px;
-  margin: 0px 0;
-}
 
     /* UI polish overrides */
     .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
@@ -945,27 +936,6 @@
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
-.dm-message-footer {
-  display: flex;
-  justify-content: space-between; /* date left, read right */
-  align-items: center;
-}
-
-.dm-message-footer .dm-message-date {
-  order: 1;
-  text-align: left;
-}
-
-.dm-message-footer .read-indicator {
-  order: 2;
-  margin-left: auto;
-}
-
-.dm-message.me .dm-message-date {
-  text-align: right;
-  margin-right: 0;
-  margin-left: auto;
-}
 
 
  .dm-message:not(.me) .dm-message-date {
@@ -984,6 +954,18 @@
   border-right: 3px solid var(--brown); /* put the accent on the right side */
 }
 
+
+
+
+/* Hide date + seen by default */
+.dm-message .dm-message-footer {
+  display: none !important;
+}
+
+/* Show only when parent message is active */
+.dm-message.active .dm-message-footer {
+  display: flex !important;
+}
 
 
   </style>
@@ -1992,7 +1974,8 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
         ${textHtml}
         ${mediaHtml}
         ${reactionsHtml}
-        <div class="muted" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:0px">
+
+     <div class="dm-message-footer" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:0px">
  ${readIcon}
        <span class="dm-message-date">${formatTimeAgo(m.timestamp)}</span>
 
@@ -4416,6 +4399,18 @@ async function init() {
       showSyncStatus('✅متصل ', 2000);
     }
     init();
+document.querySelectorAll('.dm-message').forEach(msg => {
+  msg.addEventListener('click', () => {
+    // remove active from others
+    document.querySelectorAll('.dm-message.active')
+      .forEach(m => m.classList.remove('active'));
+
+    // activate clicked one
+    msg.classList.add('active');
+  });
+});
+
+
   </script>
 </body>
 </html>
