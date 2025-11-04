@@ -104,7 +104,7 @@
 .card:hover{transform:translateY(-4px);box-shadow:0 12px 28px var(--shadow-lg);border-color:var(--brown)}
     .card-author{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;transition:opacity 0.2s}
     .card-author:hover{opacity:0.8}
-    .avatar-small{width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid var(--brown)}
+    .avatar-small{width:39px;height:39px;border-radius:50%;object-fit:cover;border:2px solid var(--brown)}
     .card h3{font-family:'Amiri',serif;margin:0 0 6px 0;color:var(--accent);font-size:20px;font-weight:700;padding-bottom:8px;border-bottom:2px solid var(--border)}
     .excerpt{font-family:'Amiri',serif;color:var(--muted);line-height:1.9;font-size:16px;min-height:56px}
     .card-footer{margin-top:10px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
@@ -651,19 +651,19 @@
   30% { opacity: 1; }
 }
 .dm-conversations-toggle {
-  padding: 3px;
+  padding: 6px 6px;
   background: var(--brown);
   color: #fff;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 500;
-  margin-bottom: 0px;
-  width: 100%;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0px;
+  gap: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 .dm-conversations-toggle:hover {
   background: var(--brown-hover);
@@ -1643,7 +1643,7 @@ modal.innerHTML = `
             <span> &nbsp;المحادثات&nbsp; </span>
             <span id="conversationsCount"></span>
           </button>
-          <button class="dm-conversations-toggle" id="closeDM">✖️ </button>
+          <button class="dm-conversations-toggle" id="closeDM"> &nbsp;✘&nbsp; </button>
         </div>
       </div>
       <div class="dm-layout">
@@ -1655,7 +1655,7 @@ modal.innerHTML = `
           <div id="dmConversationsList"></div>
         </div>
         <div class="dm-content">
-          <div id="dmHeader" style="padding:5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+          <div id="dmHeader" style="padding:5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:18px;font-weight:600;">
             <span class="muted">اختر محادثة لعرض الرسائل</span>
           </div>
           <div id="dmMessages" class="dm-messages"></div>
