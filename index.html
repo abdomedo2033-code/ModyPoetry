@@ -2495,8 +2495,8 @@ window.resizeMedia = function(mediaId) {
     function formatTimeAgo(dateString) {
       const now = new Date(), date = new Date(dateString); const seconds = Math.floor((now - date)/1000);
       if (seconds < 60) return 'الآن';
-      if (seconds < 3600) return Math.floor(seconds/60) + ' دقيقة';
-      if (seconds < 86400) return Math.floor(seconds/3600) + ' ساعة';
+      if (seconds < 3600) return Math.floor(seconds/60) + ' د';
+      if (seconds < 86400) return Math.floor(seconds/3600) + ' س';
       if (seconds < 604800) return Math.floor(seconds/86400) + ' يوم';
       if (seconds < 2592000) return Math.floor(seconds/604800) + ' أسبوع';
       return Math.floor(seconds/2592000) + ' شهر';
