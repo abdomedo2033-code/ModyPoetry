@@ -213,7 +213,8 @@
 }
 
 .modal-inner.dm-modal {
-  max-height: 90vh;
+  max-height: 95vh;
+   max-width: 180vh;
   height: auto;
   overflow: hidden;
   display: flex;
@@ -231,7 +232,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 14px;
   transition: all 0.2s;
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
@@ -545,8 +546,8 @@
 .dm-replying-indicator{background:rgba(139,94,60,0.08);border-left:2px solid var(--brown);padding:8px;border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;max-width:240px}
 .dm-input {
   display: flex;
-  gap: 8px;
-  padding: 12px;
+  gap: 0px;
+  padding: 0px;
   border-top: 2px solid var(--border);
   background: var(--card);
   align-items: flex-end;
@@ -568,10 +569,10 @@
   resize: none;
   padding: 10px 14px;
   border-radius: 8px;
-  border: 1.5px solid var(--border);
+  border: 0.5px solid var(--border);
   font-size: 14px;
-  line-height: 1.5;
-  overflow-y: auto;
+  line-height: 1;
+  overflow-y: 0;
   width: 100%;
   box-sizing: border-box;
 }
@@ -650,19 +651,19 @@
   30% { opacity: 1; }
 }
 .dm-conversations-toggle {
-  padding: 10px;
+  padding: 3px;
   background: var(--brown);
   color: #fff;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: 600;
-  margin-bottom: 10px;
+  font-weight: 500;
+  margin-bottom: 0px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 0px;
 }
 .dm-conversations-toggle:hover {
   background: var(--brown-hover);
@@ -1634,15 +1635,15 @@ function showBrowserNotification(title, body, data = {}) {
 
 modal.innerHTML = `
     <div class="modal-inner dm-modal">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <h3 style="margin:0">💌 الرسائل المباشرة</h3>
-        <div style="display:flex;gap:5px;align-items:center">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0px">
+        <h3 style="margin:0"></h3>
+        <div style="display:flex;gap:10px;align-items:center">
           <button class="dm-conversations-toggle" id="toggleConversations">
 
-            <span>المحادثات</span>
+            <span> &nbsp;المحادثات&nbsp; </span>
             <span id="conversationsCount"></span>
           </button>
-          <button class="dm-conversations-toggle" id="closeDM">✖️  </button>
+          <button class="dm-conversations-toggle" id="closeDM">✖️ </button>
         </div>
       </div>
       <div class="dm-layout">
@@ -1654,7 +1655,7 @@ modal.innerHTML = `
           <div id="dmConversationsList"></div>
         </div>
         <div class="dm-content">
-          <div id="dmHeader" style="padding:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+          <div id="dmHeader" style="padding:5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
             <span class="muted">اختر محادثة لعرض الرسائل</span>
           </div>
           <div id="dmMessages" class="dm-messages"></div>
