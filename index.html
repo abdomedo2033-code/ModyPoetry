@@ -143,8 +143,8 @@
     .media-item audio,.media-item video,.media-item iframe,.media-item img{width:100%;border-radius:6px;max-height:600px;object-fit:contain;cursor:pointer}
     .media-item video,.media-item img{max-width:800px;margin:0 auto;display:block}
     .media-item iframe{min-height:400px}
-    comments-section{margin-top:20px;border-top:2px solid var(--border);padding-top:20px}
-    .comments-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:16px;font-weight:700;color:var(--accent)}
+.comments-section{margin-top:20px;border-top:2px solid var(--border);padding-top:20px}
+.comments-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;font-size:16px;font-weight:700;color:var(--accent)}
     .comment-form{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;padding:12px;background:rgba(139,94,60,0.03);border-radius:8px;border:1px solid var(--border)}
     .comment-input{padding:10px;border-radius:6px;border:1.5px solid var(--border);font-size:14px;resize:vertical;min-height:60px;background:var(--card)}
     .comment-submit{align-self:flex-end;padding:8px 16px;background:var(--brown);color:#fff;border:none;border-radius:6px;font-weight:600;cursor:pointer;transition:all .2s}
@@ -480,17 +480,6 @@
 
 
 
-/* Date separators */
-.dm-message-date {
-  text-align: center;
-  padding: 8px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 600;
-  background: rgba(139,94,60,0.05);
-  border-radius: 8px;
-  margin: 15px 0;
-}
 
 /* Mobile responsive */
 @media (max-width: 768px) {
@@ -546,7 +535,7 @@
 .dm-replying-indicator{background:rgba(139,94,60,0.08);border-left:2px solid var(--brown);padding:8px;border-radius:4px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;max-width:240px}
 .dm-input {
   display: flex;
-  gap: 0px;
+  gap: 10px;
   padding: 0px;
   border-top: 2px solid var(--border);
   background: var(--card);
@@ -692,10 +681,11 @@
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
-  background: rgba(139,94,60,0.05);
+
   border-radius: 8px;
-  margin: 10px 0;
+  margin: 0px 0;
 }
+
     /* UI polish overrides */
     .btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     .poem-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
@@ -954,6 +944,47 @@
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
+
+.dm-message-footer {
+  display: flex;
+  justify-content: space-between; /* date left, read right */
+  align-items: center;
+}
+
+.dm-message-footer .dm-message-date {
+  order: 1;
+  text-align: left;
+}
+
+.dm-message-footer .read-indicator {
+  order: 2;
+  margin-left: auto;
+}
+
+.dm-message.me .dm-message-date {
+  text-align: right;
+  margin-right: 0;
+  margin-left: auto;
+}
+
+
+ .dm-message:not(.me) .dm-message-date {
+  text-align: left;
+  margin-left: 0;
+  margin-right: auto;
+  display: block;
+}
+
+.dm-message:not(.me) .dm-reply-indicator {
+  margin-left: 0;
+  margin-right: auto;
+  text-align: left;
+  direction: ltr;              /* force left-to-right flow */
+  border-left: none;           /* remove left border */
+  border-right: 3px solid var(--brown); /* put the accent on the right side */
+}
+
+
 
   </style>
 
@@ -1961,10 +1992,12 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
         ${textHtml}
         ${mediaHtml}
         ${reactionsHtml}
-        <div class="muted" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:4px">
-          ${readIcon}
-          ${formatTimeAgo(m.timestamp)}
-        </div>
+        <div class="muted" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:0px">
+ ${readIcon}
+       <span class="dm-message-date">${formatTimeAgo(m.timestamp)}</span>
+
+  </div>
+
         ${m.fromId === currentUser.id ? `
           <div class="dm-message-actions">
             <button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button>
@@ -3167,6 +3200,24 @@ function renderLinkPreview(url) {
         commentsList.appendChild(commentDiv);
       });
     }
+    // Implement deleteComment
+window.deleteComment = async function(poemId, commentId) {
+  showConfirm('هل تريد حذف هذا التعليق؟', async () => {
+    try {
+      await set(ref(database, `comments/${poemId}/${commentId}`), null);
+      const commentsSection = document.querySelector('.modal .comments-section');
+      if (commentsSection) {
+        await renderComments(poemId, commentsSection);
+        const updatedCount = await getCommentsCount(poemId);
+        const countEl = document.querySelector('.modal #commentsCount');
+        if (countEl) countEl.textContent = updatedCount;
+      }
+      showSyncStatus('✅ تم حذف التعليق', 1500);
+    } catch (error) {
+      showAlert('❌ فشل حذف التعليق: ' + error.message);
+    }
+  });
+};
 window.deleteMessage = async function(convId, messageId) {
   showConfirm('هل تريد حذف هذه الرسالة؟', async () => {
     try {
