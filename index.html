@@ -921,6 +921,40 @@
   transform: scale(1.05);
 }
 
+
+/* Hover effects for action buttons in poem modal */
+.modal-inner .icon-btn:hover {
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Like button hover - Red heart color */
+.like-btn-with-count:hover {
+  background: rgba(220, 53, 69, 0.1) !important;
+  border-color: var(--danger) !important;
+}
+
+.like-btn-with-count:hover .like-icon {
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px rgba(220, 53, 69, 0.5));
+}
+
+/* Menu button (☰) hover - Brown accent */
+.actions-trigger:hover {
+  background: var(--brown) !important;
+  color: #fff !important;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px var(--shadow-lg);
+}
+
+/* Close button (✖️) hover - Red color */
+#closeModal:hover {
+  background: var(--danger) !important;
+  color: #fff !important;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
   </style>
 
 
