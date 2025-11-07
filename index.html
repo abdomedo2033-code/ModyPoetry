@@ -1015,6 +1015,27 @@ but dont alter the code of messge date
   display: none;
 }
 
+.online-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #28a745;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+.online-indicator.offline {
+  background: #6c757d;
+}
+
+.avatar-container {
+  position: relative;
+  display: inline-block;
+}
+
   </style>
 
 
@@ -1234,6 +1255,84 @@ but dont alter the code of messge date
     const messaging = getMessaging(app);
 
     const FCM_VAPID_KEY = 'BH1rxDUeea6grr0gIXTI19kSWTMa50nHwu-GIShvIBKBndborG647a1A4xnHJ8KjB8iQkn5SuLbIOKdm_PXqIV8';
+
+    // Online status tracking - ADD THIS WHOLE BLOCK HERE
+ function updateOnlineStatus() {
+  if (!currentUser) return;
+
+  const userStatusRef = ref(database, `user_status/${currentUser.id}`);
+  const isOnlineForDatabase = {
+    state: 'online',
+    last_changed: new Date().toISOString(),
+  };
+  const isOfflineForDatabase = {
+    state: 'offline',
+    last_changed: new Date().toISOString(),
+  };
+
+  // Set user as online immediately
+  set(userStatusRef, isOnlineForDatabase);
+
+  // Set up Firebase's built-in presence system
+  const connectedRef = ref(database, '.info/connected');
+  onValue(connectedRef, (snapshot) => {
+    if (snapshot.val() === true) {
+      // When connected, set up onDisconnect handler
+      const onDisconnectRef = ref(database, `user_status/${currentUser.id}`);
+
+      // Import onDisconnect from Firebase
+      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js')
+        .then(({ onDisconnect }) => {
+          onDisconnect(onDisconnectRef).set(isOfflineForDatabase);
+        });
+
+      // Set user as online
+      set(userStatusRef, isOnlineForDatabase);
+    }
+  });
+
+  // Update online status every 30 seconds (heartbeat)
+  setInterval(() => {
+    if (currentUser) {
+      set(userStatusRef, {
+        state: 'online',
+        last_changed: new Date().toISOString(),
+      });
+    }
+  }, 30000);
+
+  // Set offline when page closes/unloads
+  window.addEventListener('beforeunload', () => {
+    set(userStatusRef, isOfflineForDatabase);
+  });
+
+  // Set offline on page visibility change (mobile)
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      set(userStatusRef, isOfflineForDatabase);
+    } else {
+      set(userStatusRef, isOnlineForDatabase);
+    }
+  });
+}
+    function isUserOnline(userId, callback) {
+      const statusRef = ref(database, `user_status/${userId}`);
+      onValue(statusRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const status = snapshot.val();
+          const lastChanged = new Date(status.last_changed);
+          const now = new Date();
+          const diffMinutes = (now - lastChanged) / 1000 / 60;
+
+          callback(status.state === 'online' && diffMinutes < 2);
+        } else {
+          callback(false);
+        }
+      });
+    }
+    // END OF ONLINE STATUS CODE
+
+
 
     const USER_KEY = 'mody_current_user';
     const HIDDEN_KEY_PREFIX = 'mody_hidden_poems';
@@ -1753,10 +1852,12 @@ function buildMessageElement(m, convId, withUser, allMessages) {
     }
   }
 
-  let textHtml = '';
+let textHtml = '';
   if (m.text && m.text.trim()) {
     const links = extractLinks(m.text);
     let processedText = escapeHtml(m.text);
+    // Convert line breaks to <br>
+    processedText = processedText.replace(/\n/g, '<br>');
     links.forEach(link => {
       const escapedLink = escapeHtml(link);
       processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
@@ -1838,11 +1939,13 @@ function updateMessageElement(div, m, convId, allMessages) {
     }
   }
 
-  if (m.edited) {
+ if (m.edited) {
     const bubble = div.querySelector('.bubble');
     if (bubble && !bubble.textContent.includes('(معدّل)')) {
       const links = extractLinks(m.text);
       let processedText = escapeHtml(m.text);
+      // Convert line breaks to <br>
+      processedText = processedText.replace(/\n/g, '<br>');
       links.forEach(link => {
         const escapedLink = escapeHtml(link);
         processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
@@ -2134,8 +2237,11 @@ function destroyDM() {
       const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`;
       const item = document.createElement('div');
       item.className = 'dm-list-item';
-      item.innerHTML = `
-        <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
+    item.innerHTML = `
+        <div class="avatar-container">
+          <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
+          <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
+        </div>
         <div style="flex:1">
           <div style="font-weight:700;color:var(--accent)">${escapeHtml(user?.username||'مستخدم')}</div>
           <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
@@ -2147,6 +2253,31 @@ function destroyDM() {
         sidebar.classList.remove('show');
       };
       listEl.appendChild(item);
+       // Update online indicators for all users in list - ADD THIS
+  // Set up real-time listeners for all users in list
+sorted.forEach(conv => {
+  const statusRef = ref(database, `user_status/${conv.userId}`);
+  onValue(statusRef, (snapshot) => {
+    const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+    if (!indicator) return;
+
+    if (snapshot.exists()) {
+      const status = snapshot.val();
+      const lastChanged = new Date(status.last_changed);
+      const now = new Date();
+      const diffMinutes = (now - lastChanged) / 1000 / 60;
+      const isOnline = status.state === 'online' && diffMinutes < 2;
+
+      if (isOnline) {
+        indicator.classList.remove('offline');
+      } else {
+        indicator.classList.add('offline');
+      }
+    } else {
+      indicator.classList.add('offline');
+    }
+  });
+});
     });
   }
 
@@ -2157,10 +2288,40 @@ function destroyDM() {
     const convId = getConversationId(currentUser.id, withUserId);
     currentConversationId = convId;
 
-    headerEl.innerHTML = `
-      <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')" />
+headerEl.innerHTML = `
+      <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
+        <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" />
+        <span class="online-indicator" id="userOnlineIndicator"></span>
+      </div>
       <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
      `;
+
+    // Monitor online status
+  // Monitor online status with real-time listener
+const statusRef = ref(database, `user_status/${withUserId}`);
+const statusUnsubscribe = onValue(statusRef, (snapshot) => {
+  const indicator = modal.querySelector('#userOnlineIndicator');
+  if (!indicator) return;
+
+  if (snapshot.exists()) {
+    const status = snapshot.val();
+    const lastChanged = new Date(status.last_changed);
+    const now = new Date();
+    const diffMinutes = (now - lastChanged) / 1000 / 60;
+    const isOnline = status.state === 'online' && diffMinutes < 2;
+
+    if (isOnline) {
+      indicator.classList.remove('offline');
+    } else {
+      indicator.classList.add('offline');
+    }
+  } else {
+    indicator.classList.add('offline');
+  }
+});
+
+// Store unsubscribe function to clean up later
+modal.dataset.statusUnsubscribe = 'active';
 
     messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
 
@@ -2264,10 +2425,12 @@ sendBtn.onclick = async () => {
 
       const messageEl = document.querySelector(`[data-message-id="${editingMessageId}"]`);
       if (messageEl) {
-        const bubble = messageEl.querySelector('.bubble');
+       const bubble = messageEl.querySelector('.bubble');
         if (bubble) {
           const links = extractLinks(text);
           let processedText = escapeHtml(text);
+          // Convert line breaks to <br>
+          processedText = processedText.replace(/\n/g, '<br>');
           links.forEach(link => {
             const escapedLink = escapeHtml(link);
             processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
@@ -2275,8 +2438,7 @@ sendBtn.onclick = async () => {
 
           const editedLabel = '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>';
           bubble.innerHTML = processedText + editedLabel;
-        }
-      }
+        }}
 
       editingMessageId = null;
       textEl.value = '';
@@ -2530,9 +2692,25 @@ modal.querySelector('#dmCancelImage').addEventListener('click', () => {
         loadConversation(user.id);
         sidebar.classList.remove('show');
       };
-      listEl.appendChild(item);
+listEl.appendChild(item);
+      });
+
+      // Update online indicators for search results - ADD THIS
+      candidates.forEach(user => {
+        isUserOnline(user.id, (online) => {
+          const indicator = document.querySelector('.dm-list-indicator-' + user.id);
+          if (indicator) {
+            if (online) {
+              indicator.classList.remove('offline');
+            } else {
+              indicator.classList.add('offline');
+            }
+          }
+        });
+      });
+      // END OF ADDITION
     });
-  });
+
 
   const closeMessageActions = function(e) {
     if (!e.target.closest('.dm-message')) {
@@ -4404,6 +4582,8 @@ ${followBtn}
       currentUser = { id: Date.now() + '_' + Math.random().toString(36).substr(2, 9), username, passwordHash: hashPassword(password), email, bio, createdAt: new Date().toISOString() };
       allUsers.push(currentUser); saveAllUsers(); localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
       await saveUserToFirebase();
+            updateOnlineStatus();
+
       document.getElementById('authModal').style.display = 'none';
       showUserInfo(); init(); showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
     });
@@ -4413,6 +4593,8 @@ ${followBtn}
       if (!password) { showAlert('⚠️ يرجى إدخال كلمة المرور'); return; }
       if (hashPassword(password) !== selectedUserForLogin.passwordHash) { document.getElementById('loginPasswordError').classList.add('show'); return; }
       currentUser = selectedUserForLogin; localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            updateOnlineStatus();
+
       document.getElementById('authModal').style.display = 'none';
       showUserInfo(); init(); showSyncStatus('✅ تم تسجيل الدخول بنجاح!', 2000);
     });
@@ -4512,10 +4694,12 @@ ${followBtn}
     });
 
 async function init() {
+
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
-
+// ADD THIS LINE - Initialize online status tracking
+  updateOnlineStatus();
       // Request notification permission on first login
       const hasPermission = await requestNotificationPermission();
       if (hasPermission) {
