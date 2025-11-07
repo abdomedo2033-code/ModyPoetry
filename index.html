@@ -1902,7 +1902,15 @@ let textHtml = '';
 }
 
 // Helper to update existing message
-function updateMessageElement(div, m, convId, allMessages) {
+ function updateMessageElement(div, m, convId, allMessages) {
+  // Add subtle flash effect for updates
+  div.style.transition = 'background 0.3s ease';
+  div.style.background = 'rgba(139,94,60,0.08)';
+  setTimeout(() => {
+    div.style.background = '';
+  }, 300);
+
+  // Update reactions
   const existingReactions = div.querySelector('.dm-message-reactions');
   let newReactionsHtml = '';
 
@@ -1927,9 +1935,14 @@ function updateMessageElement(div, m, convId, allMessages) {
     }
   } else if (newReactionsHtml) {
     const bubble = div.querySelector('.bubble');
-    if (bubble) bubble.insertAdjacentHTML('afterend', newReactionsHtml);
+    const mediaContainer = div.querySelector('[style*="position:relative"]');
+    const insertAfter = mediaContainer || bubble;
+    if (insertAfter) {
+      insertAfter.insertAdjacentHTML('afterend', newReactionsHtml);
+    }
   }
 
+  // Update read status
   const footer = div.querySelector('.dm-message-footer');
   if (footer && m.fromId === currentUser.id) {
     const readIcon = footer.querySelector('span:first-child');
@@ -1939,12 +1952,12 @@ function updateMessageElement(div, m, convId, allMessages) {
     }
   }
 
- if (m.edited) {
+  // Update edited text
+  if (m.edited) {
     const bubble = div.querySelector('.bubble');
-    if (bubble && !bubble.textContent.includes('(معدّل)')) {
+    if (bubble && !bubble.innerHTML.includes('(معدّل)')) {
       const links = extractLinks(m.text);
       let processedText = escapeHtml(m.text);
-      // Convert line breaks to <br>
       processedText = processedText.replace(/\n/g, '<br>');
       links.forEach(link => {
         const escapedLink = escapeHtml(link);
@@ -1954,7 +1967,6 @@ function updateMessageElement(div, m, convId, allMessages) {
     }
   }
 }
-
 function renderDMMessages(convId, withUser) {
   const messagesToShow = allDMMessages.slice(-dmMessagesLimit);
   const messagesEl = document.querySelector('#dmMessages');
@@ -2170,9 +2182,11 @@ modal.innerHTML = `
   const sidebar = modal.querySelector('#dmSidebar');
   const toggleBtn = modal.querySelector('#toggleConversations');
   const conversationsCount = modal.querySelector('#conversationsCount');
-  let currentConversationId = null;
+let currentConversationId = null;
   let typingTimeout = null;
   let selectedImage = null;
+  let isFirstLoad = true;
+  let previousMessagesCount = 0;
 
   let isDMOpen = true;
 
@@ -2282,11 +2296,13 @@ sorted.forEach(conv => {
   }
 
 
-  async function loadConversation(withUserId) {
+async function loadConversation(withUserId) {
     await ensureConversationMeta(withUserId);
     const withUser = allUsers.find(u => u.id === withUserId);
     const convId = getConversationId(currentUser.id, withUserId);
     currentConversationId = convId;
+
+
 
 headerEl.innerHTML = `
       <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
@@ -2348,43 +2364,83 @@ const messagesRef = ref(database, `dm_messages/${convId}`);
 dmMessagesLimit = 20;
 allDMMessages = [];
 
+isFirstLoad = true;
+previousMessagesCount = 0;
 dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
 
   if (!msgsSnap.exists()) {
     messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
     allDMMessages = [];
+    isFirstLoad = false;
     return;
   }
 
-  allDMMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
-  const messages = allDMMessages;
+  const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+
   // Mark unread as read (non-blocking)
-  const unread = messages.filter(m => m.fromId !== currentUser.id && !m.read);
+  const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
   if (unread.length > 0) {
     Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
       .catch(err => console.error('Error marking messages as read:', err));
   }
 
   // First load: render everything
-// Render messages with pagination
-renderDMMessages(convId, withUser);
+  if (isFirstLoad) {
+    allDMMessages = newMessages;
+    renderDMMessages(convId, withUser);
+    setTimeout(() => {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }, 100);
+    setupDMScrollListener(messagesEl, convId, withUser);
+    isFirstLoad = false;
+    previousMessagesCount = newMessages.length;
+  } else {
+    // Incremental update: only update changed/new messages
+    const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
 
-// Scroll to bottom on first load or new message
-setTimeout(() => {
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}, 100);
+    newMessages.forEach(newMsg => {
+      const existingMsg = oldMessagesMap.get(newMsg.id);
 
-await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+      if (!existingMsg) {
+        // New message - add to end
+        allDMMessages.push(newMsg);
+        const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
+        messagesEl.appendChild(div);
 
+        // Scroll to bottom for new messages
+        setTimeout(() => {
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        }, 50);
+      } else {
+        // Check if message was updated (reactions, edits, read status)
+        const needsUpdate =
+          JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
+          existingMsg.edited !== newMsg.edited ||
+          existingMsg.text !== newMsg.text ||
+          existingMsg.read !== newMsg.read;
 
-// Setup scroll listener
-setupDMScrollListener(messagesEl, convId, withUser);
+        if (needsUpdate) {
+          // Update existing message element
+          const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
+          if (messageEl) {
+            // Update in allDMMessages array
+            const index = allDMMessages.findIndex(m => m.id === newMsg.id);
+            if (index !== -1) {
+              allDMMessages[index] = newMsg;
+            }
 
+            // Update DOM element
+            updateMessageElement(messageEl, newMsg, convId, allDMMessages);
+          }
+        }
+      }
+    });
 
-  // Incremental updates: only update what changed
-await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+    previousMessagesCount = newMessages.length;
+  }
+
+  await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
 });
-
 const dmTextarea = modal.querySelector('#dmText');
 const dmContent = modal.querySelector('.dm-content');
 setupMentionAutocomplete(dmTextarea, dmContent);
@@ -2416,30 +2472,14 @@ sendBtn.onclick = async () => {
   sendBtn.style.cursor = 'not-allowed';
   const originalText = sendBtn.textContent;
   sendBtn.textContent = 'جاري الإرسال...';
-
-  if (editingMessageId) {
+if (editingMessageId) {
     try {
+      // Update message in Firebase
       await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
       await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
       await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
 
-      const messageEl = document.querySelector(`[data-message-id="${editingMessageId}"]`);
-      if (messageEl) {
-       const bubble = messageEl.querySelector('.bubble');
-        if (bubble) {
-          const links = extractLinks(text);
-          let processedText = escapeHtml(text);
-          // Convert line breaks to <br>
-          processedText = processedText.replace(/\n/g, '<br>');
-          links.forEach(link => {
-            const escapedLink = escapeHtml(link);
-            processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
-          });
-
-          const editedLabel = '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>';
-          bubble.innerHTML = processedText + editedLabel;
-        }}
-
+      // Real-time listener will update the UI automatically
       editingMessageId = null;
       textEl.value = '';
       document.getElementById('dmEditingIndicator')?.remove();
@@ -3816,20 +3856,23 @@ window.toggleReaction = async function(convId, messageId, emoji) {
     const snapshot = await get(reactionRef);
 
     if (snapshot.exists() && snapshot.val().emoji === emoji) {
+      // Remove reaction
       await set(reactionRef, null);
     } else {
+      // Add/change reaction
       await set(reactionRef, {
         emoji: emoji,
         username: currentUser.username,
         timestamp: new Date().toISOString()
       });
     }
-    // Real-time listener will handle UI update
+
+    // Real-time listener will handle UI update automatically
   } catch (error) {
     console.error('Error toggling reaction:', error);
+    showAlert('❌ فشل إضافة التفاعل');
   }
 };
-
     async function openModal(poem) {
       const modal = document.createElement('div'); modal.className = 'modal';
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
