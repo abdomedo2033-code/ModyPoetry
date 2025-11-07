@@ -1868,7 +1868,7 @@ function renderDMMessages(convId, withUser) {
   if (allDMMessages.length > dmMessagesLimit) {
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.className = 'btn small';
-    loadMoreBtn.textContent = `⬆️ تحميل الرسائل`;
+    loadMoreBtn.textContent = `⬆️ تحميل ${Math.min(20, allDMMessages.length - dmMessagesLimit)} رسالة أقدم`;
     loadMoreBtn.style.cssText = 'width:100%;margin:10px 0;padding:10px';
     loadMoreBtn.onclick = () => loadMoreMessages(convId, withUser);
     messagesEl.appendChild(loadMoreBtn);
@@ -1889,7 +1889,6 @@ function renderDMMessages(convId, withUser) {
     messagesEl.appendChild(div);
   });
 }
-
 function loadMoreMessages(convId, withUser) {
   if (isLoadingMoreMessages) return;
 
@@ -1899,12 +1898,13 @@ function loadMoreMessages(convId, withUser) {
   const currentScrollTop = messagesEl.scrollTop;
 
   // Increase limit by 20
+  const oldLimit = dmMessagesLimit;
   dmMessagesLimit += 20;
 
   // Re-render with more messages
   renderDMMessages(convId, withUser);
 
-  // Restore scroll position
+  // Restore scroll position after a short delay
   setTimeout(() => {
     const newScrollHeight = messagesEl.scrollHeight;
     messagesEl.scrollTop = currentScrollTop + (newScrollHeight - currentScrollHeight);
@@ -2151,125 +2151,253 @@ function destroyDM() {
   }
 
 
- async function loadConversation(withUserId) {
-  await ensureConversationMeta(withUserId);
-  const withUser = allUsers.find(u => u.id === withUserId);
-  const convId = getConversationId(currentUser.id, withUserId);
-  currentConversationId = convId;
+  async function loadConversation(withUserId) {
+    await ensureConversationMeta(withUserId);
+    const withUser = allUsers.find(u => u.id === withUserId);
+    const convId = getConversationId(currentUser.id, withUserId);
+    currentConversationId = convId;
 
-  headerEl.innerHTML = `
-    <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')" />
-    <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
-  `;
+    headerEl.innerHTML = `
+      <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')" />
+      <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
+     `;
 
-  messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
+    messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
 
-  const typingRef = ref(database, `dm_typing/${convId}/${withUserId}`);
-  onValue(typingRef, (snapshot) => {
-    const typingData = snapshot.val();
-    const indicator = modal.querySelector('#dmTypingIndicator');
-    if (typingData && typingData.typing && (Date.now() - typingData.timestamp < 4000)) {
-      indicator.classList.add('show');
-    } else {
-      indicator.classList.remove('show');
-    }
-  });
+    const typingRef = ref(database, `dm_typing/${convId}/${withUserId}`);
+    onValue(typingRef, (snapshot) => {
+      const typingData = snapshot.val();
+      const indicator = modal.querySelector('#dmTypingIndicator');
+      if (typingData && typingData.typing && (Date.now() - typingData.timestamp < 4000)) {
+        indicator.classList.add('show');
+      } else {
+        indicator.classList.remove('show');
+      }
+    });
+// Detach previous conversation listener
+if (typeof dmMessagesUnsubscribe === 'function') {
+  dmMessagesUnsubscribe();
+  dmMessagesUnsubscribe = null;
+}
 
-  // Detach previous conversation listener
-  if (typeof dmMessagesUnsubscribe === 'function') {
-    dmMessagesUnsubscribe();
-    dmMessagesUnsubscribe = null;
+
+// Attach real-time messages listener
+const messagesRef = ref(database, `dm_messages/${convId}`);
+// Reset pagination
+dmMessagesLimit = 20;
+allDMMessages = [];
+
+dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
+
+  if (!msgsSnap.exists()) {
+    messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
+    allDMMessages = [];
+    return;
   }
 
-  // Reset pagination
-  dmMessagesLimit = 20;
-  allDMMessages = [];
-  let renderedMessageIds = new Set();
-  let isFirstLoad = true;
+  allDMMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+  const messages = allDMMessages;
+  // Mark unread as read (non-blocking)
+  const unread = messages.filter(m => m.fromId !== currentUser.id && !m.read);
+  if (unread.length > 0) {
+    Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
+      .catch(err => console.error('Error marking messages as read:', err));
+  }
 
-  // Attach real-time messages listener
-  const messagesRef = ref(database, `dm_messages/${convId}`);
+  // First load: render everything
+// Render messages with pagination
+renderDMMessages(convId, withUser);
 
-  dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
-    if (!msgsSnap.exists()) {
-      messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
-      allDMMessages = [];
-      renderedMessageIds.clear();
-      return;
-    }
+// Scroll to bottom on first load or new message
+setTimeout(() => {
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}, 100);
 
-    allDMMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
 
-    // Mark unread as read (non-blocking)
-    const unread = allDMMessages.filter(m => m.fromId !== currentUser.id && !m.read);
-    if (unread.length > 0) {
-      Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
-        .catch(err => console.error('Error marking messages as read:', err));
-    }
 
-    const wasAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight < 100;
+// Setup scroll listener
+setupDMScrollListener(messagesEl, convId, withUser);
 
-    // First load: render initial messages
-    if (isFirstLoad) {
-      renderDMMessages(convId, withUser);
-      isFirstLoad = false;
-      setTimeout(() => {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }, 100);
-      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
-      return;
-    }
 
-    // Incremental updates: only update changed messages
-    const currentMessageIds = new Set(allDMMessages.map(m => m.id));
+  // Incremental updates: only update what changed
+await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+});
 
-    // Remove deleted messages from DOM
-    document.querySelectorAll('.dm-message').forEach(msgEl => {
-      const msgId = msgEl.dataset.messageId;
-      if (msgId && !currentMessageIds.has(msgId)) {
-        msgEl.remove();
-        renderedMessageIds.delete(msgId);
+const dmTextarea = modal.querySelector('#dmText');
+const dmContent = modal.querySelector('.dm-content');
+setupMentionAutocomplete(dmTextarea, dmContent);
+
+// Auto-resize textarea
+dmTextarea.addEventListener('input', function() {
+  this.style.height = '20px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+ const sendBtn = modal.querySelector('#dmSend');
+let isSending = false; // Flag to prevent multiple sends
+
+sendBtn.onclick = async () => {
+  // Prevent multiple clicks
+  if (isSending) return;
+
+  const textEl = modal.querySelector('#dmText');
+  const text = textEl.value.trim();
+
+  if (!text && !selectedImage) {
+    showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
+    return;
+  }
+
+  // Disable button and set flag
+  isSending = true;
+  sendBtn.disabled = true;
+  sendBtn.style.opacity = '0.5';
+  sendBtn.style.cursor = 'not-allowed';
+  const originalText = sendBtn.textContent;
+  sendBtn.textContent = 'جاري الإرسال...';
+
+  if (editingMessageId) {
+    try {
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
+
+      const messageEl = document.querySelector(`[data-message-id="${editingMessageId}"]`);
+      if (messageEl) {
+        const bubble = messageEl.querySelector('.bubble');
+        if (bubble) {
+          const links = extractLinks(text);
+          let processedText = escapeHtml(text);
+          links.forEach(link => {
+            const escapedLink = escapeHtml(link);
+            processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
+          });
+
+          const editedLabel = '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>';
+          bubble.innerHTML = processedText + editedLabel;
+        }
       }
-    });
 
-    // Update or add new messages
-    allDMMessages.slice(-dmMessagesLimit).forEach((m) => {
-      const existingDiv = document.querySelector(`[data-message-id="${m.id}"]`);
+      editingMessageId = null;
+      textEl.value = '';
+      document.getElementById('dmEditingIndicator')?.remove();
+      textEl.style.height = '20px';
 
-      if (!existingDiv) {
-        // New message - add it
-        const div = buildMessageElement(m, convId, withUser, allDMMessages);
-        messagesEl.appendChild(div);
-        renderedMessageIds.add(m.id);
+      showSyncStatus('✅ تم تعديل الرسالة', 1500);
+    } catch (error) {
+      showAlert('❌ فشل تعديل الرسالة');
+    }
+
+    // Re-enable button after 1 second
+    setTimeout(() => {
+      isSending = false;
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
+      sendBtn.style.cursor = 'pointer';
+      sendBtn.textContent = originalText;
+    }, 1000);
+
+    return;
+  }
+
+  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+  const payload = {
+    id: msgId, convId, text,
+    from: currentUser.username, fromId: currentUser.id, toId: withUserId,
+    timestamp: new Date().toISOString()
+  };
+if (selectedImage) {
+    try {
+      // Check if it's a link or file upload
+      if (selectedImage.url && selectedImage.type === 'image/link') {
+        // It's a link - use directly
+        payload.imageUrl = selectedImage.url;
+        payload.fileType = 'image/link';
       } else {
-        // Update existing message (for reactions, edits, read status)
-        updateMessageElement(existingDiv, m, convId, allDMMessages);
+        // It's a file upload - upload to Firebase
+        showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
+        const uploaded = await uploadFileToStorage(selectedImage.file);
+        payload.imageUrl = uploaded.url;
+        payload.fileType = selectedImage.type;
       }
+      selectedImage = null;
+      modal.querySelector('#dmImageInput').value = '';
+      modal.querySelector('#dmImageUploadPreview').style.display = 'none';
+      modal.querySelector('#dmImagePreview').innerHTML = '';
+    } catch (error) {
+      showAlert('❌ فشل رفع الوسائط');
+
+      // Re-enable button
+      setTimeout(() => {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.textContent = originalText;
+      }, 1000);
+
+      return;
+    }
+  }
+
+  if (replyingToMessage) {
+    payload.replyTo = replyingToMessage.id;
+    replyingToMessage = null;
+    document.getElementById('dmReplyingIndicator')?.remove();
+  }
+
+  try {
+    await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+
+    const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
+
+    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+      id: convId, userId: withUserId, username: withUser?.username || '',
+      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
     });
 
-    // Auto-scroll only if user was at bottom
-    if (wasAtBottom) {
+    const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+    const theirMetaSnap = await get(theirMetaRef);
+    const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+    await set(theirMetaRef, {
+      id: convId, userId: currentUser.id, username: currentUser.username,
+      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
+    });
+
+    await addNotification(withUserId, {
+      type: 'message', from: currentUser.username, fromId: currentUser.id,
+      messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
+      timestamp: payload.timestamp
+    });
+
+     textEl.value = '';
+    textEl.style.height = '20px';
+    showSyncStatus('✅ تم إرسال الرسالة', 1500);
+    await loadDMConversations();
+    renderDMList();
+ // Reset to show latest messages after sending
+    dmMessagesLimit = 20;
+    renderDMMessages(convId, withUser);
+    setTimeout(() => {
       messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+    }, 100);
 
-    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
-  });
+    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+  } catch (error) {
+    showAlert('❌ فشل إرسال الرسالة');
+  }
 
-  // Setup scroll listener for loading more messages
-  setupDMScrollListener(messagesEl, convId, withUser);
+  // Re-enable button after 1 second
+  setTimeout(() => {
+    isSending = false;
+    sendBtn.disabled = false;
+    sendBtn.style.opacity = '1';
+    sendBtn.style.cursor = 'pointer';
+    sendBtn.textContent = originalText;
+  }, 1000);
+};
 
-  const dmTextarea = modal.querySelector('#dmText');
-  const dmContent = modal.querySelector('.dm-content');
-  setupMentionAutocomplete(dmTextarea, dmContent);
-
-  // Auto-resize textarea
-  dmTextarea.addEventListener('input', function() {
-    this.style.height = '20px';
-    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-  });
-
-  // ... rest of the function (send button, etc.)
-}
+  }
 
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('show');
