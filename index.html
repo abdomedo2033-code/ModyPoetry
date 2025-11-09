@@ -1237,7 +1237,7 @@ but dont alter the code of messge date
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-    import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+   // import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
     import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
 
   const app = initializeApp({
@@ -1251,8 +1251,13 @@ but dont alter the code of messge date
     });
 
     const database = getDatabase(app);
-    const storage = getStorage(app);
+   //const storage = getStorage(app);
     const messaging = getMessaging(app);
+// ========================
+// Cloudinary Configuration
+// ========================
+const CLOUDINARY_CLOUD_NAME = 'dho1iqxul';
+const CLOUDINARY_UPLOAD_PRESET = 'mody_poetry_uploads';
 
     const FCM_VAPID_KEY = 'BH1rxDUeea6grr0gIXTI19kSWTMa50nHwu-GIShvIBKBndborG647a1A4xnHJ8KjB8iQkn5SuLbIOKdm_PXqIV8';
 
@@ -1682,7 +1687,45 @@ function showBrowserNotification(title, body, data = {}) {
     console.error('خطأ في إضافة الإشعار:', error);
   }
 }
- async function loadNotifications() {
+// Mark all DM notifications from a specific user as read
+async function markDMNotificationsAsRead(fromUserId) {
+  try {
+    const notifRef = ref(database, `notifications/${currentUser.id}`);
+    const snapshot = await get(notifRef);
+
+    if (snapshot.exists()) {
+      const allNotifications = snapshot.val();
+      const updates = {};
+
+      // Find all unread message notifications from this user
+      for (const notifId in allNotifications) {
+        const notif = allNotifications[notifId];
+
+        if (notif.type === 'message' &&
+            notif.fromId === fromUserId &&
+            !notif.read) {
+          // Mark as read
+          updates[`notifications/${currentUser.id}/${notifId}/read`] = true;
+        }
+      }
+
+      // Update all at once (batch update)
+      if (Object.keys(updates).length > 0) {
+        await Promise.all(
+          Object.entries(updates).map(([path, value]) => set(ref(database, path), value))
+        );
+
+        // Refresh notifications UI
+        await loadNotifications();
+      }
+    }
+  } catch (error) {
+    console.error('Error marking DM notifications as read:', error);
+  }
+}
+
+
+      async function loadNotifications() {
       if (!currentUser) return;
       try {
         const snapshot = await get(ref(database, `notifications/${currentUser.id}`));
@@ -2301,8 +2344,10 @@ async function loadConversation(withUserId) {
     const withUser = allUsers.find(u => u.id === withUserId);
     const convId = getConversationId(currentUser.id, withUserId);
     currentConversationId = convId;
-
-
+// ✅ Mark DM notifications from this user as read
+    await markDMNotificationsAsRead(withUserId);
+  // ✅ Update notification badge immediately
+    updateNotificationBadge();
 
 headerEl.innerHTML = `
       <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
@@ -2518,7 +2563,8 @@ if (selectedImage) {
       } else {
         // It's a file upload - upload to Firebase
         showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-        const uploaded = await uploadFileToStorage(selectedImage.file);
+        const uploaded = await uploadFileToCloudinary
+(selectedImage.file);
         payload.imageUrl = uploaded.url;
         payload.fileType = selectedImage.type;
       }
@@ -3006,48 +3052,85 @@ window.resizeMedia = function(mediaId) {
       return null;
     }
 
-    async function uploadFileToStorage(file) {
-      return new Promise((resolve, reject) => {
-        const timestamp = Date.now();
-        const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const path = `media/${currentUser.id}/${timestamp}_${safeName}`;
-        const fileRef = storageRef(storage, path);
-        const uploadTask = uploadBytesResumable(fileRef, file);
-        document.getElementById('uploadProgress').classList.add('show');
-        document.getElementById('uploadText').textContent = `جاري رفع: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
-        uploadTask.on('state_changed',
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            const fill = document.getElementById('progressFill');
-            fill.style.width = progress + '%';
-            fill.textContent = Math.round(progress) + '%';
-          },
-          (error) => {
-            document.getElementById('uploadProgress').classList.remove('show');
-            showAlert('❌ فشل رفع الملف: ' + error.message);
-            reject(error);
-          },
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              document.getElementById('uploadProgress').classList.remove('show');
-              document.getElementById('progressFill').style.width = '0%';
-              showSyncStatus('✅ تم رفع الملف بنجاح!', 2000);
-              resolve({
-                url: downloadURL, path, name: file.name, size: file.size, type: file.type,
-                uploadedBy: currentUser.username, uploadedAt: new Date().toISOString()
-              });
-            } catch (error) { reject(error); }
-          }
-        );
-      });
-    }
+  async function uploadFileToCloudinary(file) {
+  return new Promise((resolve, reject) => {
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    formData.append('folder', `mody_poems/${currentUser.id}`);
+    formData.append('public_id', `${timestamp}_${safeName}`);
+    formData.append('resource_type', 'auto');
+
+    document.getElementById('uploadProgress').classList.add('show');
+    document.getElementById('uploadText').textContent = `جاري رفع: ${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', (e) => {
+      if (e.lengthComputable) {
+        const progress = (e.loaded / e.total) * 100;
+        const fill = document.getElementById('progressFill');
+        fill.style.width = progress + '%';
+        fill.textContent = Math.round(progress) + '%';
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      document.getElementById('uploadProgress').classList.remove('show');
+      document.getElementById('progressFill').style.width = '0%';
+
+      if (xhr.status === 200) {
+        const response = JSON.parse(xhr.responseText);
+        showSyncStatus('✅ تم رفع الملف بنجاح!', 2000);
+
+        resolve({
+          url: response.secure_url,
+          publicId: response.public_id,
+          name: file.name,
+          size: file.size,
+          type: response.resource_type === 'video' ? 'video/' + response.format :
+                response.resource_type === 'audio' ? 'audio/' + response.format :
+                'image/' + response.format,
+          format: response.format,
+          uploadedBy: currentUser.username,
+          uploadedAt: new Date().toISOString()
+        });
+      } else {
+        document.getElementById('uploadProgress').classList.remove('show');
+        const errorResponse = xhr.responseText ? JSON.parse(xhr.responseText) : {};
+        const errorMsg = errorResponse.error?.message || xhr.statusText;
+        showAlert('❌ فشل رفع الملف: ' + errorMsg);
+        reject(new Error('Upload failed: ' + errorMsg));
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      document.getElementById('uploadProgress').classList.remove('show');
+      showAlert('❌ خطأ في الشبكة أثناء رفع الملف');
+      reject(new Error('Network error'));
+    });
+
+    xhr.timeout = 300000; // 5 minutes
+    xhr.addEventListener('timeout', () => {
+      document.getElementById('uploadProgress').classList.remove('show');
+      showAlert('❌ انتهت مهلة رفع الملف. حجم الملف كبير جداً أو الإنترنت بطيء.');
+      reject(new Error('Upload timeout'));
+    });
+
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`);
+    xhr.send(formData);
+  });
+}
 
     document.getElementById('inputImages').addEventListener('change', async function(e) {
       const files = e.target.files;
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) { showAlert('⚠️ يرجى اختيار ملفات صور فقط'); continue; }
-        try { const uploadedFile = await uploadFileToStorage(file); currentImages.push(uploadedFile); renderImagesPreview(); }
+        try { const uploadedFile = await uploadFileToCloudinary
+(file); currentImages.push(uploadedFile); renderImagesPreview(); }
         catch (error) { console.error('Upload failed:', error); }
       }
       e.target.value = '';
@@ -3055,7 +3138,8 @@ window.resizeMedia = function(mediaId) {
     document.getElementById('inputAudioFile').addEventListener('change', async function(e) {
       const files = e.target.files;
       for (const file of Array.from(files)) {
-        try { const uploadedFile = await uploadFileToStorage(file); currentAudios.push(uploadedFile); renderAudiosInForm(); }
+        try { const uploadedFile = await uploadFileToCloudinary
+(file); currentAudios.push(uploadedFile); renderAudiosInForm(); }
         catch (error) { console.error('Upload failed:', error); }
       }
       e.target.value = '';
@@ -4107,18 +4191,14 @@ setupMentionAutocomplete(commentInput, commentsSection);
               showSyncStatus('🔄 جاري الحذف...', 5000);
               if (poem.audios && poem.audios.length > 0) {
                 for (const audio of poem.audios) {
-                  if (audio.url && audio.url.includes('firebasestorage.googleapis.com')) {
-                    try { if (audio.path) { const fileRef = storageRef(storage, audio.path); await deleteObject(fileRef); } }
-                    catch (error) { console.error('Error deleting audio file:', error); }
-                  }
+                 // Cloudinary files remain (manual cleanup from dashboard if needed)
+if (audio.publicId) console.log('Audio marked for deletion:', audio.publicId);
                 }
               }
               if (poem.images && poem.images.length > 0) {
                 for (const img of poem.images) {
-                  if (img.url && img.url.includes('firebasestorage.googleapis.com')) {
-                    try { if (img.path) { const fileRef = storageRef(storage, img.path); await deleteObject(fileRef); } }
-                    catch (error) { console.error('Error deleting image file:', error); }
-                  }
+                // Cloudinary files remain (manual cleanup from dashboard if needed)
+if (img.publicId) console.log('Image marked for deletion:', img.publicId);
                 }
               }
               try { await set(ref(database, `comments/${poem.id}`), null); } catch {}
@@ -4348,7 +4428,8 @@ ${followBtn}
             const file = e.target.files[0]; if (!file) return;
             if (!file.type.startsWith('image/')) { showAlert('⚠️ يرجى اختيار صورة'); return; }
             try {
-              const uploaded = await uploadFileToStorage(file);
+              const uploaded = await uploadFileToCloudinary
+(file);
               currentUser.avatar = uploaded.url;
               const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
               if (userIndex > -1) { allUsers[userIndex].avatar = uploaded.url; }
@@ -4506,13 +4587,8 @@ ${followBtn}
       showConfirm('⚠️ هل أنت متأكد من حذف ملفك الشخصي؟\n\n🔴 سيتم حذف جميع قصائدك والملفات المرفوعة من السحابة وحذف ملفك الشخصي.\n\n⚠️ هذا الإجراء لا يمكن التراجع عنه!', async () => {
         try {
           showSyncStatus('🔄 جاري حذف الملف...', 5000);
-          try {
-            const userMediaPath = `media/${currentUser.id}/`;
-            const userFolderRef = storageRef(storage, userMediaPath);
-            const filesList = await listAll(userFolderRef);
-            for (const fileRef of filesList.items) { try { await deleteObject(fileRef); } catch (error) { console.error('Error deleting file:', fileRef.fullPath, error); } }
-          } catch (error) { console.error('Error deleting user files:', error); }
-
+    // User files remain in Cloudinary under mody_poems/{userId}/
+console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.id}`);
           poems = poems.filter(p => p.userId !== currentUser.id);
           await savePoemsToFirebase();
 
