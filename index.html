@@ -1491,13 +1491,13 @@ const CLOUDINARY_UPLOAD_PRESET = 'mody_poetry_uploads';
         return Object.keys(likes).length;
       } catch (error) { console.error('Error toggling like:', error); return 0; }
     }
-    async function getLikesCount(poemId) {
-      try {
-        const snapshot = await get(ref(database, `likes/${poemId}`));
-        if (snapshot.exists()) return Object.keys(snapshot.val()).length;
-        return 0;
-      } catch { return 0; }
-    }
+async function getLikesCount(poemId) {
+  // Use cache first
+  if (cachedLikes[poemId]) {
+    return Object.keys(cachedLikes[poemId]).length;
+  }
+  return 0;
+}
     async function isLiked(poemId) {
       try { const snapshot = await get(ref(database, `likes/${poemId}/${currentUser.id}`)); return snapshot.exists(); }
       catch { return false; }
@@ -1860,6 +1860,11 @@ let dmMessagesUnsubscribe = null;
 
 
 function getConversationId(userA, userB) { return [userA, userB].sort().join('_'); }
+
+function extractLinks(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.match(urlRegex) || [];
+}
 
 // Helper to build message element - MOVED TO GLOBAL SCOPE
 function buildMessageElement(m, convId, withUser, allMessages) {
@@ -2351,7 +2356,7 @@ async function loadConversation(withUserId) {
 
 headerEl.innerHTML = `
       <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
-        <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" />
+        <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" loading="lazy" class="avatar-small" />
         <span class="online-indicator" id="userOnlineIndicator"></span>
       </div>
       <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
@@ -3292,6 +3297,30 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
       }
     });
 
+    // ✅ ADD THIS NEW FUNCTION
+let cachedLikes = {};
+let cachedComments = {};
+
+async function loadAllMetadata() {
+  try {
+    const [likesSnap, commentsSnap] = await Promise.all([
+      get(ref(database, 'likes')),
+      get(ref(database, 'comments'))
+    ]);
+
+    cachedLikes = likesSnap.val() || {};
+    cachedComments = commentsSnap.val() || {};
+  } catch (error) {
+    console.error('Error loading metadata:', error);
+  }
+}
+
+// 🌟 ضيف ده فوق renderPoems()
+let displayedPoems = [];
+let hasMore = false;
+const INITIAL_LOAD = 15;
+
+
     async function renderPoems() {
       if (isRendering) return;
       isRendering = true;
@@ -3362,69 +3391,95 @@ filtered.sort((a, b) => {
   // If neither has manual order, sort by date - newest first
   return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 });
-      if (filtered.length === 0) {
-        poemGrid.style.display = 'none';
-        emptyState.style.display = 'block';
-      } else {
-        poemGrid.style.display = 'grid';
-        emptyState.style.display = 'none';
 
-        for (const poem of filtered) {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.dataset.id = poem.id;
 
-          // drag handle
-          const drag = document.createElement('div');
-          drag.className = 'drag-handle';
-          drag.title = 'اسحب لإعادة الترتيب';
-          drag.textContent = '☰';
-          card.appendChild(drag);
+    // ✅ بعد ترتيب filtered
+// Update pagination logic correctly
+if (displayedPoems.length === 0 || displayedPoems.length < INITIAL_LOAD) {
+  displayedPoems = filtered.slice(0, INITIAL_LOAD);
+  hasMore = filtered.length > INITIAL_LOAD;
+}
 
-          const hasAudio = poem.audios && poem.audios.length > 0;
-          const hasImages = poem.images && poem.images.length > 0;
-          const indicators = [];
-          if (hasAudio) indicators.push('<span>🎵 صوت</span>');
-          if (hasImages) indicators.push('<span>🖼️ صور</span>');
-          const indicatorsHtml = indicators.length > 0 ? `<div class="card-indicators">${indicators.join('')}</div>` : '';
+// ✅ تأكد إنك ما بتمسحش المتغيرات العالمية هنا
+if (filtered.length === 0) {
+  poemGrid.style.display = 'none';
+  emptyState.style.display = 'block';
+} else {
+  poemGrid.style.display = 'grid';
+  emptyState.style.display = 'none';
 
-          const tagsHtml = (poem.tags && poem.tags.length > 0)
-            ? `<div class="card-tags" style="margin-top:10px">${poem.tags.map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('')}</div>`
-            : '';
+  // عرض القصائد الحالية
+  for (const poem of displayedPoems) {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = poem.id;
 
-          const title = poem.title || 'بدون عنوان';
-          const excerpt = poem.excerpt || (poem.text ? poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '') : '');
+    const drag = document.createElement('div');
+    drag.className = 'drag-handle';
+    drag.title = 'اسحب لإعادة الترتيب';
+    drag.textContent = '☰';
+    card.appendChild(drag);
 
-          const contentWrap = document.createElement('div');
-          contentWrap.style.cursor = 'pointer';
-          contentWrap.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
-              <h3>${escapeHtml(title)}</h3>
-            </div>
-            <div class="excerpt">${escapeHtml(excerpt)}</div>
-            ${tagsHtml}
-            <div class="card-footer">
-              ${indicatorsHtml}
-            </div>
-          `;
-          contentWrap.addEventListener('click', () => openModal(poem));
-          card.appendChild(contentWrap);
-          poemGrid.appendChild(card);
-        }
-      }
+    const hasAudio = poem.audios && poem.audios.length > 0;
+    const hasImages = poem.images && poem.images.length > 0;
+    const indicators = [];
+    if (hasAudio) indicators.push('<span>🎵 صوت</span>');
+    if (hasImages) indicators.push('<span>🖼️ صور</span>');
+    const indicatorsHtml = indicators.length > 0 ? `<div class="card-indicators">${indicators.join('')}</div>` : '';
 
-      isRendering = false;
-      renderTags();
-      renderActiveSearchTags();
-    }
+    const tagsHtml = (poem.tags && poem.tags.length > 0)
+      ? `<div class="card-tags" style="margin-top:10px">${poem.tags.map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('')}</div>`
+      : '';
 
-    async function getCommentsCount(poemId) {
-      try {
-        const snapshot = await get(ref(database, `comments/${poemId}`));
-        if (snapshot.exists()) return Object.keys(snapshot.val()).length;
-        return 0;
-      } catch { return 0; }
-    }
+    const title = poem.title || 'بدون عنوان';
+    const excerpt = poem.excerpt || (poem.text ? poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '') : '');
+
+    const contentWrap = document.createElement('div');
+    contentWrap.style.cursor = 'pointer';
+    contentWrap.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+        <h3>${escapeHtml(title)}</h3>
+      </div>
+      <div class="excerpt">${escapeHtml(excerpt)}</div>
+      ${tagsHtml}
+      <div class="card-footer">${indicatorsHtml}</div>
+    `;
+    contentWrap.addEventListener('click', () => openModal(poem));
+    card.appendChild(contentWrap);
+
+    poemGrid.appendChild(card);
+  }
+
+  // ✅ الزر الجديد للتحميل التدريجي
+  if (hasMore) {
+    const remaining = filtered.length - displayedPoems.length;
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.className = 'btn';
+    loadMoreBtn.textContent = `📜 تحميل المزيد (${remaining} قصيدة متبقية)`;
+    loadMoreBtn.style.cssText = 'width:100%;padding:15px;margin-top:20px;font-size:16px';
+
+    loadMoreBtn.onclick = () => {
+      const newCount = displayedPoems.length + INITIAL_LOAD;
+      displayedPoems = filtered.slice(0, newCount);
+      hasMore = filtered.length > newCount;
+      renderPoems(); // إعادة العرض بالتدريج
+    };
+
+    poemGrid.appendChild(loadMoreBtn);
+  }
+
+
+isRendering = false;
+renderTags();
+renderActiveSearchTags();
+}
+
+  async function getCommentsCount(poemId) {
+  if (cachedComments[poemId]) {
+    return Object.keys(cachedComments[poemId]).length;
+  }
+  return 0;
+}
 
    function getYouTubeEmbedUrl(url) {
   try {
@@ -3493,7 +3548,7 @@ filtered.sort((a, b) => {
       <div style="position:absolute;top:8px;right:8px;z-index:10">
         <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
       </div>
-      <img id="${imgId}" src="${gifEmbed}" onclick="window.open('${audioUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block">
+      <img id="${imgId}" src="${gifEmbed}" loading="lazy"  onclick="window.open('${audioUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block">
     </div>`;
   }
 
@@ -3579,10 +3634,7 @@ function getSpotifyEmbedUrl(url) {
       } catch {}
       return null;
     }
-function extractLinks(text) {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.match(urlRegex) || [];
-}
+
 
 function renderLinkPreview(url) {
 
@@ -3595,7 +3647,7 @@ function renderLinkPreview(url) {
           <div style="position:absolute;top:8px;right:8px;z-index:10">
             <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
           </div>
-          <img id="${imgId}" src="${url}" onclick="window.open('${url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block" onerror="this.parentElement.style.display='none'">
+          <img id="${imgId}" src="${url}" loading="lazy" onclick="window.open('${url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block" onerror="this.parentElement.style.display='none'">
         </div>
       `;
     }
@@ -3962,7 +4014,12 @@ window.toggleReaction = async function(convId, messageId, emoji) {
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
       const audiosHtml = (poem.audios || []).length > 0
         ? '<div class="media-container"><h4 style="margin-bottom:10px">🎵 الوسائط</h4>' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>' : '';
-const imagesHtml = (poem.images || []).length > 0
+  // ✅ ADD THESE TWO LINES HERE (before modal.innerHTML):
+  const likesCount = await getLikesCount(poem.id);
+  const userLiked = await isLiked(poem.id);
+
+
+        const imagesHtml = (poem.images || []).length > 0
   ? '<div class="media-container"><h4 style="margin-bottom:10px">🖼️ الصور</h4><div style="display:flex;gap:12px;flex-wrap:wrap">' +
     (poem.images || []).map((img, idx) => {
       const imgId = 'poem-img-' + poem.id + '-' + idx;
@@ -3971,7 +4028,7 @@ const imagesHtml = (poem.images || []).length > 0
           <div style="position:absolute;top:10px;right:10px;z-index:10">
             <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
           </div>
-          <img id="${imgId}" src="${img.url}" onclick="window.open('${img.url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+          <img id="${imgId}" src="${img.url}" loading="lazy" onclick="window.open('${img.url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
         </div>
       `;
     }).join('') + '</div></div>' : '';
@@ -4002,8 +4059,7 @@ const imagesHtml = (poem.images || []).length > 0
       let authorDisplay = '';
       if (poem.author) authorDisplay = '<div class="muted" style="margin-top:6px">✒️ ' + escapeHtml(poem.author) + '</div>';
 
-      const likesCount = await getLikesCount(poem.id);
-      const userLiked = await isLiked(poem.id);
+
 
       // FIX 2: كتلة HTML مصححة وخالية من التكرار
    modal.innerHTML = `
@@ -4226,6 +4282,8 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
       modal.querySelector('#closeModal').addEventListener('click', () => modal.remove());
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
       document.addEventListener('keydown', function esc(e){ if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); } });
+
+    }
     }
 
     // Sortable with handle only
@@ -4372,7 +4430,7 @@ document.getElementById('btnMyProfile').addEventListener('click', async () => { 
           <div class="profile-header" style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;padding:20px;background:rgba(139,94,60,0.05);border-radius:12px">
             <div class="profile-avatar-container">
               <label for="avatarInput" style="cursor:pointer">
-                <img src="${avatarUrl}" class="profile-avatar" alt="${user.username}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--brown)">
+                <img src="${avatarUrl} "loading="lazy"  class="profile-avatar" alt="${user.username}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--brown)">
               </label>
               ${isOwnProfile ? '<input type="file" id="avatarInput" accept="image/*" style="display:none">' : ''}
             </div>
@@ -4538,7 +4596,6 @@ ${followBtn}
           const likesCount = await getLikesCount(poem.id);
           item.innerHTML = `
             <h4 style="margin:0 0 8px 0;color:var(--accent)">${escapeHtml(poem.title)}</h4>
-            <div style="font-size:13px;color:var(--muted);margin-bottom:8px">${poem.author ? '✒️ ' + escapeHtml(poem.author) : ''}</div>
             <div style="font-size:12px;color:var(--muted)">❤️ ${likesCount}</div>`;
           item.onclick = () => { modal.remove(); openModal(poem); };
           grid.appendChild(item);
@@ -4814,6 +4871,9 @@ console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.i
 
 async function init() {
 
+  const poemGrid = document.getElementById('poemGrid');
+  poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...</div><div class="muted" style="margin-top:6px">يتم تحميل القصائد من السحابة</div></div>';
+
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
@@ -4830,9 +4890,19 @@ async function init() {
        loadHiddenPoems();
       loadFavorites();
       loadFollowing();
-      await loadPoemsFromFirebase();
-      await loadNotifications();
-      await loadDMConversations();
+       // Load poems FIRST (critical)
+  await loadPoemsFromFirebase();
+  await loadAllMetadata(); // ✅ ADD THIS LINE
+
+  renderPoems(); // Show poems immediately
+  initSortable();
+
+  // Load these in background (non-critical)
+  setTimeout(async () => {
+    await loadNotifications();
+    await loadDMConversations();
+  }, 500);
+
       setupFirebaseListener();
 
       // Listen for new notifications in real-time
