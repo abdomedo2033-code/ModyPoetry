@@ -4873,8 +4873,7 @@ console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.i
 async function init() {
 
   const poemGrid = document.getElementById('poemGrid');
-  poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...;
-
+   poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...';
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
