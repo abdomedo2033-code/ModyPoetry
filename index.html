@@ -1366,7 +1366,7 @@ const CLOUDINARY_UPLOAD_PRESET = 'mody_poetry_uploads';
     let selectedUserForLogin = null;
 
     let isRendering = false;
-
+let currentFilteredPoems = []; // Add this new global variable
 
     function initTheme() {
       const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
@@ -3448,15 +3448,13 @@ filtered.sort((a, b) => {
 });
 
 
-    // ✅ بعد ترتيب filtered
-// Update pagination logic correctly
-if (displayedPoems.length === 0 || displayedPoems.length < INITIAL_LOAD) {
-  displayedPoems = filtered.slice(0, INITIAL_LOAD);
-  hasMore = filtered.length > INITIAL_LOAD;
-}
+// ✅ Store filtered results globally and reset pagination
+currentFilteredPoems = filtered;
+displayedPoems = currentFilteredPoems.slice(0, INITIAL_LOAD);
+hasMore = currentFilteredPoems.length > INITIAL_LOAD;
 
 // ✅ تأكد إنك ما بتمسحش المتغيرات العالمية هنا
-if (filtered.length === 0) {
+if (currentFilteredPoems.length === 0) {
   poemGrid.style.display = 'none';
   emptyState.style.display = 'block';
 } else {
@@ -3505,30 +3503,90 @@ if (filtered.length === 0) {
     poemGrid.appendChild(card);
   }
 
-  // ✅ الزر الجديد للتحميل التدريجي
+  // ✅ الزر الجديد للتحميل التدريجي - SIMPLIFIED
   if (hasMore) {
-    const remaining = filtered.length - displayedPoems.length;
+    const remaining = currentFilteredPoems.length - displayedPoems.length;
     const loadMoreBtn = document.createElement('button');
     loadMoreBtn.className = 'btn';
     loadMoreBtn.textContent = `📜 تحميل المزيد (${remaining} قصيدة متبقية)`;
     loadMoreBtn.style.cssText = 'width:100%;padding:15px;margin-top:20px;font-size:16px';
 
-    loadMoreBtn.onclick = () => {
-      const newCount = displayedPoems.length + INITIAL_LOAD;
-      displayedPoems = filtered.slice(0, newCount);
-      hasMore = filtered.length > newCount;
-      renderPoems(); // إعادة العرض بالتدريج
-    };
+// ✅ FIXED CODE with correct slicing:
+loadMoreBtn.onclick = function loadMore() {
+  const oldCount = displayedPoems.length; // ✅ Save current count BEFORE updating
+  const newCount = oldCount + INITIAL_LOAD;
+  displayedPoems = currentFilteredPoems.slice(0, newCount);
+  hasMore = currentFilteredPoems.length > newCount;
+
+  // Render only the NEW poems without full re-render
+  const poemGrid = document.getElementById('poemGrid');
+  const newPoems = currentFilteredPoems.slice(oldCount, newCount); // ✅ Get NEW poems only
+
+  // Remove the "Load More" button first
+  const oldButton = poemGrid.querySelector('button.btn');
+  if (oldButton) oldButton.remove();
+
+  // Add new poem cards
+  newPoems.forEach(poem => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = poem.id;
+
+    const drag = document.createElement('div');
+    drag.className = 'drag-handle';
+    drag.title = 'اسحب لإعادة الترتيب';
+    drag.textContent = '☰';
+    card.appendChild(drag);
+
+    const hasAudio = poem.audios && poem.audios.length > 0;
+    const hasImages = poem.images && poem.images.length > 0;
+    const indicators = [];
+    if (hasAudio) indicators.push('<span>🎵 صوت</span>');
+    if (hasImages) indicators.push('<span>🖼️ صور</span>');
+    const indicatorsHtml = indicators.length > 0 ? `<div class="card-indicators">${indicators.join('')}</div>` : '';
+
+    const tagsHtml = (poem.tags && poem.tags.length > 0)
+      ? `<div class="card-tags" style="margin-top:10px">${poem.tags.map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('')}</div>`
+      : '';
+
+    const title = poem.title || 'بدون عنوان';
+    const excerpt = poem.excerpt || (poem.text ? poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '') : '');
+
+    const contentWrap = document.createElement('div');
+    contentWrap.style.cursor = 'pointer';
+    contentWrap.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+        <h3>${escapeHtml(title)}</h3>
+      </div>
+      <div class="excerpt">${escapeHtml(excerpt)}</div>
+      ${tagsHtml}
+      <div class="card-footer">${indicatorsHtml}</div>
+    `;
+    contentWrap.addEventListener('click', () => openModal(poem));
+    card.appendChild(contentWrap);
+
+    poemGrid.appendChild(card);
+  });
+
+  // Re-add "Load More" button if there are more poems
+  if (hasMore) {
+    const remaining = currentFilteredPoems.length - displayedPoems.length;
+    const newLoadMoreBtn = document.createElement('button');
+    newLoadMoreBtn.className = 'btn';
+    newLoadMoreBtn.textContent = `📜 تحميل المزيد (${remaining} قصيدة متبقية)`;
+    newLoadMoreBtn.style.cssText = 'width:100%;padding:15px;margin-top:20px;font-size:16px';
+    newLoadMoreBtn.onclick = loadMore;
+    poemGrid.appendChild(newLoadMoreBtn);
+  }
+};
 
     poemGrid.appendChild(loadMoreBtn);
   }
-
+}
 
 isRendering = false;
 renderTags();
 renderActiveSearchTags();
-}
-
   async function getCommentsCount(poemId) {
   if (cachedComments[poemId]) {
     return Object.keys(cachedComments[poemId]).length;
@@ -4873,7 +4931,8 @@ console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.i
 async function init() {
 
   const poemGrid = document.getElementById('poemGrid');
-   poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...';
+  poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...';
+
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
