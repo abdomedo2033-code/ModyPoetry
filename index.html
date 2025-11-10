@@ -1861,6 +1861,62 @@ let dmMessagesUnsubscribe = null;
 
 function getConversationId(userA, userB) { return [userA, userB].sort().join('_'); }
 
+function renderLinkPreview(url) {
+
+  try {
+    // GIF preview
+    if (url.toLowerCase().endsWith('.gif') || url.includes('giphy.com') || url.includes('tenor.com')) {
+      const imgId = 'gif-' + Math.random().toString(36).substr(2, 9);
+      return `
+        <div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+          <div style="position:absolute;top:8px;right:8px;z-index:10">
+            <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
+          </div>
+          <img id="${imgId}" src="${url}" loading="lazy" onclick="window.open('${url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block" onerror="this.parentElement.style.display='none'">
+        </div>
+      `;
+    }
+    if (isYouTubeLink(url)) {
+      const videoId = getYouTubeEmbedId(url);
+      if (videoId) {
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        return `
+          <div style="position:relative;margin-top:8px;max-width:90%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+            <a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:block;position:relative;text-decoration:none">
+              <img src="${thumbnailUrl}" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'" style="width:100%;display:block">
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:56px;background:rgba(255,0,0,0.9);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.2s" onmouseover="this.style.background='rgba(255,0,0,1)';this.style.transform='translate(-50%,-50%) scale(1.1)'" onmouseout="this.style.background='rgba(255,0,0,0.9)';this.style.transform='translate(-50%,-50%) scale(1)'">
+                <div style="width:0;height:0;border-top:14px solid transparent;border-bottom:14px solid transparent;border-left:24px solid #fff;margin-left:6px"></div>
+              </div>
+              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top, rgba(0,0,0,0.8), transparent);padding:12px;color:#fff">
+                <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span style="font-size:20px">▶️</span>
+                  <span>مشاهدة على YouTube</span>
+                </div>
+              </div>
+            </a>
+          </div>
+        `;
+      }
+    } else if (isSpotifyLink(url)) {
+      const embedUrl = getSpotifyEmbedUrl(url);
+      if (embedUrl) {
+        return `
+         <div style="position:relative;margin-top:8px;max-width:90%;max-height:70%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          <iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:12px;display:block"></iframe>
+        </div>
+      `;
+      }
+    } else if (isSoundCloudLink(url)) {
+      return `<div style="margin-top:8px;max-width:400px"><iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" style="border-radius:8px"></iframe></div>`;
+    }
+
+    // Regular clickable link
+    return `<a href="${url}" target="_blank" onclick="event.stopPropagation();" style="color:var(--brown);text-decoration:underline;word-break:break-all">${url}</a>`;
+  } catch (e) {
+    return `<a href="${url}" target="_blank" onclick="event.stopPropagation();" style="color:var(--brown);text-decoration:underline;word-break:break-all">${url}</a>`;
+  }
+}
+
 function extractLinks(text) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.match(urlRegex) || [];
@@ -2076,20 +2132,13 @@ function loadMoreMessages(convId, withUser) {
 }
 
 function setupDMScrollListener(messagesEl, convId, withUser) {
-  let scrollTimeout;
-
   messagesEl.addEventListener('scroll', () => {
-    clearTimeout(scrollTimeout);
-
-    scrollTimeout = setTimeout(() => {
-      // If scrolled to top and there are more messages
-      if (messagesEl.scrollTop < 100 && dmMessagesLimit < allDMMessages.length && !isLoadingMoreMessages) {
-        loadMoreMessages(convId, withUser);
-      }
-    }, 150);
+    // If scrolled to top and there are more messages
+    if (messagesEl.scrollTop < 50 && dmMessagesLimit < allDMMessages.length && !isLoadingMoreMessages) {
+      loadMoreMessages(convId, withUser);
+    }
   });
 }
-
     // Global DM list renderer - will be set when modal opens
     let globalRenderDMList = null;
 
@@ -2438,9 +2487,15 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
   if (isFirstLoad) {
     allDMMessages = newMessages;
     renderDMMessages(convId, withUser);
-    setTimeout(() => {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }, 100);
+
+  // Force scroll to bottom multiple times to handle media loading
+  const scrollToBottom = () => {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  };
+
+  setTimeout(scrollToBottom, 100);
+  setTimeout(scrollToBottom, 300);
+  setTimeout(scrollToBottom, 600);
     setupDMScrollListener(messagesEl, convId, withUser);
     isFirstLoad = false;
     previousMessagesCount = newMessages.length;
@@ -2458,9 +2513,9 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
         messagesEl.appendChild(div);
 
         // Scroll to bottom for new messages
-        setTimeout(() => {
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-        }, 50);
+    // Scroll to bottom for new messages
+        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
+        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
       } else {
         // Check if message was updated (reactions, edits, read status)
         const needsUpdate =
@@ -3636,61 +3691,7 @@ function getSpotifyEmbedUrl(url) {
     }
 
 
-function renderLinkPreview(url) {
 
-  try {
-    // GIF preview
-    if (url.toLowerCase().endsWith('.gif') || url.includes('giphy.com') || url.includes('tenor.com')) {
-      const imgId = 'gif-' + Math.random().toString(36).substr(2, 9);
-      return `
-        <div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
-          <div style="position:absolute;top:8px;right:8px;z-index:10">
-            <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
-          </div>
-          <img id="${imgId}" src="${url}" loading="lazy" onclick="window.open('${url}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block" onerror="this.parentElement.style.display='none'">
-        </div>
-      `;
-    }
-    if (isYouTubeLink(url)) {
-      const videoId = getYouTubeEmbedId(url);
-      if (videoId) {
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-        return `
-          <div style="position:relative;margin-top:8px;max-width:90%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-            <a href="${url}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation();window.open(this.href,'_blank');return false;" style="display:block;position:relative;text-decoration:none">
-              <img src="${thumbnailUrl}" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'" style="width:100%;display:block">
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:80px;height:56px;background:rgba(255,0,0,0.9);border-radius:14px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:all 0.2s" onmouseover="this.style.background='rgba(255,0,0,1)';this.style.transform='translate(-50%,-50%) scale(1.1)'" onmouseout="this.style.background='rgba(255,0,0,0.9)';this.style.transform='translate(-50%,-50%) scale(1)'">
-                <div style="width:0;height:0;border-top:14px solid transparent;border-bottom:14px solid transparent;border-left:24px solid #fff;margin-left:6px"></div>
-              </div>
-              <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(to top, rgba(0,0,0,0.8), transparent);padding:12px;color:#fff">
-                <div style="font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px">
-                  <span style="font-size:20px">▶️</span>
-                  <span>مشاهدة على YouTube</span>
-                </div>
-              </div>
-            </a>
-          </div>
-        `;
-      }
-    } else if (isSpotifyLink(url)) {
-      const embedUrl = getSpotifyEmbedUrl(url);
-      if (embedUrl) {
-        return `
-         <div style="position:relative;margin-top:8px;max-width:90%;max-height:70%;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px var(--shadow);transition:transform 0.2s" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
-          <iframe src="${embedUrl}" width="100%" height="152" frameborder="0" allowtransparency="true" allow="encrypted-media" style="border-radius:12px;display:block"></iframe>
-        </div>
-      `;
-      }
-    } else if (isSoundCloudLink(url)) {
-      return `<div style="margin-top:8px;max-width:400px"><iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true" style="border-radius:8px"></iframe></div>`;
-    }
-
-    // Regular clickable link
-    return `<a href="${url}" target="_blank" onclick="event.stopPropagation();" style="color:var(--brown);text-decoration:underline;word-break:break-all">${url}</a>`;
-  } catch (e) {
-    return `<a href="${url}" target="_blank" onclick="event.stopPropagation();" style="color:var(--brown);text-decoration:underline;word-break:break-all">${url}</a>`;
-  }
-}
     async function loadCommentsFromFirebase(poemId) {
       try { const snapshot = await get(ref(database, `comments/${poemId}`)); if (snapshot.exists()) return Object.values(snapshot.val()); return []; }
       catch (error) { console.error('Error loading comments:', error); return []; }
