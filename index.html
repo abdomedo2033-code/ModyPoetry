@@ -4068,7 +4068,7 @@ window.toggleReaction = async function(convId, messageId, emoji) {
     showAlert('❌ فشل إضافة التفاعل');
   }
 };
-    async function openModal(poem) {
+window.openModal = async function(poem) {
       const modal = document.createElement('div'); modal.className = 'modal';
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
       const audiosHtml = (poem.audios || []).length > 0
