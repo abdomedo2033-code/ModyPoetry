@@ -4100,13 +4100,13 @@ window.openModal = async function(poem) {
           userInfoDisplay = `
             <div class="card-author" onclick="window.openUserProfile('${poem.userId}')" style="margin-top:8px;cursor:pointer">
               <img src="${avatarUrl}" class="avatar-small" alt="${user.username}">
-              <span style="font-weight:600;color:var(--brown)">أضيفت بواسطة: ${escapeHtml(user.username)}</span>
+
             </div>
           `;
         }
       } else if (poem.createdBy) {
         const userIcon = poem.createdBy.toLowerCase().includes('mody') ? '✒️' : '👤';
-        userInfoDisplay = '<div class="muted" style="margin-top:4px">' + userIcon + ' أضيفت بواسطة: ' + escapeHtml(poem.createdBy) + '</div>';
+        userInfoDisplay = '<div class="muted" style="margin-top:4px">' + userIcon + escapeHtml(poem.createdBy) + '</div>';
       }
 // ... هنا يجب أن تكون متغيرات userInfoDisplay و tagsHtml معرّفة ...
 
