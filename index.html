@@ -1,4 +1,4 @@
- <!doctype html>
+  <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
@@ -1036,6 +1036,10 @@ but dont alter the code of messge date
   display: inline-block;
 }
 
+.dm-message-date:empty {
+  display: none !important;
+}
+
   </style>
 
 
@@ -1991,7 +1995,7 @@ let textHtml = '';
 
   const readIcon = m.fromId === currentUser.id ? `<span style="font-size:10px;margin-left:8px;color:${m.read ? '#4a90e2' : 'var(--muted)'}">${m.read ? '✓✓' : '✓'}</span>` : '';
 
-  div.innerHTML = `${replyHtml}${textHtml}${mediaHtml}${reactionsHtml}<div class="dm-message-footer" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:0px">${readIcon}<span class="dm-message-date">${formatTimeAgo(m.timestamp)}</span></div>${m.fromId === currentUser.id ? `<div class="dm-message-actions"><button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button><button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button><button class="dm-action-btn" onclick="window.editMessage('${m.id}')" title="تعديل">✏️</button><button class="dm-action-btn" onclick="window.deleteMessage('${convId}', '${m.id}')" title="حذف">🗑️</button></div>` : `<div class="dm-message-actions"><button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button><button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button></div>`}`;
+  div.innerHTML = `${replyHtml}${textHtml}${mediaHtml}${reactionsHtml}<div class="dm-message-footer" style="font-size:11px;margin-top:4px;display:flex;align-items:center;gap:0px">${readIcon}<span class="dm-message-date">${m.timestamp ? formatTimeAgo(m.timestamp) : ''}</span></div>${m.fromId === currentUser.id ? `<div class="dm-message-actions"><button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button><button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button><button class="dm-action-btn" onclick="window.editMessage('${m.id}')" title="تعديل">✏️</button><button class="dm-action-btn" onclick="window.deleteMessage('${convId}', '${m.id}')" title="حذف">🗑️</button></div>` : `<div class="dm-message-actions"><button class="dm-action-btn" onclick="window.dmReact('${m.id}')" title="تفاعل">😊</button><button class="dm-action-btn" onclick="window.replyToMessage('${m.id}')" title="رد">↩️</button></div>`}`;
 
   div.addEventListener('click', function(e) {
     if (e.target.closest('.dm-message-actions')) return;
@@ -2093,20 +2097,35 @@ function renderDMMessages(convId, withUser) {
     messagesEl.appendChild(loadMoreBtn);
   }
 
-  let lastDate = null;
-  messagesToShow.forEach(m => {
-    const msgDate = new Date(m.timestamp).toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
-    if (msgDate !== lastDate) {
-      const dateDiv = document.createElement('div');
-      dateDiv.className = 'dm-message-date';
-      dateDiv.textContent = msgDate;
-      messagesEl.appendChild(dateDiv);
-      lastDate = msgDate;
-    }
+let lastDate = null;
+messagesToShow.forEach(m => {
+  // ✅ إضافة فحص للتاريخ قبل عرضه
+  if (m.timestamp) {
+    try {
+      const testDate = new Date(m.timestamp);
+      if (!isNaN(testDate.getTime())) {
+        const msgDate = testDate.toLocaleDateString('ar-EG', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
 
-    const div = buildMessageElement(m, convId, withUser, allDMMessages);
-    messagesEl.appendChild(div);
-  });
+        if (msgDate !== lastDate) {
+          const dateDiv = document.createElement('div');
+          dateDiv.className = 'dm-message-date';
+          dateDiv.textContent = msgDate;
+          messagesEl.appendChild(dateDiv);
+          lastDate = msgDate;
+        }
+      }
+    } catch (e) {
+      console.warn('Invalid timestamp:', m.timestamp);
+    }
+  }
+
+  const div = buildMessageElement(m, convId, withUser, allDMMessages);
+  messagesEl.appendChild(div);
+});
 }
 function loadMoreMessages(convId, withUser) {
   if (isLoadingMoreMessages) return;
@@ -3045,15 +3064,33 @@ window.resizeMedia = function(mediaId) {
     if (btn) btn.textContent = '🔍';
   }
 };
-    function formatTimeAgo(dateString) {
-      const now = new Date(), date = new Date(dateString); const seconds = Math.floor((now - date)/1000);
-      if (seconds < 60) return 'الآن';
-      if (seconds < 3600) return Math.floor(seconds/60) + ' د';
-      if (seconds < 86400) return Math.floor(seconds/3600) + ' س';
-      if (seconds < 604800) return Math.floor(seconds/86400) + ' يوم';
-      if (seconds < 2592000) return Math.floor(seconds/604800) + ' أسبوع';
-      return Math.floor(seconds/2592000) + ' شهر';
+   function formatTimeAgo(dateString) {
+  if (!dateString) return ''; // إذا لم يكن هناك تاريخ، لا تعرض شيء
+
+  try {
+    const now = new Date();
+    const date = new Date(dateString);
+
+    // تحقق من صحة التاريخ
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateString);
+      return ''; // أرجع فارغ بدلاً من "Invalid Date"
     }
+
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 0) return ''; // تاريخ مستقبلي؟ أخفه
+    if (seconds < 60) return 'الآن';
+    if (seconds < 3600) return Math.floor(seconds / 60) + ' د';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + ' س';
+    if (seconds < 604800) return Math.floor(seconds / 86400) + ' يوم';
+    if (seconds < 2592000) return Math.floor(seconds / 604800) + ' أسبوع';
+    return Math.floor(seconds / 2592000) + ' شهر';
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return ''; // في حالة أي خطأ، أرجع فارغ
+  }
+}
 
     async function saveUserToFirebase() { try { await set(ref(database, 'users/' + currentUser.id), currentUser); } catch (e) {} }
     async function savePoemsToFirebase() {
