@@ -1091,9 +1091,12 @@ but dont alter the code of messge date
             <button class="menu-item" id="btnFavorites">⭐ القصائد المفضلة</button>
             <button class="menu-item" id="btnFollowing">👥 المتابَعون</button>
             <div class="menu-divider"></div>
+
+            <!--
             <button class="menu-item" id="btnEnableNotifications">🔔 تفعيل الإشعارات</button>
             <div class="menu-divider"></div>
             <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي</button>
+  -->
             <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
             <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
             <div class="menu-divider"></div>
@@ -1116,7 +1119,7 @@ but dont alter the code of messge date
   <div class="container">
     <section class="hero">
       <label for="searchInput" style="display:none">البحث</label>
-      <input id="searchInput" name="searchInput" type="search" placeholder="🔍 ابحث في العنوان أو النص... (استخدم @اسم_المستخدم واضغط Enter لإنشاء وسم)" />
+      <input id="searchInput" name="searchInput" type="search" placeholder="🔍 ابحث ..." />
       <div id="tagsWrapper" class="tags-wrapper"></div>
       <div id="activeSearchTags" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"></div>
     </section>
@@ -1961,16 +1964,16 @@ function buildMessageElement(m, convId, withUser, allMessages) {
   }
 
 let textHtml = '';
-  if (m.text && m.text.trim()) {
-    const links = extractLinks(m.text);
-    let processedText = escapeHtml(m.text);
-    // Convert line breaks to <br>
-    processedText = processedText.replace(/\n/g, '<br>');
-    links.forEach(link => {
-      const escapedLink = escapeHtml(link);
-      processedText = processedText.replace(escapedLink, `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
-    });
-    textHtml = `<div class="bubble">${processedText}${editedLabel}</div>`;
+if (m.text && m.text.trim()) {
+  const links = extractLinks(m.text);
+  let processedText = escapeHtml(m.text);
+  // Preserve line breaks
+  processedText = processedText.replace(/\n/g, '<br>');
+  links.forEach(link => {
+    const escapedLink = escapeHtml(link);
+    processedText = processedText.replace(new RegExp(escapedLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
+  });
+  textHtml = `<div class="bubble">${processedText}${editedLabel}</div>`;
     if (links.length > 0) {
       links.forEach(link => {
         const preview = renderLinkPreview(link);
@@ -2274,15 +2277,17 @@ modal.innerHTML = `
           <div class="dm-typing-indicator" id="dmTypingIndicator">
             <span class="dm-typing-dots">...</span> يكتب
           </div>
-    <div class="dm-input">
+<div class="dm-input">
   <div class="dm-image-upload" style="display:none" id="dmImageUploadPreview">
     <div id="dmImagePreview"></div>
     <button class="btn small" id="dmCancelImage">✖️</button>
   </div>
   <div style="display:flex;gap:8px;align-items:center">
+    <button class="btn small" id="dmToggleDir" title="تبديل الاتجاه">⇄</button>
     <input type="file" id="dmImageInput" accept="image/*,video/*,audio/*" style="display:none">
     <button class="btn small" id="dmImageBtn" title="إرفاق وسائط">📎</button>
-    <textarea id="dmText" placeholder="اكتب رسالتك... (الصق رابط لمعاينة تلقائية)" style="flex:1"></textarea>
+    <button class="btn small" id="dmEmojiBtn" title="إيموجي وGIF">😊</button>
+    <textarea id="dmText" dir="ltr" style="flex:1"></textarea>
     <button class="btn small" id="dmSend">إرسال</button>
   </div>
 </div>
@@ -2328,7 +2333,12 @@ function destroyDM() {
   isDMOpen = false;
 }
 
-
+modal.querySelector('#dmToggleDir').addEventListener('click', function() {
+  const textarea = modal.querySelector('#dmText');
+  const currentDir = textarea.getAttribute('dir') || 'rtl';
+  textarea.setAttribute('dir', currentDir === 'rtl' ? 'ltr' : 'rtl');
+  this.textContent = currentDir === 'rtl' ? '→' : '←';
+});
   async function ensureConversationMeta(withUserId) {
     const withUser = allUsers.find(u => u.id === withUserId);
     const convId = getConversationId(currentUser.id, withUserId);
@@ -2378,38 +2388,55 @@ function destroyDM() {
         </div>
         ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
       `;
+      listEl.appendChild(item);
       item.onclick = () => {
         loadConversation(conv.userId);
         sidebar.classList.remove('show');
       };
-      listEl.appendChild(item);
+ // Check online status immediately
+(async function checkStatus() {
+  const statusSnapshot = await get(ref(database, `user_status/${conv.userId}`));
+  const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+  if (!indicator) return;
+
+  if (statusSnapshot.exists()) {
+    const status = statusSnapshot.val();
+    const lastChanged = new Date(status.last_changed);
+    const now = new Date();
+    const diffMinutes = (now - lastChanged) / 1000 / 60;
+    const isOnline = status.state === 'online' && diffMinutes < 2;
+    indicator.classList.toggle('offline', !isOnline);
+  }
+})();
        // Update online indicators for all users in list - ADD THIS
   // Set up real-time listeners for all users in list
-sorted.forEach(conv => {
-  const statusRef = ref(database, `user_status/${conv.userId}`);
-  onValue(statusRef, (snapshot) => {
-    const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
-    if (!indicator) return;
+});
 
-    if (snapshot.exists()) {
-      const status = snapshot.val();
-      const lastChanged = new Date(status.last_changed);
-      const now = new Date();
-      const diffMinutes = (now - lastChanged) / 1000 / 60;
-      const isOnline = status.state === 'online' && diffMinutes < 2;
+  // ✅ CORRECT: Set up real-time listener AFTER creating the element
+  setTimeout(() => {
+    const statusRef = ref(database, `user_status/${conv.userId}`);
+    onValue(statusRef, (snapshot) => {
+      const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+      if (!indicator) return;
 
-      if (isOnline) {
-        indicator.classList.remove('offline');
+      if (snapshot.exists()) {
+        const status = snapshot.val();
+        const lastChanged = new Date(status.last_changed);
+        const now = new Date();
+        const diffMinutes = (now - lastChanged) / 1000 / 60;
+        const isOnline = status.state === 'online' && diffMinutes < 2;
+
+        if (isOnline) {
+          indicator.classList.remove('offline');
+        } else {
+          indicator.classList.add('offline');
+        }
       } else {
         indicator.classList.add('offline');
       }
-    } else {
-      indicator.classList.add('offline');
-    }
-  });
-});
     });
-  }
+  }, 100);
+}
 
 
 async function loadConversation(withUserId) {
@@ -2584,6 +2611,12 @@ sendBtn.onclick = async () => {
   const textEl = modal.querySelector('#dmText');
   const text = textEl.value.trim();
 
+  // Check if GIF was selected from picker BEFORE validation
+  const preview = modal.querySelector('#dmImageUploadPreview');
+  if (preview && preview.dataset.gifUrl && !selectedImage) {
+    selectedImage = { url: preview.dataset.gifUrl, type: 'image/gif' };
+  }
+
   if (!text && !selectedImage) {
     showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
     return;
@@ -2603,18 +2636,27 @@ if (editingMessageId) {
       await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
       await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
 
-      // Real-time listener will update the UI automatically
+      // Update local message immediately
+      const msgIndex = allDMMessages.findIndex(m => m.id === editingMessageId);
+      if (msgIndex !== -1) {
+        allDMMessages[msgIndex].text = text;
+        allDMMessages[msgIndex].edited = true;
+        allDMMessages[msgIndex].editedAt = new Date().toISOString();
+      }
+
       editingMessageId = null;
       textEl.value = '';
       document.getElementById('dmEditingIndicator')?.remove();
       textEl.style.height = '20px';
+
+      // Force re-render
+      renderDMMessages(convId, withUser);
 
       showSyncStatus('✅ تم تعديل الرسالة', 1500);
     } catch (error) {
       showAlert('❌ فشل تعديل الرسالة');
     }
 
-    // Re-enable button after 1 second
     setTimeout(() => {
       isSending = false;
       sendBtn.disabled = false;
@@ -2635,15 +2677,14 @@ if (editingMessageId) {
 if (selectedImage) {
     try {
       // Check if it's a link or file upload
-      if (selectedImage.url && selectedImage.type === 'image/link') {
-        // It's a link - use directly
+      if (selectedImage.url && (selectedImage.type === 'image/link' || selectedImage.type === 'image/gif')) {
+        // It's a link or GIF - use directly
         payload.imageUrl = selectedImage.url;
-        payload.fileType = 'image/link';
+        payload.fileType = selectedImage.type;
       } else {
-        // It's a file upload - upload to Firebase
+        // It's a file upload - upload to Cloudinary
         showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-        const uploaded = await uploadFileToCloudinary
-(selectedImage.file);
+        const uploaded = await uploadFileToCloudinary(selectedImage.file);
         payload.imageUrl = uploaded.url;
         payload.fileType = selectedImage.type;
       }
@@ -2651,9 +2692,9 @@ if (selectedImage) {
       modal.querySelector('#dmImageInput').value = '';
       modal.querySelector('#dmImageUploadPreview').style.display = 'none';
       modal.querySelector('#dmImagePreview').innerHTML = '';
+      delete preview.dataset.gifUrl; // Clear GIF URL
     } catch (error) {
       showAlert('❌ فشل رفع الوسائط');
-
       // Re-enable button
       setTimeout(() => {
         isSending = false;
@@ -2820,6 +2861,10 @@ modal.querySelector('#dmCancelImage').addEventListener('click', () => {
   modal.querySelector('#dmImagePreview').innerHTML = '';
 });
 
+modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  window.openEmojiGifPicker();
+});
   modal.querySelector('#dmText').addEventListener('input', async function() {
     if (!currentConversationId) return;
 
@@ -3471,16 +3516,13 @@ filtered.sort((a, b) => {
   const aHasOrder = a.manualOrder !== undefined;
   const bHasOrder = b.manualOrder !== undefined;
 
-  // If both have manual order, respect it
   if (aHasOrder && bHasOrder) {
     return a.manualOrder - b.manualOrder;
   }
 
-  // If only one has manual order, the one WITHOUT manual order (newer) comes first
-  if (aHasOrder && !bHasOrder) return 1;  // b (new) before a (old)
-  if (!aHasOrder && bHasOrder) return -1; // a (new) before b (old)
+  if (aHasOrder && !bHasOrder) return 1;
+  if (!aHasOrder && bHasOrder) return -1;
 
-  // If neither has manual order, sort by date - newest first
   return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
 });
 
@@ -3526,7 +3568,7 @@ if (currentFilteredPoems.length === 0) {
 
     const contentWrap = document.createElement('div');
     contentWrap.style.cursor = 'pointer';
-    contentWrap.innerHTML = `
+     contentWrap.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
         <h3>${escapeHtml(title)}</h3>
       </div>
@@ -3538,6 +3580,8 @@ if (currentFilteredPoems.length === 0) {
     card.appendChild(contentWrap);
 
     poemGrid.appendChild(card);
+
+
   }
 
   // ✅ الزر الجديد للتحميل التدريجي - SIMPLIFIED
@@ -3591,7 +3635,7 @@ loadMoreBtn.onclick = function loadMore() {
 
     const contentWrap = document.createElement('div');
     contentWrap.style.cursor = 'pointer';
-    contentWrap.innerHTML = `
+  contentWrap.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
         <h3>${escapeHtml(title)}</h3>
       </div>
@@ -3819,7 +3863,7 @@ function getSpotifyEmbedUrl(url) {
       const commentsList = commentsContainer.querySelector('.comments-list');
       commentsList.innerHTML = '';
       if (comments.length === 0) {
-        commentsList.innerHTML = '<div class="no-comments">لا توجد تعليقات بعد. كن أول من يعلق! 💬</div>';
+        commentsList.innerHTML = '<div class="no-comments"> </div>';
         return;
       }
       comments.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
@@ -3915,7 +3959,9 @@ window.editMessage = function(messageId) {
   const bubble = messageEl.querySelector('.bubble');
   if (!bubble) return;
 
-  const messageText = bubble.textContent.trim().replace('(معدّل)', '').trim();
+  // FIX: Get original text from allDMMessages to preserve line breaks
+  const originalMessage = allDMMessages.find(m => m.id === messageId);
+  const messageText = originalMessage ? originalMessage.text : bubble.textContent.trim().replace('(معدّل)', '').trim();
 
   const textarea = modal.querySelector('#dmText');
   const dmInput = modal.querySelector('.dm-input');
@@ -3926,7 +3972,6 @@ window.editMessage = function(messageId) {
 
     editingMessageId = messageId;
 
-    // Show editing indicator
     let indicator = modal.querySelector('#dmEditingIndicator');
     if (!indicator) {
       indicator = document.createElement('div');
@@ -3936,12 +3981,11 @@ window.editMessage = function(messageId) {
     }
 
     indicator.innerHTML = `
-      <span>✏️  </span>
+      <span>✏️   </span>
       <button type="button" onclick="cancelEditing()" style="background:none;border:none;cursor:pointer;color:var(--brown)">✖️</button>
     `;
   }
 
-  // Close message actions
   document.querySelectorAll('.dm-message.active').forEach(msg => {
     msg.classList.remove('active');
   });
@@ -4022,7 +4066,6 @@ window.cancelReplying = function() {
     if (indicator) indicator.remove();
   }
 };
-
 window.dmReact = function(messageId) {
   const emojis = ['🤍', '👍', '😂', '😮', '😭', '💩', '💀'];
   const modal = document.querySelector('.dm-modal');
@@ -4081,6 +4124,305 @@ window.dmReact = function(messageId) {
     msg.classList.remove('active');
   });
 };
+// ✅ NEW: Emoji + GIF Picker for DM Input
+window.openEmojiGifPicker = function () {
+  const dmModal = document.querySelector('.dm-modal');
+  if (!dmModal) return;
+
+  /* ===== Helpers & cleanup ===== */
+  let closeOnClick = null;
+  function onEsc(e) { if (e.key === 'Escape') removePicker(); }
+  function removePicker() {
+    if (picker && picker.parentNode) picker.remove();
+    if (closeOnClick) {
+      document.removeEventListener('click', closeOnClick);
+      closeOnClick = null;
+    }
+    document.removeEventListener('keydown', onEsc);
+  }
+
+  /* ===== Picker container ===== */
+  const picker = document.createElement('div');
+  picker.className = 'emoji-gif-picker';
+  picker.style.cssText = `
+    position:fixed;
+    bottom:80px;
+    right:20px;
+    width:480px;
+    max-height:500px;
+    display:flex;
+    flex-direction:column;
+    background:var(--card);
+    border:2px solid var(--brown);
+    border-radius:12px;
+    box-shadow:0 8px 32px var(--shadow-lg);
+    z-index:10000;
+    overflow:hidden;
+  `;
+
+  /* ===== Tabs ===== */
+  const tabs = document.createElement('div');
+  tabs.style.cssText = 'display:flex;border-bottom:2px solid var(--border);';
+  tabs.innerHTML = `
+    <button class="tab-btn active" data-tab="emoji" aria-pressed="true"
+      style="flex:1;padding:12px;border:none;background:var(--brown);color:#fff;font-weight:600;cursor:pointer;border-radius:10px 0 0 0">
+      😊 إيموجي
+    </button>
+    <button class="tab-btn" data-tab="gif"
+      style="flex:1;padding:12px;border:none;background:transparent;color:var(--text);font-weight:600;cursor:pointer;border-radius:0 10px 0 0">
+      🎬 GIF
+    </button>
+  `;
+  picker.appendChild(tabs);
+
+  /* ===== Content wrapper ===== */
+  const content = document.createElement('div');
+  content.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;';
+  picker.appendChild(content);
+
+  /* ===== Emoji tab ===== */
+  const emojiContent = document.createElement('div');
+  emojiContent.className = 'tab-content emoji-tab';
+  emojiContent.style.cssText = 'flex:1;display:flex;flex-direction:column;overflow:hidden;padding:8px;';
+
+  const categoryNav = document.createElement('div');
+  categoryNav.style.cssText = 'display:flex;overflow-x:auto;border-bottom:2px solid var(--border);padding:8px;gap:8px;';
+
+  const emojiGrid = document.createElement('div');
+  emojiGrid.style.cssText = 'display:grid;grid-template-columns:repeat(8,1fr);gap:6px;flex:1;overflow-y:auto;padding:12px;';
+
+ const emojiCategories = {
+    '⏰  ':
+
+    ['🤍', '👍', '😂', '😮', '😭', '💩', '💀','❤️' , '👍', '🔥', '🎉', '😍', '🤔', '👏', '😊', '💯', '✨', '👌', '🙏', '💪', '✅', '🎊'],
+
+  '😊  ':
+
+    ['😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺'],
+
+   '😢 ' :
+
+    ['😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨', '😰', '😥', '😓', '🤗', '🤭', '🤫', '🤥', '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧', '😷', '🤒', '🤕'],
+
+    '😈 ':
+
+    ['🤑', '🤠', '😈', '👿', '👹', '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾', '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾'],
+
+   '👋  ':
+
+    ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🫀', '🫁', '🦷', '🦴', '👀', '👁️', '👅', '👄', '💋'],
+
+
+   '👤  ':
+
+    ['👶', '👧', '🧒', '👦', '👩', '🧑', '👨', '👩‍🦱', '🧑‍🦱', '👨‍🦱', '👩‍🦰', '🧑‍🦰', '👨‍🦰', '👱‍♀️', '👱', '👱‍♂️', '👩‍🦳', '🧑‍🦳', '👨‍🦳', '👩‍🦲', '🧑‍🦲', '👨‍🦲', '🧔', '👵', '🧓', '👴', '👲', '👳‍♀️', '👳', '👳‍♂️', '🧕', '👮‍♀️', '👮', '👮‍♂️', '👷‍♀️', '👷', '👷‍♂️', '💂‍♀️', '💂', '💂‍♂️', '🕵️‍♀️', '🕵️', '🕵️‍♂️', '👩‍⚕️', '🧑‍⚕️', '👨‍⚕️', '👩‍🌾', '🧑‍🌾', '👨‍🌾', '👩‍🍳', '🧑‍🍳', '👨‍🍳', '👩‍🎓', '🧑‍🎓', '👨‍🎓', '👩‍🎤', '🧑‍🎤', '👨‍🎤', '👩‍🏫', '🧑‍🏫', '👨‍🏫', '👩‍🏭', '🧑‍🏭', '👨‍🏭', '👩‍💻', '🧑‍💻', '👨‍💻', '👩‍💼', '🧑‍💼', '👨‍💼', '👩‍🔧', '🧑‍🔧', '👨‍🔧', '👩‍🔬', '🧑‍🔬', '👨‍🔬', '👩‍🎨', '🧑‍🎨', '👨‍🎨', '👩‍🚒', '🧑‍🚒', '👨‍🚒', '👩‍✈️', '🧑‍✈️', '👨‍✈️', '👩‍🚀', '🧑‍🚀', '👨‍🚀', '👩‍⚖️', '🧑‍⚖️', '👨‍⚖️', '👰‍♀️', '👰', '👰‍♂️', '🤵‍♀️', '🤵', '🤵‍♂️', '👸', '🤴', '🥷', '🦸‍♀️', '🦸', '🦸‍♂️', '🦹‍♀️', '🦹', '🦹‍♂️', '🧙‍♀️', '🧙', '🧙‍♂️', '🧚‍♀️', '🧚', '🧚‍♂️', '🧛‍♀️', '🧛', '🧛‍♂️', '🧜‍♀️', '🧜', '🧜‍♂️', '🧝‍♀️', '🧝', '🧝‍♂️', '🧞‍♀️', '🧞', '🧞‍♂️', '🧟‍♀️', '🧟', '🧟‍♂️', '💆‍♀️', '💆', '💆‍♂️', '💇‍♀️', '💇', '💇‍♂️', '🚶‍♀️', '🚶', '🚶‍♂️', '🧍‍♀️', '🧍', '🧍‍♂️', '🧎‍♀️', '🧎', '🧎‍♂️'],
+
+  '❤️  ':
+
+    ['💘', '💝', '💖', '💗', '💓', '💞', '💕', '💟', '❣️', '💔', '❤️‍🔥', '❤️‍🩹', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💯', '💢', '💥', '💫', '💦', '💨', '🕳️', '💣', '💬', '👁️‍🗨️', '🗨️', '🗯️', '💭', '💤'],
+
+   '🐶  ':
+
+    ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🪱', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🕸️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🦣', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🦬', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐈‍⬛', '🪶', '🐓', '🦃', '🦤', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦫', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'],
+
+  '🌸  ':
+
+
+    ['💐', '🌸', '💮', '🏵️', '🌹', '🥀', '🌺', '🌻', '🌼', '🌷', '🌱', '🪴', '🌲', '🌳', '🌴', '🌵', '🌾', '🌿', '☘️', '🍀', '🍁', '🍂', '🍃' ],
+
+   '🍎  ':
+
+    ['🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🫐', '🥝', '🍅', '🫒', '🥥', '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🫑', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🫓', '🥨', '🥯', '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🫔', '🥙', '🧆', '🥚', '🍳', '🥘', '🍲', '🫕', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥', '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🫖', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧋', '🧃', '🧉', '🧊'],
+
+
+   '⚽  ':
+
+    ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🪃', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛼', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '🤾', '🏌️', '🏇', '🧘', '🏊', '🤽', '🚣', '🧗', '🚴', '🚵', '🏎️', '🏍️', '🤹', '🎯', '🪀', '🪁', '🎪', '🎭', '🩰', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🪘', '🎷', '🎺', '🪗', '🎸', '🪕', '🎻', '🎲', '♟️', '🎳', '🎮', '🎰', '🧩'],
+
+
+   '🚗 ' :
+
+    ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🛻', '🚚', '🚛', '🚜', '🦯', '🦽', '🦼', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩️', '💺', '🛰️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '🪝', '⛽', '🚧', '🚦', '🚥', '🚏', '🗺️', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🛖', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🕍', '🛕', '🕋', '⛩️'],
+
+  '⏰   ':
+
+    ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💽', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '🪙', '💰', '💳', '🌡️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☃️', '⛄', '🌬️', '💨', '🌪️', '🌫️', '🌈', '☂️', '☔', '⚡', '⭐', '🌟', '✨', '💫', '🌙', '☄️', '🌠', '🌌', '🌃', '🌆', '🌇', '🌉', '🌁'],
+
+   '💎  ':
+
+    ['💎', '🔮', '🪬', '🧿', '📿', '🕉️', '☸️', '✡️', '☯️', '☦️', '☪️', '🛐', '🕎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '🔀', '🔁', '🔂', '▶️', '⏩', '⏭️', '⏯️', '◀️', '⏪', '⏮️', '🔼', '⏫', '🔽', '⏬', '⏸️', '⏹️', '⏺️', '⏏️', '🎦', '📶', '📳', '📴', '♀️', '♂️', '⚧️', '✖️', '➕', '➖', '➗', '♾️', '‼️', '⁉️', '❓', '❔', '❕', '❗', '〰️', '💱', '💲', '⚕️', '♻️', '⚜️', '🔱', '📛', '🔰', '⭕', '✅', '☑️', '✔️', '❌', '❎', '➰', '➿', '〽️', '✳️', '✴️', '❇️', '©️', '®️', '™️', '#️⃣', '*️⃣', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔠', '🔡', '🔢', '🔣', '🔤', '🅰️', '🆎', '🅱️', '🆑', '🆒', '🆓', 'ℹ️', '🆔', 'Ⓜ️', '🆕', '🆖', '🅾️', '🆗', '🅿️', '🆘', '🆙', '🆚', '🈁', '🈂️', '🈷️', '🈶', '🈯', '🉐', '🈹', '🈚', '🈲', '🉑', '🈸', '🈴', '🈳', '㊗️', '㊙️', '🈺', '🈵'],
+
+    '🏁  ':
+
+    ['🏳️', '🏴', '🏁', '🚩', '🏳️‍🌈', '🏳️‍⚧️', '🏴‍☠️', '🇦🇨', '🇦🇩', '🇦🇪', '🇦🇫', '🇦🇬', '🇦🇮', '🇦🇱', '🇦🇲', '🇦🇴', '🇦🇶', '🇦🇷', '🇦🇸', '🇦🇹', '🇦🇺', '🇦🇼', '🇦🇽', '🇦🇿', '🇧🇦', '🇧🇧', '🇧🇩', '🇧🇪', '🇧🇫', '🇧🇬', '🇧🇭', '🇧🇮', '🇧🇯', '🇧🇱', '🇧🇲', '🇧🇳', '🇧🇴', '🇧🇶', '🇧🇷', '🇧🇸', '🇧🇹', '🇧🇻', '🇧🇼', '🇧🇾', '🇧🇿', '🇨🇦', '🇨🇨', '🇨🇩', '🇨🇫', '🇨🇬', '🇨🇭', '🇨🇮', '🇨🇰', '🇨🇱', '🇨🇲', '🇨🇳', '🇨🇴', '🇨🇵', '🇨🇷', '🇨🇺', '🇨🇻', '🇨🇼', '🇨🇽', '🇨🇾', '🇨🇿', '🇩🇪', '🇩🇬', '🇩🇯', '🇩🇰', '🇩🇲', '🇩🇴', '🇩🇿', '🇪🇦', '🇪🇨', '🇪🇪', '🇪🇬', '🇪🇭', '🇪🇷', '🇪🇸', '🇪🇹', '🇪🇺', '🇫🇮', '🇫🇯', '🇫🇰', '🇫🇲', '🇫🇴', '🇫🇷', '🇬🇦', '🇬🇧', '🇬🇩', '🇬🇪', '🇬🇫', '🇬🇬', '🇬🇭', '🇬🇮', '🇬🇱', '🇬🇲', '🇬🇳', '🇬🇵', '🇬🇶', '🇬🇷', '🇬🇸', '🇬🇹', '🇬🇺', '🇬🇼', '🇬🇾', '🇭🇰', '🇭🇲', '🇭🇳', '🇭🇷', '🇭🇹', '🇭🇺', '🇮🇨', '🇮🇩', '🇮🇪', '🇮🇱', '🇮🇲', '🇮🇳', '🇮🇴', '🇮🇶', '🇮🇷', '🇮🇸', '🇮🇹', '🇯🇪', '🇯🇲', '🇯🇴', '🇯🇵', '🇰🇪', '🇰🇬', '🇰🇭', '🇰🇮', '🇰🇲', '🇰🇳', '🇰🇵', '🇰🇷', '🇰🇼', '🇰🇾', '🇰🇿', '🇱🇦', '🇱🇧', '🇱🇨', '🇱🇮', '🇱🇰', '🇱🇷', '🇱🇸', '🇱🇹', '🇱🇺', '🇱🇻', '🇱🇾', '🇲🇦', '🇲🇨', '🇲🇩', '🇲🇪', '🇲🇫', '🇲🇬', '🇲🇭', '🇲🇰', '🇲🇱', '🇲🇲', '🇲🇳', '🇲🇴', '🇲🇵', '🇲🇶', '🇲🇷', '🇲🇸', '🇲🇹', '🇲🇺', '🇲🇻', '🇲🇼', '🇲🇽', '🇲🇾', '🇲🇿', '🇳🇦', '🇳🇨', '🇳🇪', '🇳🇫', '🇳🇬', '🇳🇮', '🇳🇱', '🇳🇴', '🇳🇵', '🇳🇷', '🇳🇺', '🇳🇿', '🇴🇲', '🇵🇦', '🇵🇪', '🇵🇫', '🇵🇬', '🇵🇭', '🇵🇰', '🇵🇱', '🇵🇲', '🇵🇳', '🇵🇷', '🇵🇸', '🇵🇹', '🇵🇼', '🇵🇾', '🇶🇦', '🇷🇪', '🇷🇴', '🇷🇸', '🇷🇺', '🇷🇼', '🇸🇦', '🇸🇧', '🇸🇨', '🇸🇩', '🇸🇪', '🇸🇬', '🇸🇭', '🇸🇮', '🇸🇯', '🇸🇰', '🇸🇱', '🇸🇲', '🇸🇳', '🇸🇴', '🇸🇷', '🇸🇸', '🇸🇹', '🇸🇻', '🇸🇽', '🇸🇾', '🇸🇿', '🇹🇦', '🇹🇨', '🇹🇩', '🇹🇫', '🇹🇬', '🇹🇭', '🇹🇯', '🇹🇰', '🇹🇱', '🇹🇲', '🇹🇳', '🇹🇴', '🇹🇷', '🇹🇹', '🇹🇻', '🇹🇼', '🇹🇿', '🇺🇦', '🇺🇬', '🇺🇲', '🇺🇳', '🇺🇸', '🇺🇾', '🇺🇿', '🇻🇦', '🇻🇨', '🇻🇪', '🇻🇬', '🇻🇮', '🇻🇳', '🇻🇺', '🇼🇫', '🇼🇸', '🇽🇰', '🇾🇪', '🇾🇹', '🇿🇦', '🇿🇲', '🇿🇼', '🏴󠁧󠁢󠁥󠁮󠁧󠁿', '🏴󠁧󠁢󠁳󠁣󠁴󠁿', '🏴󠁧󠁢󠁷󠁬󠁳󠁿']
+};
+
+  let activeCategory = Object.keys(emojiCategories)[0];
+
+  function renderEmojiCategory(categoryName) {
+    emojiGrid.innerHTML = '';
+    const list = emojiCategories[categoryName] || [];
+    list.forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'emoji-btn';
+      btn.textContent = emoji;
+      btn.setAttribute('aria-label', `emoji ${emoji}`);
+      btn.style.cssText = 'background:none;border:none;font-size:24px;cursor:pointer;padding:6px;border-radius:8px;transition:transform .12s,background .12s;';
+      btn.onmouseover = () => { btn.style.background = 'rgba(139,94,60,0.08)'; btn.style.transform = 'scale(1.12)'; };
+      btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.transform = 'scale(1)'; };
+      btn.onclick = () => {
+        const targetInput = document.querySelector('.emoji-target') || dmModal.querySelector('#dmText');
+        if (targetInput) {
+          if ('value' in targetInput) {
+            targetInput.value += emoji;
+            targetInput.focus();
+            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+          } else { // contenteditable
+            targetInput.innerText = (targetInput.innerText || '') + emoji;
+          }
+        }
+      };
+      emojiGrid.appendChild(btn);
+    });
+  }
+
+  // build category buttons
+  Object.keys(emojiCategories).forEach(name => {
+    const catBtn = document.createElement('button');
+    catBtn.type = 'button';
+    catBtn.textContent = name;
+    catBtn.style.cssText = `
+      padding:6px 10px;border:none;border-radius:8px;cursor:pointer;white-space:nowrap;
+      font-weight:600;font-size:13px;background:${name === activeCategory ? 'var(--brown)' : 'transparent'};
+      color:${name === activeCategory ? '#fff' : 'var(--text)'};
+    `;
+    catBtn.onclick = () => {
+      activeCategory = name;
+      categoryNav.querySelectorAll('button').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = 'var(--text)';
+        b.setAttribute('aria-pressed', 'false');
+      });
+      catBtn.style.background = 'var(--brown)';
+      catBtn.style.color = '#fff';
+      catBtn.setAttribute('aria-pressed', 'true');
+      renderEmojiCategory(name);
+    };
+    categoryNav.appendChild(catBtn);
+  });
+
+  emojiContent.appendChild(categoryNav);
+  emojiContent.appendChild(emojiGrid);
+  renderEmojiCategory(activeCategory);
+
+  /* ===== GIF tab ===== */
+  const gifContent = document.createElement('div');
+  gifContent.className = 'tab-content gif-tab';
+  gifContent.style.cssText = 'flex:1;display:none;flex-direction:column;overflow:hidden;padding:12px;';
+
+  const gifSearch = document.createElement('input');
+  gifSearch.type = 'text';
+  gifSearch.placeholder = '🔍 ابحث عن GIF...';
+  gifSearch.style.cssText = 'width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--border);margin-bottom:12px;font-size:14px;';
+  gifContent.appendChild(gifSearch);
+
+  const gifGrid = document.createElement('div');
+  gifGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,1fr);gap:8px;overflow:auto;';
+  gifContent.appendChild(gifGrid);
+
+  const GIPHY_KEY = 'sXpGFDGZs0Dv1mmNFvYaGUvYwKX0PWIh'; // replace with your server-proxied key ideally
+
+  async function loadGifs(query = 'trending') {
+    gifGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted)">جاري التحميل...</div>';
+    try {
+      const endpoint = query === 'trending'
+        ? `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_KEY}&limit=20&rating=g`
+        : `https://api.giphy.com/v1/gifs/search?api_key=${GIPHY_KEY}&q=${encodeURIComponent(query)}&limit=20&rating=g`;
+
+      const res = await fetch(endpoint);
+      const data = await res.json();
+      gifGrid.innerHTML = '';
+
+      if (!data || !data.data || data.data.length === 0) {
+        gifGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--muted)">لا توجد نتائج</div>';
+        return;
+      }
+
+      data.data.forEach(gif => {
+        const img = document.createElement('img');
+        img.src = gif.images.fixed_height_small.url;
+        img.alt = gif.title || 'GIF';
+        img.style.cssText = 'width:100%;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform .15s;';
+        img.onmouseover = () => img.style.transform = 'scale(1.03)';
+        img.onmouseout = () => img.style.transform = 'scale(1)';
+        img.onclick = () => {
+          const preview = dmModal.querySelector('#dmImageUploadPreview');
+          const previewContainer = dmModal.querySelector('#dmImagePreview');
+          if (preview && previewContainer) {
+            previewContainer.innerHTML = `<img src="${gif.images.fixed_height.url}" style="max-width:100px;max-height:100px;border-radius:8px">`;
+            preview.style.display = 'flex';
+            preview.dataset.gifUrl = gif.images.original.url;
+          }
+          removePicker();
+          const textarea = dmModal.querySelector('#dmText');
+          if (textarea) textarea.focus();
+        };
+        gifGrid.appendChild(img);
+      });
+    } catch (err) {
+      console.error('GIF Load Error:', err);
+      gifGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--danger)">فشل تحميل GIFs</div>';
+    }
+  }
+
+  let searchTimeout = null;
+  gifSearch.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => loadGifs(e.target.value || 'trending'), 450);
+  });
+
+  /* ===== Tab switching ===== */
+  tabs.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+      tabs.querySelectorAll('.tab-btn').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = 'var(--text)';
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.style.background = 'var(--brown)';
+      btn.style.color = '#fff';
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+
+      if (tab === 'emoji') {
+        emojiContent.style.display = 'flex';
+        gifContent.style.display = 'none';
+      } else {
+        emojiContent.style.display = 'none';
+        gifContent.style.display = 'flex';
+        if (gifGrid.children.length === 0) loadGifs();
+      }
+    });
+  });
+
+  /* ===== final assembly ===== */
+  content.appendChild(emojiContent);
+  content.appendChild(gifContent);
+  picker.appendChild(content);
+  document.body.appendChild(picker);
+
+  /* ===== safe close handlers ===== */
+  setTimeout(() => {
+    closeOnClick = (e) => {
+      if (!picker.contains(e.target) && !e.target.closest('#dmEmojiBtn')) removePicker();
+    };
+    document.addEventListener('click', closeOnClick);
+    document.addEventListener('keydown', onEsc);
+  }, 100);
+};
 
 window.toggleReaction = async function(convId, messageId, emoji) {
   try {
@@ -4105,7 +4447,26 @@ window.toggleReaction = async function(convId, messageId, emoji) {
     showAlert('❌ فشل إضافة التفاعل');
   }
 };
+
+// Add these globals at the top of your script:
+let isModalOpening = false;
+let currentOpenModalId = null;
+
 window.openModal = async function(poem) {
+
+  // Prevent multiple opens
+  if (isModalOpening || currentOpenModalId === poem.id) {
+    return;
+  }
+
+  isModalOpening = true;
+  currentOpenModalId = poem.id;
+
+  // Add a small delay to prevent rapid clicks
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+
+
       const modal = document.createElement('div'); modal.className = 'modal';
       const tagsHtml = (poem.tags || []).map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('');
       const audiosHtml = (poem.audios || []).length > 0
@@ -4374,47 +4735,72 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
         });
       }
 
-      // Close
-      modal.querySelector('#closeModal').addEventListener('click', () => modal.remove());
-      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
-      document.addEventListener('keydown', function esc(e){ if (e.key === 'Escape') { modal.remove(); document.removeEventListener('keydown', esc); } });
+     // At the end of the function, add close handler:
+  const closeModal = () => {
+    modal.remove();
+    isModalOpening = false;
+    currentOpenModalId = null;
+  };
 
+  modal.querySelector('#closeModal').addEventListener('click', closeModal);
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeModal();
+  });
+
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', esc);
     }
+  });
+};
+
+
     }
 
     // Sortable with handle only
     let sortableInstance = null;
-    function initSortable() {
-      const poemGrid = document.getElementById('poemGrid');
-      if (!poemGrid) return;
-      if (sortableInstance && typeof sortableInstance.destroy === 'function') { try { sortableInstance.destroy(); } catch(e){} }
-    sortableInstance = new Sortable(poemGrid, {
-  animation: 200,
-  handle: '.drag-handle',
-  draggable: '.card',
-  dataIdAttr: 'data-id',
-  onStart: () => {
-    isDragging = true;
-  },
-  onEnd: async () => {
-  const ids = Array.from(poemGrid.children).map(c => c.dataset.id).filter(Boolean);
-  const newOrder = [];
-  ids.forEach((id, index) => {
-    const found = poems.find(p => p.id === id);
-    if (found) {
-      found.manualOrder = index; // Add order property
-      newOrder.push(found);
+  function initSortable() {
+  const poemGrid = document.getElementById('poemGrid');
+  if (!poemGrid) return;
+  if (sortableInstance && typeof sortableInstance.destroy === 'function') {
+    try { sortableInstance.destroy(); } catch(e){}
+  }
+
+  sortableInstance = new Sortable(poemGrid, {
+    animation: 200,
+    handle: '.drag-handle',
+    draggable: '.card',
+    dataIdAttr: 'data-id',
+    touchStartThreshold: 10,
+    onStart: () => {
+      isDragging = true;
+    },
+    onEnd: async () => {
+      const ids = Array.from(poemGrid.children)
+        .map(c => c.dataset.id)
+        .filter(Boolean);
+
+      const newOrder = [];
+      ids.forEach((id, index) => {
+        const found = poems.find(p => p.id === id);
+        if (found) {
+          found.manualOrder = index;
+          newOrder.push(found);
+        }
+      });
+
+      const missing = poems.filter(p => !ids.includes(p.id));
+      poems = newOrder.concat(missing);
+
+      await savePoemsToFirebase();
+
+      setTimeout(() => {
+        isDragging = false;
+      }, 300);
     }
   });
-  const missing = poems.filter(p => !ids.includes(p.id));
-  poems = newOrder.concat(missing);
-  await savePoemsToFirebase();
-  setTimeout(() => {
-    isDragging = false;
-  }, 300);
 }
-});
-    }
 
     document.getElementById('btnDownload').addEventListener('click', () => {
       const a = document.createElement('a');
@@ -4424,7 +4810,7 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
       document.body.appendChild(a); a.click(); a.remove();
     });
 
-    document.getElementById('btnReloadAndSort').addEventListener('click', async () => {
+ /*   document.getElementById('btnReloadAndSort').addEventListener('click', async () => {
       showConfirm('هل تريد جلب آخر قصائد مودي من GitHub؟', async () => {
         showSyncStatus('🔄 جاري تحميل قصائد مودي...', 3000);
         const githubPoems = await loadFromGitHub();
@@ -4449,7 +4835,7 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
         showAlert(`✅ تم بنجاح!\n\n🎉 أُضيف: ${added} قصيدة جديدة\n🔄 حُدِّث: ${updated} قصيدة\n🔓 استُعيد: ${restored} قصيدة مخفية\n📋 عدد القصائد الكلي: ${poems.length}`);
       });
     });
-
+*/
     document.getElementById('btnImportJSON').addEventListener('click', () => {
       const input = document.createElement('input'); input.type='file'; input.accept='.json';
       input.onchange = function(e) {
@@ -4485,7 +4871,9 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
     });
 document.getElementById('btnMyProfile').addEventListener('click', async () => { openUserProfile(currentUser.id); });
 
-    // Enable browser notifications
+  /*
+  // Enable browser notifications
+
     document.getElementById('btnEnableNotifications').addEventListener('click', async () => {
       const granted = await requestNotificationPermission();
       if (granted) {
@@ -4495,7 +4883,7 @@ document.getElementById('btnMyProfile').addEventListener('click', async () => { 
         showAlert('⚠️ لم يتم منح صلاحية الإشعارات\n\nيرجى السماح بالإشعارات من إعدادات المتصفح');
       }
     });
-
+*/
     async function openUserProfile(userId) {
       const user = allUsers.find(u => u.id === userId);
       if (!user) return;
@@ -4532,6 +4920,8 @@ document.getElementById('btnMyProfile').addEventListener('click', async () => { 
             </div>
             <div class="profile-info" style="flex:1">
               <div class="profile-name" style="font-size:24px;font-weight:700;color:var(--accent);margin-bottom:5px">${escapeHtml(user.username)}</div>
+
+
               ${user.email ? '<div class="profile-username" style="font-size:14px;color:var(--muted);margin-bottom:10px">📧 ' + escapeHtml(user.email) + '</div>' : ''}
 <div style="position:relative">
   ${isOwnProfile ? '<button class="btn small" id="editBioBtn" style="position:absolute;top:0;left:0;padding:4px 8px;font-size:12px">✏️ تعديل</button>' : ''}
@@ -4560,7 +4950,56 @@ ${followBtn}
 
       document.body.appendChild(modal);
 
+// In openUserProfile, after bio editing section
+if (isOwnProfile) {
+  const editBioBtn = modal.querySelector('#editBioBtn');
+  const usernameDisplay = modal.querySelector('.profile-name');
 
+  if (editBioBtn) {
+    editBioBtn.addEventListener('click', async () => {
+      const newUsername = prompt('أدخل اسم المستخدم الجديد:', currentUser.username);
+      if (!newUsername || newUsername.trim() === '') return;
+
+      const trimmedUsername = newUsername.trim();
+
+      // Check if same as current
+      if (trimmedUsername === currentUser.username) {
+        showAlert('ℹ️ هذا هو اسم المستخدم الحالي');
+        return;
+      }
+
+      // Check if already exists (case-insensitive)
+      if (allUsers.some(u => u.id !== currentUser.id && u.username.toLowerCase() === trimmedUsername.toLowerCase())) {
+        showAlert('⚠️ اسم المستخدم موجود بالفعل! يرجى اختيار اسم آخر.');
+        return;
+      }
+
+      try {
+        // Update in allUsers
+        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+        if (userIndex > -1) {
+          allUsers[userIndex].username = trimmedUsername;
+        }
+
+        // Update currentUser
+        currentUser.username = trimmedUsername;
+
+        // Save to localStorage and Firebase
+        saveAllUsers();
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        await saveUserToFirebase();
+
+        // Update display
+        usernameDisplay.textContent = trimmedUsername;
+        document.getElementById('currentUserName').textContent = trimmedUsername;
+
+        showSyncStatus('✅ تم تحديث اسم المستخدم بنجاح', 2000);
+      } catch (error) {
+        showAlert('❌ فشل تحديث اسم المستخدم: ' + error.message);
+      }
+    });
+  }
+}
       if (!isOwnProfile) {
         modal.querySelector('#followBtn').addEventListener('click', function() {
           toggleFollow(user.id);
@@ -4572,8 +5011,15 @@ ${followBtn}
           btn.textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
           btn.className = 'follow-btn ' + (nowFollowing ? 'following' : 'not-following');
         });
-        modal.querySelector('#chatBtn').addEventListener('click', () => { modal.remove(); openDMWindow(user.id); });
-      }
+const chatBtn = modal.querySelector('#chatBtn');
+if (chatBtn) {
+  chatBtn.addEventListener('click', () => {
+    modal.remove();
+    setTimeout(() => {
+      openDMWindow(user.id);
+    }, 200);
+  });
+}}
 
       if (isOwnProfile) {
         const avatarInput = modal.querySelector('#avatarInput');
@@ -4644,6 +5090,8 @@ ${followBtn}
     });
   }
 }
+
+
       modal.querySelector('#closeProfileModal').addEventListener('click', () => modal.remove());
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
@@ -4925,9 +5373,17 @@ console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.i
         createdAt: new Date().toISOString()
       };
 
-      if (editingPoem) {
-        const index = poems.findIndex(p => p.id === editingPoem.id);
-        if (index !== -1) poems[index] = { ...poemData, id: editingPoem.id };
+
+  if (editingPoem) {
+  const index = poems.findIndex(p => p.id === editingPoem.id);
+  if (index !== -1) {
+    // ✅ Keep the original manualOrder when editing
+    poems[index] = {
+      ...poemData,
+      id: editingPoem.id,
+      manualOrder: editingPoem.manualOrder // Preserve position
+    };
+  }
         editingPoem = null;
         showSyncStatus('✅ تم تحديث القصيدة', 2000);
     } else {
