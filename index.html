@@ -1371,6 +1371,8 @@ const CLOUDINARY_UPLOAD_PRESET = 'mody_poetry_uploads';
     let isLoadingMoreMessages = false;
     let isUpdatingFromFirebase = false;
     let selectedUserForLogin = null;
+let cachedLikes = {};
+let cachedComments = {};
 
     let isRendering = false;
 let currentFilteredPoems = []; // Add this new global variable
@@ -1498,23 +1500,37 @@ let currentFilteredPoems = []; // Add this new global variable
         return Object.keys(likes).length;
       } catch (error) { console.error('Error toggling like:', error); return 0; }
     }
-async function getLikesCount(poemId) {
+function getLikesCount(poemId) {
   // Use cache first
   if (cachedLikes[poemId]) {
     return Object.keys(cachedLikes[poemId]).length;
   }
   return 0;
 }
-    async function isLiked(poemId) {
-      try { const snapshot = await get(ref(database, `likes/${poemId}/${currentUser.id}`)); return snapshot.exists(); }
-      catch { return false; }
-    }
+    function isLiked(poemId) {
+  // Use cache
+  return !!(cachedLikes[poemId] && cachedLikes[poemId][currentUser.id]);
+}
+
+    // ✅ ADD THIS NEW FUNCTION
+async function loadAllMetadata() {
+  try {
+    const [likesSnap, commentsSnap] = await Promise.all([
+      get(ref(database, 'likes')),
+      get(ref(database, 'comments'))
+    ]);
+    cachedLikes = likesSnap.val() || {};
+    cachedComments = commentsSnap.val() || {};
+  } catch (error) {
+    console.error('Error loading metadata:', error);
+  }
+}
+
 // Register Service Worker and get FCM token
 async function registerServiceWorkerAndGetToken() {
   try {
-    // Check if we're on a secure context (https or localhost)
     if (window.location.protocol === 'file:') {
-      console.warn('⚠️ Service Worker not supported on file:// URLs. FCM notifications will not work.');
+      console.warn('⚠️ Service Worker not supported on file:// URLs.');
       return null;
     }
 
@@ -1529,7 +1545,6 @@ async function registerServiceWorkerAndGetToken() {
 
       if (token) {
         console.log('FCM Token:', token);
-        // Save token to user profile
         if (currentUser) {
           currentUser.fcmToken = token;
           await set(ref(database, `users/${currentUser.id}/fcmToken`), token);
@@ -1540,12 +1555,12 @@ async function registerServiceWorkerAndGetToken() {
     }
   } catch (error) {
     console.warn('⚠️ FCM not available:', error.message);
-    // Fail silently - app will work without FCM
   }
   return null;
 }
-    // Listen for foreground messages
-    onMessage(messaging, (payload) => {
+
+// Listen for foreground messages
+onMessage(messaging, (payload) => {
       console.log('Foreground message received:', payload);
 
       const title = payload.notification?.title || 'Mody Poetry';
@@ -2243,7 +2258,7 @@ function setupVirtualScrolling(messagesEl, messages, convId, withUser) {
 }
 
 
-   async function openDMWindow(targetUserId = null) {
+ async function openDMWindow(targetUserId = null) {
   const modal = document.createElement('div');
   modal.className = 'modal';
   const targetUser = targetUserId ? allUsers.find(u => u.id === targetUserId) : null;
@@ -2254,7 +2269,6 @@ modal.innerHTML = `
         <h3 style="margin:0"></h3>
         <div style="display:flex;gap:10px;align-items:center">
           <button class="dm-conversations-toggle" id="toggleConversations">
-
             <span> &nbsp;المحادثات&nbsp; </span>
             <span id="conversationsCount"></span>
           </button>
@@ -2303,42 +2317,34 @@ modal.innerHTML = `
   const sidebar = modal.querySelector('#dmSidebar');
   const toggleBtn = modal.querySelector('#toggleConversations');
   const conversationsCount = modal.querySelector('#conversationsCount');
-let currentConversationId = null;
+  let currentConversationId = null;
   let typingTimeout = null;
   let selectedImage = null;
   let isFirstLoad = true;
   let previousMessagesCount = 0;
-
   let isDMOpen = true;
 
-function destroyDM() {
-  // Clear typing state for the active conversation
-  if (currentConversationId) {
-    set(ref(database, `dm_typing/${currentConversationId}/${currentUser.id}`), null).catch(() => {});
-    set(ref(database, `dm_conversations/${currentUser.id}/${currentConversationId}/unreadCount`), 0).catch(() => {});
+  function destroyDM() {
+    if (currentConversationId) {
+      set(ref(database, `dm_typing/${currentConversationId}/${currentUser.id}`), null).catch(() => {});
+      set(ref(database, `dm_conversations/${currentUser.id}/${currentConversationId}/unreadCount`), 0).catch(() => {});
+    }
+    if (typeof dmMessagesUnsubscribe === 'function') {
+      dmMessagesUnsubscribe();
+      dmMessagesUnsubscribe = null;
+    }
+    document.removeEventListener('click', closeMessageActions);
+    if (modal && modal.parentNode) modal.remove();
+    isDMOpen = false;
   }
 
-  // Detach messages listener if any
-  if (typeof dmMessagesUnsubscribe === 'function') {
-    dmMessagesUnsubscribe();
-    dmMessagesUnsubscribe = null;
-  }
+  modal.querySelector('#dmToggleDir').addEventListener('click', function() {
+    const textarea = modal.querySelector('#dmText');
+    const currentDir = textarea.getAttribute('dir') || 'rtl';
+    textarea.setAttribute('dir', currentDir === 'rtl' ? 'ltr' : 'rtl');
+    this.textContent = currentDir === 'rtl' ? '→' : '←';
+  });
 
-  // Remove global click listener for message actions
-  document.removeEventListener('click', closeMessageActions);
-
-  // Remove modal
-  if (modal && modal.parentNode) modal.remove();
-
-  isDMOpen = false;
-}
-
-modal.querySelector('#dmToggleDir').addEventListener('click', function() {
-  const textarea = modal.querySelector('#dmText');
-  const currentDir = textarea.getAttribute('dir') || 'rtl';
-  textarea.setAttribute('dir', currentDir === 'rtl' ? 'ltr' : 'rtl');
-  this.textContent = currentDir === 'rtl' ? '→' : '←';
-});
   async function ensureConversationMeta(withUserId) {
     const withUser = allUsers.find(u => u.id === withUserId);
     const convId = getConversationId(currentUser.id, withUserId);
@@ -2362,8 +2368,7 @@ modal.querySelector('#dmToggleDir').addEventListener('click', function() {
   }
 
   function renderDMList() {
-  globalRenderDMList = renderDMList;
-
+    globalRenderDMList = renderDMList;
     listEl.innerHTML = '';
     const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
     conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
@@ -2372,12 +2377,13 @@ modal.querySelector('#dmToggleDir').addEventListener('click', function() {
       listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
       return;
     }
+
     sorted.forEach(conv => {
       const user = allUsers.find(u => u.id === conv.userId);
       const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`;
       const item = document.createElement('div');
       item.className = 'dm-list-item';
-    item.innerHTML = `
+      item.innerHTML = `
         <div class="avatar-container">
           <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
           <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
@@ -2393,39 +2399,71 @@ modal.querySelector('#dmToggleDir').addEventListener('click', function() {
         loadConversation(conv.userId);
         sidebar.classList.remove('show');
       };
- // Check online status immediately
-(async function checkStatus() {
-  const statusSnapshot = await get(ref(database, `user_status/${conv.userId}`));
-  const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
-  if (!indicator) return;
 
-  if (statusSnapshot.exists()) {
-    const status = statusSnapshot.val();
-    const lastChanged = new Date(status.last_changed);
-    const now = new Date();
-    const diffMinutes = (now - lastChanged) / 1000 / 60;
-    const isOnline = status.state === 'online' && diffMinutes < 2;
-    indicator.classList.toggle('offline', !isOnline);
+      (async function checkStatus() {
+        const statusSnapshot = await get(ref(database, `user_status/${conv.userId}`));
+        const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+        if (!indicator) return;
+        if (statusSnapshot.exists()) {
+          const status = statusSnapshot.val();
+          const lastChanged = new Date(status.last_changed);
+          const now = new Date();
+          const diffMinutes = (now - lastChanged) / 1000 / 60;
+          const isOnline = status.state === 'online' && diffMinutes < 2;
+          indicator.classList.toggle('offline', !isOnline);
+        }
+      })();
+
+      setTimeout(() => {
+        const statusRef = ref(database, `user_status/${conv.userId}`);
+        onValue(statusRef, (snapshot) => {
+          const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+          if (!indicator) return;
+          if (snapshot.exists()) {
+            const status = snapshot.val();
+            const lastChanged = new Date(status.last_changed);
+            const now = new Date();
+            const diffMinutes = (now - lastChanged) / 1000 / 60;
+            const isOnline = status.state === 'online' && diffMinutes < 2;
+            if (isOnline) {
+              indicator.classList.remove('offline');
+            } else {
+              indicator.classList.add('offline');
+            }
+          } else {
+            indicator.classList.add('offline');
+          }
+        });
+      }, 100);
+    });
   }
-})();
-       // Update online indicators for all users in list - ADD THIS
-  // Set up real-time listeners for all users in list
-});
 
-  // ✅ CORRECT: Set up real-time listener AFTER creating the element
-  setTimeout(() => {
-    const statusRef = ref(database, `user_status/${conv.userId}`);
-    onValue(statusRef, (snapshot) => {
-      const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+  async function loadConversation(withUserId) {
+    await ensureConversationMeta(withUserId);
+    const withUser = allUsers.find(u => u.id === withUserId);
+    const convId = getConversationId(currentUser.id, withUserId);
+    currentConversationId = convId;
+    await markDMNotificationsAsRead(withUserId);
+    updateNotificationBadge();
+
+    headerEl.innerHTML = `
+      <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
+        <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" loading="lazy" class="avatar-small" />
+        <span class="online-indicator" id="userOnlineIndicator"></span>
+      </div>
+      <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
+    `;
+
+    const statusRef = ref(database, `user_status/${withUserId}`);
+    const statusUnsubscribe = onValue(statusRef, (snapshot) => {
+      const indicator = modal.querySelector('#userOnlineIndicator');
       if (!indicator) return;
-
       if (snapshot.exists()) {
         const status = snapshot.val();
         const lastChanged = new Date(status.last_changed);
         const now = new Date();
         const diffMinutes = (now - lastChanged) / 1000 / 60;
         const isOnline = status.state === 'online' && diffMinutes < 2;
-
         if (isOnline) {
           indicator.classList.remove('offline');
         } else {
@@ -2435,55 +2473,8 @@ modal.querySelector('#dmToggleDir').addEventListener('click', function() {
         indicator.classList.add('offline');
       }
     });
-  }, 100);
-}
 
-
-async function loadConversation(withUserId) {
-    await ensureConversationMeta(withUserId);
-    const withUser = allUsers.find(u => u.id === withUserId);
-    const convId = getConversationId(currentUser.id, withUserId);
-    currentConversationId = convId;
-// ✅ Mark DM notifications from this user as read
-    await markDMNotificationsAsRead(withUserId);
-  // ✅ Update notification badge immediately
-    updateNotificationBadge();
-
-headerEl.innerHTML = `
-      <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
-        <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" loading="lazy" class="avatar-small" />
-        <span class="online-indicator" id="userOnlineIndicator"></span>
-      </div>
-      <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
-     `;
-
-    // Monitor online status
-  // Monitor online status with real-time listener
-const statusRef = ref(database, `user_status/${withUserId}`);
-const statusUnsubscribe = onValue(statusRef, (snapshot) => {
-  const indicator = modal.querySelector('#userOnlineIndicator');
-  if (!indicator) return;
-
-  if (snapshot.exists()) {
-    const status = snapshot.val();
-    const lastChanged = new Date(status.last_changed);
-    const now = new Date();
-    const diffMinutes = (now - lastChanged) / 1000 / 60;
-    const isOnline = status.state === 'online' && diffMinutes < 2;
-
-    if (isOnline) {
-      indicator.classList.remove('offline');
-    } else {
-      indicator.classList.add('offline');
-    }
-  } else {
-    indicator.classList.add('offline');
-  }
-});
-
-// Store unsubscribe function to clean up later
-modal.dataset.statusUnsubscribe = 'active';
-
+    modal.dataset.statusUnsubscribe = 'active';
     messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
 
     const typingRef = ref(database, `dm_typing/${convId}/${withUserId}`);
@@ -2496,165 +2487,227 @@ modal.dataset.statusUnsubscribe = 'active';
         indicator.classList.remove('show');
       }
     });
-// Detach previous conversation listener
-if (typeof dmMessagesUnsubscribe === 'function') {
-  dmMessagesUnsubscribe();
-  dmMessagesUnsubscribe = null;
-}
 
+    if (typeof dmMessagesUnsubscribe === 'function') {
+      dmMessagesUnsubscribe();
+      dmMessagesUnsubscribe = null;
+    }
 
-// Attach real-time messages listener
-const messagesRef = ref(database, `dm_messages/${convId}`);
-// Reset pagination
-dmMessagesLimit = 20;
-allDMMessages = [];
-
-isFirstLoad = true;
-previousMessagesCount = 0;
-dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
-
-  if (!msgsSnap.exists()) {
-    messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
+    const messagesRef = ref(database, `dm_messages/${convId}`);
+    dmMessagesLimit = 20;
     allDMMessages = [];
-    isFirstLoad = false;
-    return;
-  }
+    isFirstLoad = true;
+    previousMessagesCount = 0;
 
-  const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
-
-  // Mark unread as read (non-blocking)
-  const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
-  if (unread.length > 0) {
-    Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
-      .catch(err => console.error('Error marking messages as read:', err));
-  }
-
-  // First load: render everything
-  if (isFirstLoad) {
-    allDMMessages = newMessages;
-    renderDMMessages(convId, withUser);
-
-  // Force scroll to bottom multiple times to handle media loading
-  const scrollToBottom = () => {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  };
-
-  setTimeout(scrollToBottom, 100);
-  setTimeout(scrollToBottom, 300);
-  setTimeout(scrollToBottom, 600);
-    setupDMScrollListener(messagesEl, convId, withUser);
-    isFirstLoad = false;
-    previousMessagesCount = newMessages.length;
-  } else {
-    // Incremental update: only update changed/new messages
-    const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
-
-    newMessages.forEach(newMsg => {
-      const existingMsg = oldMessagesMap.get(newMsg.id);
-
-      if (!existingMsg) {
-        // New message - add to end
-        allDMMessages.push(newMsg);
-        const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
-        messagesEl.appendChild(div);
-
-        // Scroll to bottom for new messages
-    // Scroll to bottom for new messages
-        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
-        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
-      } else {
-        // Check if message was updated (reactions, edits, read status)
-        const needsUpdate =
-          JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
-          existingMsg.edited !== newMsg.edited ||
-          existingMsg.text !== newMsg.text ||
-          existingMsg.read !== newMsg.read;
-
-        if (needsUpdate) {
-          // Update existing message element
-          const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
-          if (messageEl) {
-            // Update in allDMMessages array
-            const index = allDMMessages.findIndex(m => m.id === newMsg.id);
-            if (index !== -1) {
-              allDMMessages[index] = newMsg;
-            }
-
-            // Update DOM element
-            updateMessageElement(messageEl, newMsg, convId, allDMMessages);
-          }
-        }
+    dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
+      if (!msgsSnap.exists()) {
+        messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
+        allDMMessages = [];
+        isFirstLoad = false;
+        return;
       }
+
+      const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+      const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
+      if (unread.length > 0) {
+        Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
+          .catch(err => console.error('Error marking messages as read:', err));
+      }
+
+      if (isFirstLoad) {
+        allDMMessages = newMessages;
+        renderDMMessages(convId, withUser);
+        const scrollToBottom = () => {
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        };
+        setTimeout(scrollToBottom, 100);
+        setTimeout(scrollToBottom, 300);
+        setTimeout(scrollToBottom, 600);
+        setupDMScrollListener(messagesEl, convId, withUser);
+        isFirstLoad = false;
+        previousMessagesCount = newMessages.length;
+      } else {
+        const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
+        newMessages.forEach(newMsg => {
+          const existingMsg = oldMessagesMap.get(newMsg.id);
+          if (!existingMsg) {
+            allDMMessages.push(newMsg);
+            const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
+            messagesEl.appendChild(div);
+            setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
+            setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
+          } else {
+            const needsUpdate =
+              JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
+              existingMsg.edited !== newMsg.edited ||
+              existingMsg.text !== newMsg.text ||
+              existingMsg.read !== newMsg.read;
+            if (needsUpdate) {
+              const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
+              if (messageEl) {
+                const index = allDMMessages.findIndex(m => m.id === newMsg.id);
+                if (index !== -1) {
+                  allDMMessages[index] = newMsg;
+                }
+                updateMessageElement(messageEl, newMsg, convId, allDMMessages);
+              }
+            }
+          }
+        });
+        previousMessagesCount = newMessages.length;
+      }
+
+      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
     });
 
-    previousMessagesCount = newMessages.length;
+    const dmTextarea = modal.querySelector('#dmText');
+    const dmContent = modal.querySelector('.dm-content');
+    setupMentionAutocomplete(dmTextarea, dmContent);
+
+    dmTextarea.addEventListener('input', function() {
+      this.style.height = '20px';
+      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    });
   }
 
-  await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
-});
-const dmTextarea = modal.querySelector('#dmText');
-const dmContent = modal.querySelector('.dm-content');
-setupMentionAutocomplete(dmTextarea, dmContent);
+  const sendBtn = modal.querySelector('#dmSend');
+  let isSending = false;
 
-// Auto-resize textarea
-dmTextarea.addEventListener('input', function() {
-  this.style.height = '20px';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-});
- const sendBtn = modal.querySelector('#dmSend');
-let isSending = false; // Flag to prevent multiple sends
+  sendBtn.onclick = async () => {
+    if (isSending) return;
+    const textEl = modal.querySelector('#dmText');
+    const text = textEl.value.trim();
+    const preview = modal.querySelector('#dmImageUploadPreview');
+    if (preview && preview.dataset.gifUrl && !selectedImage) {
+      selectedImage = { url: preview.dataset.gifUrl, type: 'image/gif' };
+    }
+    if (!text && !selectedImage) {
+      showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
+      return;
+    }
 
-sendBtn.onclick = async () => {
-  // Prevent multiple clicks
-  if (isSending) return;
+    isSending = true;
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = '0.5';
+    sendBtn.style.cursor = 'not-allowed';
+    const originalText = sendBtn.textContent;
+    sendBtn.textContent = 'جاري الإرسال...';
 
-  const textEl = modal.querySelector('#dmText');
-  const text = textEl.value.trim();
+    if (editingMessageId) {
+      try {
+        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/text`), text);
+        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/edited`), true);
+        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
 
-  // Check if GIF was selected from picker BEFORE validation
-  const preview = modal.querySelector('#dmImageUploadPreview');
-  if (preview && preview.dataset.gifUrl && !selectedImage) {
-    selectedImage = { url: preview.dataset.gifUrl, type: 'image/gif' };
-  }
+        const msgIndex = allDMMessages.findIndex(m => m.id === editingMessageId);
+        if (msgIndex !== -1) {
+          allDMMessages[msgIndex].text = text;
+          allDMMessages[msgIndex].edited = true;
+          allDMMessages[msgIndex].editedAt = new Date().toISOString();
+        }
 
-  if (!text && !selectedImage) {
-    showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
-    return;
-  }
-
-  // Disable button and set flag
-  isSending = true;
-  sendBtn.disabled = true;
-  sendBtn.style.opacity = '0.5';
-  sendBtn.style.cursor = 'not-allowed';
-  const originalText = sendBtn.textContent;
-  sendBtn.textContent = 'جاري الإرسال...';
-if (editingMessageId) {
-    try {
-      // Update message in Firebase
-      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
-      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
-      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
-
-      // Update local message immediately
-      const msgIndex = allDMMessages.findIndex(m => m.id === editingMessageId);
-      if (msgIndex !== -1) {
-        allDMMessages[msgIndex].text = text;
-        allDMMessages[msgIndex].edited = true;
-        allDMMessages[msgIndex].editedAt = new Date().toISOString();
+        editingMessageId = null;
+        textEl.value = '';
+        document.getElementById('dmEditingIndicator')?.remove();
+        textEl.style.height = '20px';
+        const withUser = allUsers.find(u => u.id === currentConversationId.split('_').find(id => id !== currentUser.id));
+        renderDMMessages(currentConversationId, withUser);
+        showSyncStatus('✅ تم تعديل الرسالة', 1500);
+      } catch (error) {
+        showAlert('❌ فشل تعديل الرسالة');
       }
 
-      editingMessageId = null;
+      setTimeout(() => {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.textContent = originalText;
+      }, 1000);
+      return;
+    }
+
+    const convId = currentConversationId;
+    const withUserId = convId.split('_').find(id => id !== currentUser.id);
+    const withUser = allUsers.find(u => u.id === withUserId);
+    const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+    const payload = {
+      id: msgId, convId, text,
+      from: currentUser.username, fromId: currentUser.id, toId: withUserId,
+      timestamp: new Date().toISOString()
+    };
+
+    if (selectedImage) {
+      try {
+        if (selectedImage.url && (selectedImage.type === 'image/link' || selectedImage.type === 'image/gif')) {
+          payload.imageUrl = selectedImage.url;
+          payload.fileType = selectedImage.type;
+        } else {
+          showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
+          const uploaded = await uploadFileToCloudinary(selectedImage.file);
+          payload.imageUrl = uploaded.url;
+          payload.fileType = selectedImage.type;
+        }
+        selectedImage = null;
+        modal.querySelector('#dmImageInput').value = '';
+        modal.querySelector('#dmImageUploadPreview').style.display = 'none';
+        modal.querySelector('#dmImagePreview').innerHTML = '';
+        delete preview.dataset.gifUrl;
+      } catch (error) {
+        showAlert('❌ فشل رفع الوسائط');
+        setTimeout(() => {
+          isSending = false;
+          sendBtn.disabled = false;
+          sendBtn.style.opacity = '1';
+          sendBtn.style.cursor = 'pointer';
+          sendBtn.textContent = originalText;
+        }, 1000);
+        return;
+      }
+    }
+
+    if (replyingToMessage) {
+      payload.replyTo = replyingToMessage.id;
+      replyingToMessage = null;
+      document.getElementById('dmReplyingIndicator')?.remove();
+    }
+
+    try {
+      await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+      const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
+
+      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+        id: convId, userId: withUserId, username: withUser?.username || '',
+        lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
+      });
+
+      const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+      const theirMetaSnap = await get(theirMetaRef);
+      const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+      await set(theirMetaRef, {
+        id: convId, userId: currentUser.id, username: currentUser.username,
+        lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
+      });
+
+      await addNotification(withUserId, {
+        type: 'message', from: currentUser.username, fromId: currentUser.id,
+        messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
+        timestamp: payload.timestamp
+      });
+
       textEl.value = '';
-      document.getElementById('dmEditingIndicator')?.remove();
       textEl.style.height = '20px';
-
-      // Force re-render
+      showSyncStatus('✅ تم إرسال الرسالة', 1500);
+      await loadDMConversations();
+      renderDMList();
+      dmMessagesLimit = 20;
       renderDMMessages(convId, withUser);
-
-      showSyncStatus('✅ تم تعديل الرسالة', 1500);
+      setTimeout(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }, 100);
+      await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
     } catch (error) {
-      showAlert('❌ فشل تعديل الرسالة');
+      showAlert('❌ فشل إرسال الرسالة');
     }
 
     setTimeout(() => {
@@ -2664,216 +2717,99 @@ if (editingMessageId) {
       sendBtn.style.cursor = 'pointer';
       sendBtn.textContent = originalText;
     }, 1000);
-
-    return;
-  }
-
-  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
-  const payload = {
-    id: msgId, convId, text,
-    from: currentUser.username, fromId: currentUser.id, toId: withUserId,
-    timestamp: new Date().toISOString()
   };
-if (selectedImage) {
-    try {
-      // Check if it's a link or file upload
-      if (selectedImage.url && (selectedImage.type === 'image/link' || selectedImage.type === 'image/gif')) {
-        // It's a link or GIF - use directly
-        payload.imageUrl = selectedImage.url;
-        payload.fileType = selectedImage.type;
-      } else {
-        // It's a file upload - upload to Cloudinary
-        showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-        const uploaded = await uploadFileToCloudinary(selectedImage.file);
-        payload.imageUrl = uploaded.url;
-        payload.fileType = selectedImage.type;
-      }
-      selectedImage = null;
-      modal.querySelector('#dmImageInput').value = '';
-      modal.querySelector('#dmImageUploadPreview').style.display = 'none';
-      modal.querySelector('#dmImagePreview').innerHTML = '';
-      delete preview.dataset.gifUrl; // Clear GIF URL
-    } catch (error) {
-      showAlert('❌ فشل رفع الوسائط');
-      // Re-enable button
-      setTimeout(() => {
-        isSending = false;
-        sendBtn.disabled = false;
-        sendBtn.style.opacity = '1';
-        sendBtn.style.cursor = 'pointer';
-        sendBtn.textContent = originalText;
-      }, 1000);
-
-      return;
-    }
-  }
-
-  if (replyingToMessage) {
-    payload.replyTo = replyingToMessage.id;
-    replyingToMessage = null;
-    document.getElementById('dmReplyingIndicator')?.remove();
-  }
-
-  try {
-    await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
-
-    const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
-
-    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
-      id: convId, userId: withUserId, username: withUser?.username || '',
-      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
-    });
-
-    const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
-    const theirMetaSnap = await get(theirMetaRef);
-    const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
-    await set(theirMetaRef, {
-      id: convId, userId: currentUser.id, username: currentUser.username,
-      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
-    });
-
-    await addNotification(withUserId, {
-      type: 'message', from: currentUser.username, fromId: currentUser.id,
-      messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
-      timestamp: payload.timestamp
-    });
-
-     textEl.value = '';
-    textEl.style.height = '20px';
-    showSyncStatus('✅ تم إرسال الرسالة', 1500);
-    await loadDMConversations();
-    renderDMList();
- // Reset to show latest messages after sending
-    dmMessagesLimit = 20;
-    renderDMMessages(convId, withUser);
-    setTimeout(() => {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }, 100);
-
-    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
-  } catch (error) {
-    showAlert('❌ فشل إرسال الرسالة');
-  }
-
-  // Re-enable button after 1 second
-  setTimeout(() => {
-    isSending = false;
-    sendBtn.disabled = false;
-    sendBtn.style.opacity = '1';
-    sendBtn.style.cursor = 'pointer';
-    sendBtn.textContent = originalText;
-  }, 1000);
-};
-
-  }
 
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('show');
   });
 
-modal.addEventListener('click', e => {
-  // Clicked on overlay (outside inner content)
-  if (e.target === modal) {
-    destroyDM();
-    return;
-  }
-  // Hide sidebar if clicking outside it
-  if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
-    sidebar.classList.remove('show');
-  }
-});
-
+  modal.addEventListener('click', e => {
+    if (e.target === modal) {
+      destroyDM();
+      return;
+    }
+    if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
+      sidebar.classList.remove('show');
+    }
+  });
 
   modal.querySelector('#dmImageBtn').addEventListener('click', () => {
     modal.querySelector('#dmImageInput').click();
   });
 
-modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const isImage = file.type.startsWith('image/');
-  const isVideo = file.type.startsWith('video/');
-  const isAudio = file.type.startsWith('audio/');
-
-  if (!isImage && !isVideo && !isAudio) {
-    showAlert('⚠️ يرجى اختيار صورة، فيديو، أو ملف صوتي');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    selectedImage = { file, dataUrl: event.target.result, type: file.type };
-
-    const preview = modal.querySelector('#dmImageUploadPreview');
-    const previewContainer = modal.querySelector('#dmImagePreview');
-
-    if (isVideo) {
-      previewContainer.innerHTML = `<video controls style="max-width:100px;max-height:100px;border-radius:8px"><source src="${event.target.result}" type="${file.type}"></video>`;
-    } else if (isAudio) {
-      previewContainer.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(139,94,60,0.1);border-radius:8px"><span>🎵</span><span style="font-size:12px">${file.name}</span></div>`;
-    } else {
-      previewContainer.innerHTML = `<img src="${event.target.result}" style="max-width:100px;max-height:100px;border-radius:8px">`;
+  modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+    const isAudio = file.type.startsWith('audio/');
+    if (!isImage && !isVideo && !isAudio) {
+      showAlert('⚠️ يرجى اختيار صورة، فيديو، أو ملف صوتي');
+      return;
     }
 
-    preview.style.display = 'flex';
-  };
-  reader.readAsDataURL(file);
-});
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      selectedImage = { file, dataUrl: event.target.result, type: file.type };
+      const preview = modal.querySelector('#dmImageUploadPreview');
+      const previewContainer = modal.querySelector('#dmImagePreview');
 
-// NEW: Auto-detect image/GIF links in textarea and show preview
-const dmTextarea = modal.querySelector('#dmText');
-let linkPreviewTimeout;
-
-dmTextarea.addEventListener('input', function() {
-  clearTimeout(linkPreviewTimeout);
-
-  linkPreviewTimeout = setTimeout(() => {
-    const text = this.value.trim();
-    const urls = text.match(/(https?:\/\/[^\s]+)/g);
-
-    if (urls && urls.length > 0) {
-      const lastUrl = urls[urls.length - 1];
-
-      // Check if it's an image/GIF link
-      const isImageLink = lastUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ||
-                          lastUrl.includes('giphy.com') ||
-                          lastUrl.includes('tenor.com');
-
-      if (isImageLink && !selectedImage) {
-        const preview = modal.querySelector('#dmImageUploadPreview');
-        const previewContainer = modal.querySelector('#dmImagePreview');
-
-        previewContainer.innerHTML = `<img src="${lastUrl}" style="max-width:100px;max-height:100px;border-radius:8px" onerror="this.parentElement.parentElement.style.display='none'">`;
-        preview.style.display = 'flex';
-
-        // Store as link (not file upload)
-        selectedImage = { url: lastUrl, type: 'image/link' };
+      if (isVideo) {
+        previewContainer.innerHTML = `<video controls style="max-width:100px;max-height:100px;border-radius:8px"><source src="${event.target.result}" type="${file.type}"></video>`;
+      } else if (isAudio) {
+        previewContainer.innerHTML = `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:rgba(139,94,60,0.1);border-radius:8px"><span>🎵</span><span style="font-size:12px">${file.name}</span></div>`;
+      } else {
+        previewContainer.innerHTML = `<img src="${event.target.result}" style="max-width:100px;max-height:100px;border-radius:8px">`;
       }
-    }
-  }, 500); // Wait 500ms after typing stops
-});
-modal.querySelector('#dmCancelImage').addEventListener('click', () => {
-  selectedImage = null;
-  modal.querySelector('#dmImageInput').value = '';
-  const preview = modal.querySelector('#dmImageUploadPreview');
-  preview.style.display = 'none';
-  modal.querySelector('#dmImagePreview').innerHTML = '';
-});
+      preview.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  });
 
-modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
-  e.stopPropagation();
-  window.openEmojiGifPicker();
-});
+  const dmTextarea = modal.querySelector('#dmText');
+  let linkPreviewTimeout;
+
+  dmTextarea.addEventListener('input', function() {
+    clearTimeout(linkPreviewTimeout);
+    linkPreviewTimeout = setTimeout(() => {
+      const text = this.value.trim();
+      const urls = text.match(/(https?:\/\/[^\s]+)/g);
+      if (urls && urls.length > 0) {
+        const lastUrl = urls[urls.length - 1];
+        const isImageLink = lastUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif|webp)$/i) ||
+                            lastUrl.includes('giphy.com') ||
+                            lastUrl.includes('tenor.com');
+        if (isImageLink && !selectedImage) {
+          const preview = modal.querySelector('#dmImageUploadPreview');
+          const previewContainer = modal.querySelector('#dmImagePreview');
+          previewContainer.innerHTML = `<img src="${lastUrl}" style="max-width:100px;max-height:100px;border-radius:8px" onerror="this.parentElement.parentElement.style.display='none'">`;
+          preview.style.display = 'flex';
+          selectedImage = { url: lastUrl, type: 'image/link' };
+        }
+      }
+    }, 500);
+  });
+
+  modal.querySelector('#dmCancelImage').addEventListener('click', () => {
+    selectedImage = null;
+    modal.querySelector('#dmImageInput').value = '';
+    const preview = modal.querySelector('#dmImageUploadPreview');
+    preview.style.display = 'none';
+    modal.querySelector('#dmImagePreview').innerHTML = '';
+  });
+
+  modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.openEmojiGifPicker();
+  });
+
   modal.querySelector('#dmText').addEventListener('input', async function() {
     if (!currentConversationId) return;
-
     const convId = currentConversationId;
     await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), {
       typing: true,
       timestamp: Date.now()
     });
-
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(async () => {
       await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
@@ -2902,25 +2838,22 @@ modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
         loadConversation(user.id);
         sidebar.classList.remove('show');
       };
-listEl.appendChild(item);
-      });
-
-      // Update online indicators for search results - ADD THIS
-      candidates.forEach(user => {
-        isUserOnline(user.id, (online) => {
-          const indicator = document.querySelector('.dm-list-indicator-' + user.id);
-          if (indicator) {
-            if (online) {
-              indicator.classList.remove('offline');
-            } else {
-              indicator.classList.add('offline');
-            }
-          }
-        });
-      });
-      // END OF ADDITION
+      listEl.appendChild(item);
     });
 
+    candidates.forEach(user => {
+      isUserOnline(user.id, (online) => {
+        const indicator = document.querySelector('.dm-list-indicator-' + user.id);
+        if (indicator) {
+          if (online) {
+            indicator.classList.remove('offline');
+          } else {
+            indicator.classList.add('offline');
+          }
+        }
+      });
+    });
+  });
 
   const closeMessageActions = function(e) {
     if (!e.target.closest('.dm-message')) {
@@ -2932,16 +2865,16 @@ listEl.appendChild(item);
 
   document.addEventListener('click', closeMessageActions);
 
-modal.querySelector('#closeDM').addEventListener('click', () => {
-  destroyDM();
-});
+  modal.querySelector('#closeDM').addEventListener('click', () => {
+    destroyDM();
+  });
 
-await loadDMConversations();
+  await loadDMConversations();
   renderDMList();
+
   if (targetUser) {
     loadConversation(targetUserId);
   } else if (dmConversations.length > 0) {
-    // Open the most recent conversation
     const mostRecent = dmConversations.sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0))[0];
     if (mostRecent && mostRecent.userId) {
       loadConversation(mostRecent.userId);
@@ -2949,17 +2882,14 @@ await loadDMConversations();
   }
 
   modal.addEventListener('click', e => {
-  // Clicked on overlay (outside inner content)
-  if (e.target === modal) {
-    destroyDM();
-    return;
-  }
-  // Hide sidebar if clicking outside it
-  if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
-    sidebar.classList.remove('show');
-  }
-});
-
+    if (e.target === modal) {
+      destroyDM();
+      return;
+    }
+    if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
+      sidebar.classList.remove('show');
+    }
+  });
 }
     // UI controls
     function showSyncStatus(message, duration = 2000) {
@@ -3305,7 +3235,7 @@ window.resizeMedia = function(mediaId) {
         const div = document.createElement('div');
         div.className = 'image-preview-item';
         div.innerHTML = `
-          <img src="${img.url}" alt="صورة ${index+1}">
+          <img src="${img.url}" loading="lazy" style="width:300px" alt="صورة ${index+1}">
           <button class="image-preview-remove" type="button" onclick="window.removeImage(${index})">×</button>
         `;
         preview.appendChild(div);
@@ -3434,29 +3364,15 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
       }
     });
 
-    // ✅ ADD THIS NEW FUNCTION
-let cachedLikes = {};
-let cachedComments = {};
 
-async function loadAllMetadata() {
-  try {
-    const [likesSnap, commentsSnap] = await Promise.all([
-      get(ref(database, 'likes')),
-      get(ref(database, 'comments'))
-    ]);
 
-    cachedLikes = likesSnap.val() || {};
-    cachedComments = commentsSnap.val() || {};
-  } catch (error) {
-    console.error('Error loading metadata:', error);
-  }
-}
 
 // 🌟 ضيف ده فوق renderPoems()
-let displayedPoems = [];
+// let displayedPoems = [];
 let hasMore = false;
 const INITIAL_LOAD = 15;
-
+let displayedPoems = poems.slice(0, INITIAL_LOAD);
+// Show "Load More" button for rest
 
     async function renderPoems() {
       if (isRendering) return;
@@ -3541,8 +3457,8 @@ if (currentFilteredPoems.length === 0) {
   emptyState.style.display = 'none';
 
   // عرض القصائد الحالية
-  for (const poem of displayedPoems) {
-    const card = document.createElement('div');
+displayedPoems.forEach(poem => {
+const card = document.createElement('div');
     card.className = 'card';
     card.dataset.id = poem.id;
 
@@ -3579,10 +3495,8 @@ if (currentFilteredPoems.length === 0) {
     contentWrap.addEventListener('click', () => openModal(poem));
     card.appendChild(contentWrap);
 
-    poemGrid.appendChild(card);
-
-
-  }
+poemGrid.appendChild(card);
+  });
 
   // ✅ الزر الجديد للتحميل التدريجي - SIMPLIFIED
   if (hasMore) {
@@ -3668,13 +3582,12 @@ loadMoreBtn.onclick = function loadMore() {
 isRendering = false;
 renderTags();
 renderActiveSearchTags();
-  async function getCommentsCount(poemId) {
+function getCommentsCount(poemId) {
   if (cachedComments[poemId]) {
     return Object.keys(cachedComments[poemId]).length;
   }
   return 0;
 }
-
    function getYouTubeEmbedUrl(url) {
   try {
     const urlObj = new URL(url);
@@ -4472,8 +4385,8 @@ window.openModal = async function(poem) {
       const audiosHtml = (poem.audios || []).length > 0
         ? '<div class="media-container"><h4 style="margin-bottom:10px">🎵 الوسائط</h4>' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>' : '';
   // ✅ ADD THESE TWO LINES HERE (before modal.innerHTML):
-  const likesCount = await getLikesCount(poem.id);
-  const userLiked = await isLiked(poem.id);
+const likesCount = getLikesCount(poem.id);
+  const userLiked = isLiked(poem.id);
 
 
         const imagesHtml = (poem.images || []).length > 0
@@ -5135,15 +5048,11 @@ if (chatBtn) {
       if (favoritePoems.length === 0) {
         grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><div>لا توجد قصائد مفضلة</div></div>';
       } else {
-        for (const poem of favoritePoems) {
-          const item = document.createElement('div'); item.className='favorite-item';
-          const likesCount = await getLikesCount(poem.id);
-          item.innerHTML = `
-            <h4 style="margin:0 0 8px 0;color:var(--accent)">${escapeHtml(poem.title)}</h4>
-            <div style="font-size:12px;color:var(--muted)">❤️ ${likesCount}</div>`;
-          item.onclick = () => { modal.remove(); openModal(poem); };
-          grid.appendChild(item);
-        }
+
+// Then use cache:
+function getLikesCount(poemId) {
+  return Object.keys(cachedLikes[poemId] || {}).length;
+}
       }
       modal.querySelector('#closeFavModal').addEventListener('click', () => modal.remove());
       modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
@@ -5444,6 +5353,7 @@ async function init() {
       loadFollowing();
        // Load poems FIRST (critical)
   await loadPoemsFromFirebase();
+
   await loadAllMetadata(); // ✅ ADD THIS LINE
 
   renderPoems(); // Show poems immediately
