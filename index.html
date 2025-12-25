@@ -1272,156 +1272,490 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
     // Helper: Create a fake email for username-based login
     const getEmail = (username) => `${username.toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry.com`;
 
-    // 1. SIGNUP: Create Secure Auth + Database Profile
-    document.getElementById('btnSignup').addEventListener('click', async () => {
-      const username = document.getElementById('signupUsername').value.trim();
-      const password = document.getElementById('signupPassword').value.trim();
-      const emailInput = document.getElementById('signupEmail').value.trim();
-      const bio = document.getElementById('signupBio').value.trim();
+// SIGNUP - Create Firebase Auth + Database profile
+document.getElementById('btnSignup').addEventListener('click', async () => {
+  const username = document.getElementById('signupUsername').value.trim();
+  const password = document.getElementById('signupPassword').value.trim();
+  const emailInput = document.getElementById('signupEmail').value. trim();
+  const bio = document.getElementById('signupBio').value.trim();
 
-      document.getElementById('usernameError').classList.remove('show');
-      document.getElementById('passwordError').classList.remove('show');
+  // Clear previous errors
+  document.getElementById('usernameError').classList.remove('show');
+  document.getElementById('passwordError').classList.remove('show');
+  document.getElementById('usernameError').textContent = '';
+  document.getElementById('passwordError').textContent = '';
 
-      if (!username) { showAlert('⚠️ يرجى إدخال اسم المستخدم'); return; }
-      if (checkUserNameExists(username)) { document.getElementById('usernameError').classList.add('show'); return; }
-      if (!password || password.length < 6) {
-        showAlert('⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (متطلبات الأمان)');
-        return;
-      }
+  // Validate username
+  if (! username) {
+    document.getElementById('usernameError').textContent = '⚠️ يرجى إدخال اسم المستخدم';
+    document.getElementById('usernameError').classList.add('show');
+    document.getElementById('signupUsername').focus();
+    return;
+  }
 
-      const btn = document.getElementById('btnSignup');
-      const originalText = btn.textContent;
-      btn.textContent = 'جاري الإنشاء...';
-      btn.disabled = true;
+  if (username.length < 2) {
+    document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم يجب أن يكون حرفين على الأقل';
+    document.getElementById('usernameError').classList.add('show');
+    document.getElementById('signupUsername').focus();
+    return;
+  }
 
-      try {
-        // A. Create Secure User in Firebase Auth
-        const loginEmail = getEmail(username);
-        const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
-        const firebaseUid = userCredential.user.uid;
+  if (checkUserNameExists(username)) {
+    document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم "' + username + '" موجود بالفعل!  يرجى اختيار اسم آخر. ';
+    document. getElementById('usernameError').classList.add('show');
+    document.getElementById('signupUsername').focus();
+    return;
+  }
 
-        // B. Create Database Profile (Linking to Auth UID)
-        // We keep your old ID format so links don't break
-        const dbId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  // Validate password
+  if (!password) {
+    document.getElementById('passwordError').textContent = '⚠️ يرجى إدخال كلمة المرور';
+    document.getElementById('passwordError').classList.add('show');
+    document.getElementById('signupPassword').focus();
+    return;
+  }
 
-        currentUser = {
-          id: dbId,
-          firebaseUid: firebaseUid, // ✅ The link to security
-          username,
-          // We still store the hash for legacy checks, but Auth handles security now
-          passwordHash: hashPassword(password),
-          email: emailInput || loginEmail,
-          bio,
-          createdAt: new Date().toISOString()
-        };
+  if (password. length < 6) {
+    document. getElementById('passwordError').textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (حالياً: ' + password. length + ' أحرف)';
+    document.getElementById('passwordError').classList.add('show');
+    document.getElementById('signupPassword').focus();
+    return;
+  }
 
-        // Save to Database
-        await set(ref(database, 'users/' + dbId), currentUser);
+  const btn = document.getElementById('btnSignup');
+  const originalText = btn.textContent;
+  btn. textContent = 'جاري الإنشاء...';
+  btn.disabled = true;
 
-        // Save to Local/Memory
-        allUsers.push(currentUser);
-        saveAllUsers();
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+  const loginEmail = `${username. toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry. com`;
 
-        updateOnlineStatus();
-        document.getElementById('authModal').style.display = 'none';
-        showUserInfo();
-        init();
-        showSyncStatus('✅ تم إنشاء الحساب الآمن بنجاح!', 2000);
+  try {
+    // Create Firebase Auth account
+    const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
+    const firebaseUid = userCredential.user.uid;
 
-      } catch (error) {
-        console.error(error);
-        if(error.code === 'auth/email-already-in-use') {
-           showAlert('⚠️ هذا الاسم مسجل بالفعل في النظام الآمن.');
-        } else {
-           showAlert('❌ خطأ في التسجيل: ' + error.message);
-        }
-      } finally {
-        btn.textContent = originalText;
-        btn.disabled = false;
-      }
-    });
+    // Create database ID
+    const dbId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-    // 2. LOGIN: Hybrid Logic (Try Secure -> Fallback to Old -> Migrate)
-    document.getElementById('btnLoginSubmit').addEventListener('click', async () => {
-      if (!selectedUserForLogin) return;
+    // Create user profile
+    currentUser = {
+      id:  dbId,
+      firebaseUid: firebaseUid,
+      username: username,
+      passwordHash: hashPassword(password),
+      email: emailInput || loginEmail,
+      bio: bio,
+      createdAt: new Date().toISOString()
+    };
 
-      const password = document.getElementById('loginPassword').value.trim();
-      const username = selectedUserForLogin.username;
+    // Save to database
+    await set(ref(database, 'users/' + dbId), currentUser);
 
-      document.getElementById('loginPasswordError').classList.remove('show');
-      if (!password) { showAlert('⚠️ يرجى إدخال كلمة المرور'); return; }
+    // Save locally
+    allUsers.push(currentUser);
+    saveAllUsers();
+    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
 
-      const btn = document.getElementById('btnLoginSubmit');
-      btn.textContent = 'جاري التحقق...';
-      btn.disabled = true;
+    updateOnlineStatus();
+    document.getElementById('authModal').style.display = 'none';
+    showUserInfo();
+    init();
 
-      const loginEmail = getEmail(username);
+    showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
+    console.log('✅ New user created with Firebase Auth');
+    console.log('   Database ID:', dbId);
+    console.log('   Firebase UID:', firebaseUid);
 
-      try {
-        // STEP 1: Try to login with Secure Firebase Auth
-        await signInWithEmailAndPassword(auth, loginEmail, password);
+  } catch (error) {
+    console.error('Signup error:', error);
 
-        // If successful, onAuthStateChanged will handle the rest
-        // We just verify the local profile matches
-        console.log("✅ Logged in via Secure Auth");
-        completeLoginFlow(selectedUserForLogin);
-
-      } catch (error) {
-        // STEP 2: Handle Migration (If Auth failed but Old Password is correct)
-        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-
-          // Check the OLD hash
-          if (hashPassword(password) === selectedUserForLogin.passwordHash) {
-             console.log("🔄 Old user detected. Migrating to Secure Auth...");
-
-             try {
-               // Create the Secure Auth Account silently
-               const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
-               const newUid = userCredential.user.uid;
-
-               // Update the existing Database Profile with the new Security UID
-               // This "locks" the profile to this new account
-               await update(ref(database, 'users/' + selectedUserForLogin.id), {
-                 firebaseUid: newUid,
-                 email: loginEmail // Update email to the official one
-               });
-
-               // Update local object
-               selectedUserForLogin.firebaseUid = newUid;
-               completeLoginFlow(selectedUserForLogin);
-               showSyncStatus('🔒 تم تأمين حسابك بنجاح', 3000);
-
-             } catch (migrationError) {
-               // If creation fails (maybe secure account exists but password wrong?)
-               if(migrationError.code === 'auth/email-already-in-use') {
-                 document.getElementById('loginPasswordError').textContent = '⚠️ كلمة المرور غير صحيحة للحساب المؤمن';
-                 document.getElementById('loginPasswordError').classList.add('show');
-               } else {
-                 showAlert('❌ فشل تحديث الأمان: ' + migrationError.message);
-               }
-             }
-          } else {
-            // Both Secure Auth AND Old Hash failed
-            document.getElementById('loginPasswordError').classList.add('show');
-          }
-        } else {
-          showAlert('❌ خطأ في النظام: ' + error.message);
-        }
-      } finally {
-        btn.textContent = 'تسجيل الدخول';
-        btn.disabled = false;
-      }
-    });
-
-    function completeLoginFlow(userData) {
-      currentUser = userData;
-      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-      updateOnlineStatus();
-      document.getElementById('authModal').style.display = 'none';
-      showUserInfo();
-      init();
+    if (error.code === 'auth/email-already-in-use') {
+      document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم "' + username + '" مسجل بالفعل في النظام!  جرب اسم مختلف.';
+      document.getElementById('usernameError').classList.add('show');
+      document.getElementById('signupUsername').focus();
+    } else if (error.code === 'auth/weak-password') {
+      document.getElementById('passwordError').textContent = '⚠️ كلمة المرور ضعيفة جداً - استخدم 6 أحرف على الأقل مع أرقام';
+      document.getElementById('passwordError').classList.add('show');
+      document.getElementById('signupPassword').focus();
+    } else if (error. code === 'auth/invalid-email') {
+      document. getElementById('usernameError').textContent = '⚠️ اسم المستخدم يحتوي على رموز غير مسموحة.  استخدم حروف وأرقام فقط.';
+      document.getElementById('usernameError').classList.add('show');
+      document.getElementById('signupUsername').focus();
+    } else {
+      showAlert('❌ خطأ في التسجيل:  ' + error.message);
     }
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Real-time validation while typing
+document.getElementById('signupUsername').addEventListener('input', function() {
+  const username = this.value.trim();
+  const errorDiv = document.getElementById('usernameError');
+
+  if (! username) {
+    errorDiv.classList.remove('show');
+    return;
+  }
+
+  if (username.length < 2) {
+    errorDiv.textContent = '⚠️ اسم المستخدم قصير جداً (حرفين على الأقل)';
+    errorDiv.classList.add('show');
+  } else if (checkUserNameExists(username)) {
+    errorDiv.textContent = '⚠️ اسم المستخدم "' + username + '" موجود بالفعل! ';
+    errorDiv.classList.add('show');
+  } else {
+    errorDiv.textContent = '✅ اسم المستخدم متاح';
+    errorDiv.style.color = 'var(--success)';
+    errorDiv.classList. add('show');
+    // Reset color after a moment
+    setTimeout(() => {
+      errorDiv.style.color = '';
+      if (errorDiv.textContent. includes('✅')) {
+        errorDiv.classList. remove('show');
+      }
+    }, 2000);
+  }
+});
+
+document.getElementById('signupPassword').addEventListener('input', function() {
+  const password = this. value.trim();
+  const errorDiv = document.getElementById('passwordError');
+
+  if (!password) {
+    errorDiv.classList.remove('show');
+    return;
+  }
+
+  if (password.length < 6) {
+    errorDiv.textContent = '⚠️ كلمة المرور قصيرة (' + password.length + '/6 أحرف)';
+    errorDiv.classList. add('show');
+  } else {
+    errorDiv. textContent = '✅ كلمة المرور مقبولة (' + password.length + ' أحرف)';
+    errorDiv.style.color = 'var(--success)';
+    errorDiv.classList. add('show');
+    // Reset color after a moment
+    setTimeout(() => {
+      errorDiv.style.color = '';
+      if (errorDiv.textContent.includes('✅')) {
+        errorDiv.classList. remove('show');
+      }
+    }, 2000);
+  }
+});
+
+// LOGIN - Auto-migrate anonymous users to Firebase Auth
+document.getElementById('btnLoginSubmit').addEventListener('click', async () => {
+  if (! selectedUserForLogin) return;
+
+  const password = document.getElementById('loginPassword').value.trim();
+  const username = selectedUserForLogin.username;
+
+  document.getElementById('loginPasswordError').classList.remove('show');
+
+  if (! password) {
+    showAlert('⚠️ يرجى إدخال كلمة المرور');
+    return;
+  }
+
+  const btn = document.getElementById('btnLoginSubmit');
+  const originalText = btn.textContent;
+  btn.textContent = 'جاري التحقق...';
+  btn.disabled = true;
+
+  const loginEmail = `${username. toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry.com`;
+
+  try {
+    // CASE 1: User already has Firebase Auth - try to sign in
+    if (selectedUserForLogin.firebaseUid) {
+      try {
+        await signInWithEmailAndPassword(auth, loginEmail, password);
+        console.log('✅ Signed in with existing Firebase Auth');
+        completeLogin(selectedUserForLogin);
+      } catch (signInError) {
+        console.log('Sign in error:', signInError. code);
+        document.getElementById('loginPasswordError').classList.add('show');
+      }
+      btn.textContent = originalText;
+      btn.disabled = false;
+      return;
+    }
+
+    // CASE 2: User doesn't have Firebase Auth yet - verify old password first
+    const passwordMatches = hashPassword(password) === selectedUserForLogin. passwordHash;
+
+    if (! passwordMatches) {
+      document.getElementById('loginPasswordError').classList.add('show');
+      btn.textContent = originalText;
+      btn. disabled = false;
+      return;
+    }
+
+    // Password correct!
+    console.log('✅ Old password verified correctly');
+
+    // Reset button state
+    btn.textContent = originalText;
+    btn.disabled = false;
+
+    // Check if password is long enough for Firebase Auth
+    if (password.length < 6) {
+      console.log('⚠️ Password too short, showing update prompt');
+      // Password too short - prompt to update
+      promptPasswordUpdate(selectedUserForLogin, loginEmail, password);
+      return;
+    }
+
+    // Password is 6+ chars - create Firebase Auth
+    btn.textContent = 'جاري التأمين...';
+    btn.disabled = true;
+
+    console.log('🔄 Creating Firebase Auth for user:', username);
+
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
+      const newUid = userCredential.user.uid;
+
+      await update(ref(database, `users/${selectedUserForLogin.id}`), {
+        firebaseUid:  newUid
+      });
+
+      selectedUserForLogin.firebaseUid = newUid;
+
+      const userIndex = allUsers.findIndex(u => u.id === selectedUserForLogin. id);
+      if (userIndex > -1) {
+        allUsers[userIndex].firebaseUid = newUid;
+        saveAllUsers();
+      }
+
+      console. log('✅ Firebase Auth created and linked! ');
+      showSyncStatus('🔒 تم تأمين حسابك! ', 3000);
+      completeLogin(selectedUserForLogin);
+
+    } catch (authError) {
+      console.log('Auth creation error:', authError. code);
+
+      if (authError.code === 'auth/email-already-in-use') {
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
+          await update(ref(database, `users/${selectedUserForLogin.id}`), {
+            firebaseUid:  userCredential.user.uid
+          });
+          selectedUserForLogin.firebaseUid = userCredential.user. uid;
+          console.log('✅ Existing Auth account linked! ');
+          completeLogin(selectedUserForLogin);
+        } catch (signInError) {
+          document.getElementById('loginPasswordError').classList.add('show');
+        }
+      } else {
+        showAlert('❌ خطأ:  ' + authError. message);
+      }
+    }
+
+  } catch (error) {
+    console. error('Login error:', error);
+    showAlert('❌ خطأ في تسجيل الدخول');
+  } finally {
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+});
+
+// Password Update Prompt Function
+function promptPasswordUpdate(user, loginEmail, oldPassword) {
+  // Hide auth modal temporarily
+  document.getElementById('authModal').style.display = 'none';
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.id = 'passwordUpdateModal';
+  modal.style.display = 'flex';
+
+  modal.innerHTML = `
+    <div style="background: var(--card);border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 50px rgba(0,0,0,0.3);border:1px solid var(--border)">
+      <h3 style="margin: 0 0 15px 0;color:var(--accent);font-size:20px">🔒 تحديث كلمة المرور</h3>
+
+      <div style="background:rgba(255,193,7,0.15);border:1px solid #ffc107;border-radius:8px;padding:12px;margin-bottom:15px">
+        <p style="margin:0;font-size:14px;color:var(--text);line-height:1.6">
+          ⚠️ <strong>كلمة المرور الحالية قصيرة جداً</strong>
+          <br><br>
+          لتأمين حسابك، يرجى إنشاء كلمة مرور جديدة تحتوي على <strong style="color:var(--brown)">6 أحرف على الأقل</strong>
+        </p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div>
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">كلمة المرور الجديدة *</label>
+          <input type="password" id="newPassword" placeholder="أدخل كلمة مرور جديدة (6 أحرف على الأقل)"
+            style="width:100%;padding:12px;border-radius:8px;border:1.5px solid var(--border);font-size:14px;box-sizing:border-box">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">💡 مثال: mody123 أو password1</div>
+        </div>
+
+        <div>
+          <label style="font-size:13px;font-weight:600;display: block;margin-bottom:4px">تأكيد كلمة المرور *</label>
+          <input type="password" id="confirmPassword" placeholder="أعد إدخال كلمة المرور الجديدة"
+            style="width:100%;padding:12px;border-radius:8px;border:1.5px solid var(--border);font-size:14px;box-sizing:border-box">
+        </div>
+
+        <div id="passwordUpdateError" style="display:none;color:#dc3545;font-size:13px;padding:10px;background:rgba(220,53,69,0.1);border-radius:6px;border:1px solid rgba(220,53,69,0.3)"></div>
+
+        <div style="display:flex;gap:10px;margin-top:15px">
+          <button class="btn" id="skipPasswordUpdate" style="flex:1;padding: 12px">⏭️ تخطي الآن</button>
+          <button class="btn btn-primary" id="confirmPasswordUpdate" style="flex:1;padding: 12px">🔒 تحديث وتأمين</button>
+        </div>
+
+        <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:5px">
+          يمكنك تخطي هذه الخطوة والتحديث لاحقاً من إعدادات الملف الشخصي
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const newPasswordInput = modal.querySelector('#newPassword');
+  const confirmPasswordInput = modal. querySelector('#confirmPassword');
+  const errorDiv = modal.querySelector('#passwordUpdateError');
+
+  // Focus on new password input
+  setTimeout(() => newPasswordInput.focus(), 100);
+
+  // Skip button - login with old system
+  modal.querySelector('#skipPasswordUpdate').addEventListener('click', () => {
+    modal.remove();
+    console.log('⚠️ User skipped password update, using old system');
+    showSyncStatus('تم الدخول - يمكنك تحديث كلمة المرور لاحقاً', 3000);
+    completeLogin(user);
+  });
+
+  // Confirm button - update password and create Firebase Auth
+  modal.querySelector('#confirmPasswordUpdate').addEventListener('click', async () => {
+    const newPassword = newPasswordInput.value.trim();
+    const confirmPassword = confirmPasswordInput. value.trim();
+
+    // Hide previous error
+    errorDiv.style.display = 'none';
+
+    // Validation
+    if (!newPassword) {
+      errorDiv.textContent = '⚠️ يرجى إدخال كلمة المرور الجديدة';
+      errorDiv.style. display = 'block';
+      newPasswordInput.focus();
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      errorDiv.textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (حالياً: ' + newPassword. length + ' أحرف)';
+      errorDiv.style.display = 'block';
+      newPasswordInput. focus();
+      return;
+    }
+
+    if (! confirmPassword) {
+      errorDiv.textContent = '⚠️ يرجى تأكيد كلمة المرور';
+      errorDiv. style.display = 'block';
+      confirmPasswordInput.focus();
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      errorDiv.textContent = '⚠️ كلمة المرور غير متطابقة';
+      errorDiv. style.display = 'block';
+      confirmPasswordInput.focus();
+      return;
+    }
+
+    const confirmBtn = modal.querySelector('#confirmPasswordUpdate');
+    const skipBtn = modal. querySelector('#skipPasswordUpdate');
+    const originalText = confirmBtn.textContent;
+    confirmBtn. textContent = 'جاري التحديث...';
+    confirmBtn.disabled = true;
+    skipBtn.disabled = true;
+
+    try {
+      console.log('🔄 Creating Firebase Auth with new password.. .');
+
+      // Create Firebase Auth with new password
+      const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, newPassword);
+      const newUid = userCredential.user.uid;
+
+      console.log('✅ Firebase Auth created, UID:', newUid);
+
+      // Update user data
+      user.firebaseUid = newUid;
+      user.passwordHash = hashPassword(newPassword);
+
+      // Save to Firebase Database
+      await update(ref(database, `users/${user.id}`), {
+        firebaseUid:  newUid,
+        passwordHash:  user.passwordHash
+      });
+
+      console.log('✅ User data saved to Firebase');
+
+      // Update local data
+      const userIndex = allUsers.findIndex(u => u.id === user.id);
+      if (userIndex > -1) {
+        allUsers[userIndex]. firebaseUid = newUid;
+        allUsers[userIndex]. passwordHash = user. passwordHash;
+        saveAllUsers();
+      }
+
+      console.log('✅ Password updated and Firebase Auth created!');
+
+      modal.remove();
+      showSyncStatus('🔒 تم تحديث كلمة المرور وتأمين الحساب!', 3000);
+      completeLogin(user);
+
+    } catch (error) {
+      console.error('Password update error:', error);
+
+      if (error.code === 'auth/email-already-in-use') {
+        // Firebase Auth already exists - try to sign in with new password
+        errorDiv.textContent = '⚠️ يوجد حساب بهذا الاسم.  جرب كلمة مرور مختلفة أو اضغط "تخطي"';
+        errorDiv.style.display = 'block';
+      } else if (error.code === 'auth/weak-password') {
+        errorDiv.textContent = '⚠️ كلمة المرور ضعيفة جداً. استخدم أحرف وأرقام. ';
+        errorDiv.style.display = 'block';
+      } else {
+        errorDiv.textContent = '❌ خطأ: ' + error.message;
+        errorDiv.style. display = 'block';
+      }
+
+      confirmBtn.textContent = originalText;
+      confirmBtn.disabled = false;
+      skipBtn.disabled = false;
+    }
+  });
+
+  // Enter key support
+  newPasswordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      confirmPasswordInput.focus();
+    }
+  });
+
+  confirmPasswordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      modal.querySelector('#confirmPasswordUpdate').click();
+    }
+  });
+}
+
+
+
+// Helper function to complete login
+function completeLogin(userData) {
+  currentUser = userData;
+  localStorage.setItem(USER_KEY, JSON. stringify(currentUser));
+  updateOnlineStatus();
+  document.getElementById('authModal').style.display = 'none';
+  showUserInfo();
+  init();
+  showSyncStatus('✅ تم تسجيل الدخول', 2000);
+}
 
     // 3. LOGOUT
     document.getElementById('btnLogout').addEventListener('click', () => {
@@ -5471,35 +5805,7 @@ console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.i
       document.getElementById('loginPasswordError').classList.remove('show');
     });
 
-    document.getElementById('btnSignup').addEventListener('click', async () => {
-      const username = document.getElementById('signupUsername').value.trim();
-      const password = document.getElementById('signupPassword').value.trim();
-      const email = document.getElementById('signupEmail').value.trim();
-      const bio = document.getElementById('signupBio').value.trim();
-      document.getElementById('usernameError').classList.remove('show');
-      document.getElementById('passwordError').classList.remove('show');
-      if (!username) { showAlert('⚠️ يرجى إدخال اسم المستخدم'); return; }
-      if (!password || password.length < 4) { document.getElementById('passwordError').classList.add('show'); return; }
-      if (checkUserNameExists(username)) { document.getElementById('usernameError').classList.add('show'); return; }
-      currentUser = { id: Date.now() + '_' + Math.random().toString(36).substr(2, 9), username, passwordHash: hashPassword(password), email, bio, createdAt: new Date().toISOString() };
-      allUsers.push(currentUser); saveAllUsers(); localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-      await saveUserToFirebase();
-            updateOnlineStatus();
 
-      document.getElementById('authModal').style.display = 'none';
-      showUserInfo(); init(); showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
-    });
-    document.getElementById('btnLoginSubmit').addEventListener('click', () => {
-      const password = document.getElementById('loginPassword').value.trim();
-      document.getElementById('loginPasswordError').classList.remove('show');
-      if (!password) { showAlert('⚠️ يرجى إدخال كلمة المرور'); return; }
-      if (hashPassword(password) !== selectedUserForLogin.passwordHash) { document.getElementById('loginPasswordError').classList.add('show'); return; }
-      currentUser = selectedUserForLogin; localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-            updateOnlineStatus();
-
-      document.getElementById('authModal').style.display = 'none';
-      showUserInfo(); init(); showSyncStatus('✅ تم تسجيل الدخول بنجاح!', 2000);
-    });
     document.getElementById('loginPassword').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('btnLoginSubmit').click(); });
 
     function checkAuth() {
@@ -5616,11 +5922,7 @@ async function init() {
   updateOnlineStatus();
       // Request notification permission on first login
       const hasPermission = await requestNotificationPermission();
-      if (hasPermission) {
-        console.log('✅ Notification permission granted');
-      } else {
-        console.log('⚠️ Notification permission denied or not supported');
-      }
+
 
        loadHiddenPoems();
       loadFavorites();
