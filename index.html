@@ -1256,7 +1256,35 @@ but dont alter the code of messge date
       messagingSenderId: "805060440847",
       appId: "1:805060440847:web:bc4f89cd351c9c244f447a"
     });
+// Add Firebase Auth
+import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
+const auth = getAuth(app);
+let firebaseAuthUser = null;
+
+// Authenticate with Firebase before loading data
+async function authenticateFirebase() {
+  try {
+    // Sign in anonymously to get Firebase auth
+    const userCredential = await signInAnonymously(auth);
+    firebaseAuthUser = userCredential.user;
+    console.log('✅ Firebase authenticated:', firebaseAuthUser.uid);
+    return true;
+  } catch (error) {
+    console.error('❌ Firebase auth failed:', error);
+    return false;
+  }
+}
+
+// Listen for auth state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    firebaseAuthUser = user;
+    console.log('🔐 Firebase user:', user.uid);
+  } else {
+    console.log('👤 No Firebase auth');
+  }
+});
     const database = getDatabase(app);
    //const storage = getStorage(app);
     const messaging = getMessaging(app);
@@ -5335,6 +5363,12 @@ async function init() {
   const poemGrid = document.getElementById('poemGrid');
   poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...';
 
+ // ✅ AUTHENTICATE FIRST
+  const authenticated = await authenticateFirebase();
+  if (!authenticated) {
+    showAlert('❌ فشل الاتصال بالخادم. يرجى إعادة المحاولة.');
+    return;
+  }
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
