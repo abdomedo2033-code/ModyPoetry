@@ -1242,12 +1242,13 @@ but dont alter the code of messge date
 
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
   <script type="module">
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
-   // import { getStorage, ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject, listAll } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getDatabase, ref, set, get, update, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
     import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js';
+    // ✅ ADDED: Secure Authentication Imports
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-  const app = initializeApp({
+    const app = initializeApp({
       apiKey: "AIzaSyANYJJ3gTxEgeaj731npdx37OHd4Xf3t70",
       authDomain: "modypoems.firebaseapp.com",
       databaseURL: "https://modypoems-default-rtdb.firebaseio.com",
@@ -1256,38 +1257,206 @@ but dont alter the code of messge date
       messagingSenderId: "805060440847",
       appId: "1:805060440847:web:bc4f89cd351c9c244f447a"
     });
-// Add Firebase Auth
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
-const auth = getAuth(app);
-let firebaseAuthUser = null;
-
-// Authenticate with Firebase before loading data
-async function authenticateFirebase() {
-  try {
-    // Sign in anonymously to get Firebase auth
-    const userCredential = await signInAnonymously(auth);
-    firebaseAuthUser = userCredential.user;
-    console.log('✅ Firebase authenticated:', firebaseAuthUser.uid);
-    return true;
-  } catch (error) {
-    console.error('❌ Firebase auth failed:', error);
-    return false;
-  }
-}
-
-// Listen for auth state changes
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    firebaseAuthUser = user;
-    console.log('🔐 Firebase user:', user.uid);
-  } else {
-    console.log('👤 No Firebase auth');
-  }
-});
     const database = getDatabase(app);
-   //const storage = getStorage(app);
+    const auth = getAuth(app); // ✅ Secure Auth Instance
     const messaging = getMessaging(app);
+
+    // ... (Keep your Cloudinary & Variables config here) ...
+    // ... (Keep updateOnlineStatus and isUserOnline functions here) ...
+
+    // ==========================================
+    // 🔐 SECURE AUTHENTICATION & MIGRATION LOGIC
+    // ==========================================
+
+    // Helper: Create a fake email for username-based login
+    const getEmail = (username) => `${username.toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry.com`;
+
+    // 1. SIGNUP: Create Secure Auth + Database Profile
+    document.getElementById('btnSignup').addEventListener('click', async () => {
+      const username = document.getElementById('signupUsername').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+      const emailInput = document.getElementById('signupEmail').value.trim();
+      const bio = document.getElementById('signupBio').value.trim();
+
+      document.getElementById('usernameError').classList.remove('show');
+      document.getElementById('passwordError').classList.remove('show');
+
+      if (!username) { showAlert('⚠️ يرجى إدخال اسم المستخدم'); return; }
+      if (checkUserNameExists(username)) { document.getElementById('usernameError').classList.add('show'); return; }
+      if (!password || password.length < 6) {
+        showAlert('⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (متطلبات الأمان)');
+        return;
+      }
+
+      const btn = document.getElementById('btnSignup');
+      const originalText = btn.textContent;
+      btn.textContent = 'جاري الإنشاء...';
+      btn.disabled = true;
+
+      try {
+        // A. Create Secure User in Firebase Auth
+        const loginEmail = getEmail(username);
+        const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
+        const firebaseUid = userCredential.user.uid;
+
+        // B. Create Database Profile (Linking to Auth UID)
+        // We keep your old ID format so links don't break
+        const dbId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        currentUser = {
+          id: dbId,
+          firebaseUid: firebaseUid, // ✅ The link to security
+          username,
+          // We still store the hash for legacy checks, but Auth handles security now
+          passwordHash: hashPassword(password),
+          email: emailInput || loginEmail,
+          bio,
+          createdAt: new Date().toISOString()
+        };
+
+        // Save to Database
+        await set(ref(database, 'users/' + dbId), currentUser);
+
+        // Save to Local/Memory
+        allUsers.push(currentUser);
+        saveAllUsers();
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+
+        updateOnlineStatus();
+        document.getElementById('authModal').style.display = 'none';
+        showUserInfo();
+        init();
+        showSyncStatus('✅ تم إنشاء الحساب الآمن بنجاح!', 2000);
+
+      } catch (error) {
+        console.error(error);
+        if(error.code === 'auth/email-already-in-use') {
+           showAlert('⚠️ هذا الاسم مسجل بالفعل في النظام الآمن.');
+        } else {
+           showAlert('❌ خطأ في التسجيل: ' + error.message);
+        }
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    // 2. LOGIN: Hybrid Logic (Try Secure -> Fallback to Old -> Migrate)
+    document.getElementById('btnLoginSubmit').addEventListener('click', async () => {
+      if (!selectedUserForLogin) return;
+
+      const password = document.getElementById('loginPassword').value.trim();
+      const username = selectedUserForLogin.username;
+
+      document.getElementById('loginPasswordError').classList.remove('show');
+      if (!password) { showAlert('⚠️ يرجى إدخال كلمة المرور'); return; }
+
+      const btn = document.getElementById('btnLoginSubmit');
+      btn.textContent = 'جاري التحقق...';
+      btn.disabled = true;
+
+      const loginEmail = getEmail(username);
+
+      try {
+        // STEP 1: Try to login with Secure Firebase Auth
+        await signInWithEmailAndPassword(auth, loginEmail, password);
+
+        // If successful, onAuthStateChanged will handle the rest
+        // We just verify the local profile matches
+        console.log("✅ Logged in via Secure Auth");
+        completeLoginFlow(selectedUserForLogin);
+
+      } catch (error) {
+        // STEP 2: Handle Migration (If Auth failed but Old Password is correct)
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+
+          // Check the OLD hash
+          if (hashPassword(password) === selectedUserForLogin.passwordHash) {
+             console.log("🔄 Old user detected. Migrating to Secure Auth...");
+
+             try {
+               // Create the Secure Auth Account silently
+               const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
+               const newUid = userCredential.user.uid;
+
+               // Update the existing Database Profile with the new Security UID
+               // This "locks" the profile to this new account
+               await update(ref(database, 'users/' + selectedUserForLogin.id), {
+                 firebaseUid: newUid,
+                 email: loginEmail // Update email to the official one
+               });
+
+               // Update local object
+               selectedUserForLogin.firebaseUid = newUid;
+               completeLoginFlow(selectedUserForLogin);
+               showSyncStatus('🔒 تم تأمين حسابك بنجاح', 3000);
+
+             } catch (migrationError) {
+               // If creation fails (maybe secure account exists but password wrong?)
+               if(migrationError.code === 'auth/email-already-in-use') {
+                 document.getElementById('loginPasswordError').textContent = '⚠️ كلمة المرور غير صحيحة للحساب المؤمن';
+                 document.getElementById('loginPasswordError').classList.add('show');
+               } else {
+                 showAlert('❌ فشل تحديث الأمان: ' + migrationError.message);
+               }
+             }
+          } else {
+            // Both Secure Auth AND Old Hash failed
+            document.getElementById('loginPasswordError').classList.add('show');
+          }
+        } else {
+          showAlert('❌ خطأ في النظام: ' + error.message);
+        }
+      } finally {
+        btn.textContent = 'تسجيل الدخول';
+        btn.disabled = false;
+      }
+    });
+
+    function completeLoginFlow(userData) {
+      currentUser = userData;
+      localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+      updateOnlineStatus();
+      document.getElementById('authModal').style.display = 'none';
+      showUserInfo();
+      init();
+    }
+
+    // 3. LOGOUT
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      showConfirm('هل تريد تسجيل الخروج؟', async () => {
+        await signOut(auth); // Sign out from Firebase
+        localStorage.removeItem(USER_KEY);
+        location.reload();
+      });
+    });
+
+    // 4. AUTH STATE LISTENER (Keeps user logged in)
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is securely logged in.
+        // We need to find which DB profile belongs to them.
+        if (!currentUser) {
+           // Try to find user by firebaseUid in the loaded users list
+           const foundUser = allUsers.find(u => u.firebaseUid === user.uid);
+           if (foundUser) {
+             currentUser = foundUser;
+             showUserInfo();
+             updateOnlineStatus();
+           } else {
+             // Fallback to local storage if allUsers isn't loaded yet
+             checkAuth();
+           }
+        }
+      }
+    });
+
+    // ... (Rest of your code: checkAuth, etc.) ...
+// Authenticate with Firebase before loading data
+
+
+
 // ========================
 // Cloudinary Configuration
 // ========================
@@ -1684,7 +1853,11 @@ function showBrowserNotification(title, body, data = {}) {
   try {
     const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
+
     // حفظ في Database
+
+
+
     await set(ref(database, `notifications/${userId}/${notifId}`), {
       ...notification,
       id: notifId,
@@ -2206,22 +2379,55 @@ function setupDMScrollListener(messagesEl, convId, withUser) {
 }
     // Global DM list renderer - will be set when modal opens
     let globalRenderDMList = null;
+async function loadDMConversations() {
+  if (!currentUser) return [];
 
-    function loadDMConversations() {
-      if (!currentUser) return;
-      const convRef = ref(database, `dm_conversations/${currentUser.id}`);
-      onValue(convRef, (snapshot) => {
-        dmConversations = snapshot.exists() ? Object.values(snapshot.val()) : [];
+  try {
+    // ✅ Load data ONCE first
+    const snapshot = await get(ref(database, `dm_conversations/${currentUser.id}`));
+
+    if (snapshot.exists()) {
+      const allConvs = Object.values(snapshot.val());
+
+      // ✅ Filter out conversations with missing users
+      dmConversations = allConvs.filter(conv => {
+        const userExists = allUsers.find(u => u.id === conv.userId);
+        if (!userExists) {
+          console.warn('⚠️ Removing invalid conversation:', conv.userId);
+          // Remove from database
+          set(ref(database, `dm_conversations/${currentUser.id}/${conv.id}`), null)
+            .catch(err => console.error('Failed to remove invalid conversation:', err));
+          return false;
+        }
+        return true;
+      });
+    } else {
+      dmConversations = [];
+    }
+    updateDMBadge();
+
+    // ✅ Then setup listener for updates
+    const convRef = ref(database, `dm_conversations/${currentUser.id}`);
+    onValue(convRef, (snapshot) => {
+      if (snapshot.exists()) {
+        dmConversations = Object.values(snapshot.val());
         updateDMBadge();
 
-        // If DM modal is open and renderer is available, refresh the list
+        // Refresh list if modal is open
         const dmModal = document.querySelector('.dm-modal');
         if (dmModal && typeof globalRenderDMList === 'function') {
           globalRenderDMList();
         }
-      });
-    }
+      }
+    });
 
+    return dmConversations;
+
+  } catch (error) {
+    console.error('Error loading DM conversations:', error);
+    return [];
+  }
+}
     function updateDMBadge() {
       const badge = document.getElementById('dmBadge');
       const unread = dmConversations.filter(c => c.unreadCount && c.unreadCount > 0).length;
@@ -2395,76 +2601,92 @@ modal.innerHTML = `
     }
   }
 
-  function renderDMList() {
-    globalRenderDMList = renderDMList;
-    listEl.innerHTML = '';
-    const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
-    conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
+ function renderDMList() {
+  globalRenderDMList = renderDMList;
+  listEl.innerHTML = '';
 
-    if (sorted.length === 0) {
-      listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
-      return;
+  if (!dmConversations || dmConversations.length === 0) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
+    conversationsCount.textContent = '';
+    return;
+  }
+
+  const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+  conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
+
+ sorted.forEach(conv => {
+    // ✅ FIX: Find user properly
+    const user = allUsers.find(u => u.id === conv.userId);
+
+    // ✅ Skip if user not found (using return in forEach continues to next item)
+    if (!user) {
+      console.warn('⚠️ Skipping conversation - user not found:', conv.userId);
+      return; // This just skips this iteration, doesn't stop the loop
     }
 
-    sorted.forEach(conv => {
-      const user = allUsers.find(u => u.id === conv.userId);
-      const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`;
-      const item = document.createElement('div');
-      item.className = 'dm-list-item';
-      item.innerHTML = `
-        <div class="avatar-container">
-          <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
-          <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
-        </div>
-        <div style="flex:1">
-          <div style="font-weight:700;color:var(--accent)">${escapeHtml(user?.username||'مستخدم')}</div>
-          <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
-        </div>
-        ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
-      `;
-      listEl.appendChild(item);
-      item.onclick = () => {
-        loadConversation(conv.userId);
-        sidebar.classList.remove('show');
-      };
+    const username = user.username || 'مستخدم';
+    const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=8b5e3c&color=fff&size=32`;
 
-      (async function checkStatus() {
-        const statusSnapshot = await get(ref(database, `user_status/${conv.userId}`));
+    const item = document.createElement('div');
+    item.className = 'dm-list-item';
+    item.innerHTML = `
+      <div class="avatar-container">
+        <img src="${avatarUrl}" class="avatar-small" alt="${escapeHtml(username)}">
+        <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--accent)">${escapeHtml(username)}</div>
+        <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
+      </div>
+      ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
+    `;
+
+    listEl.appendChild(item);
+
+    item.onclick = () => {
+      loadConversation(conv.userId);
+      sidebar.classList.remove('show');
+    };
+
+    // Check online status
+    (async function checkStatus() {
+      const statusSnapshot = await get(ref(database, `user_status/${conv.userId}`));
+      const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+      if (!indicator) return;
+
+      if (statusSnapshot.exists()) {
+        const status = statusSnapshot.val();
+        const lastChanged = new Date(status.last_changed);
+        const now = new Date();
+        const diffMinutes = (now - lastChanged) / 1000 / 60;
+        const isOnline = status.state === 'online' && diffMinutes < 2;
+        indicator.classList.toggle('offline', !isOnline);
+      } else {
+        indicator.classList.add('offline');
+      }
+    })();
+
+    // Setup realtime status listener
+    setTimeout(() => {
+      const statusRef = ref(database, `user_status/${conv.userId}`);
+      onValue(statusRef, (snapshot) => {
         const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
         if (!indicator) return;
-        if (statusSnapshot.exists()) {
-          const status = statusSnapshot.val();
+
+        if (snapshot.exists()) {
+          const status = snapshot.val();
           const lastChanged = new Date(status.last_changed);
           const now = new Date();
           const diffMinutes = (now - lastChanged) / 1000 / 60;
           const isOnline = status.state === 'online' && diffMinutes < 2;
           indicator.classList.toggle('offline', !isOnline);
+        } else {
+          indicator.classList.add('offline');
         }
-      })();
-
-      setTimeout(() => {
-        const statusRef = ref(database, `user_status/${conv.userId}`);
-        onValue(statusRef, (snapshot) => {
-          const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
-          if (!indicator) return;
-          if (snapshot.exists()) {
-            const status = snapshot.val();
-            const lastChanged = new Date(status.last_changed);
-            const now = new Date();
-            const diffMinutes = (now - lastChanged) / 1000 / 60;
-            const isOnline = status.state === 'online' && diffMinutes < 2;
-            if (isOnline) {
-              indicator.classList.remove('offline');
-            } else {
-              indicator.classList.add('offline');
-            }
-          } else {
-            indicator.classList.add('offline');
-          }
-        });
-      }, 100);
-    });
-  }
+      });
+    }, 100);
+  });
+}
 
   async function loadConversation(withUserId) {
     await ensureConversationMeta(withUserId);
@@ -2897,18 +3119,41 @@ modal.innerHTML = `
     destroyDM();
   });
 
-  await loadDMConversations();
-  renderDMList();
+ // ✅ NEW CODE:
+// Load conversations and wait for data
+const conversations = await loadDMConversations();
 
-  if (targetUser) {
-    loadConversation(targetUserId);
-  } else if (dmConversations.length > 0) {
-    const mostRecent = dmConversations.sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0))[0];
-    if (mostRecent && mostRecent.userId) {
-      loadConversation(mostRecent.userId);
-    }
+// Small delay to ensure UI is ready
+await new Promise(resolve => setTimeout(resolve, 150));
+
+// Render the list
+renderDMList();
+
+// Auto-open conversation
+if (targetUserId) {
+  // Direct target provided
+  const targetExists = allUsers.find(u => u.id === targetUserId);
+  if (targetExists) {
+    await ensureConversationMeta(targetUserId);
+    await loadConversation(targetUserId);
+  } else {
+    headerEl.innerHTML = '<span class="muted">⚠️ المستخدم غير موجود</span>';
   }
+} else if (conversations && conversations.length > 0) {
+  // Load most recent conversation
+  const sorted = [...conversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+  const mostRecent = sorted[0];
 
+  if (mostRecent && mostRecent.userId) {
+    await loadConversation(mostRecent.userId);
+  } else {
+    headerEl.innerHTML = '<span class="muted">👋 اختر محادثة من القائمة</span>';
+  }
+} else {
+  // No conversations yet
+  headerEl.innerHTML = '<span class="muted">💬 ابدأ محادثة جديدة</span>';
+  messagesEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">📭 لا توجد محادثات بعد<br><br>استخدم زر "بدء" للبحث عن مستخدم</div>';
+}
   modal.addEventListener('click', e => {
     if (e.target === modal) {
       destroyDM();
@@ -5363,12 +5608,7 @@ async function init() {
   const poemGrid = document.getElementById('poemGrid');
   poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...';
 
- // ✅ AUTHENTICATE FIRST
-  const authenticated = await authenticateFirebase();
-  if (!authenticated) {
-    showAlert('❌ فشل الاتصال بالخادم. يرجى إعادة المحاولة.');
-    return;
-  }
+
       loadAllUsers();
       await loadAllUsersFromFirebase();
       if (!checkAuth()) return;
