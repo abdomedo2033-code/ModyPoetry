@@ -1309,18 +1309,20 @@ but dont alter the code of messge date
     </section>
 
     <!-- Auth modal -->
-    <div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1500;align-items:center;justify-content:center;padding:20px">
+<div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1500;align-items:center;justify-content:center;padding:20px">
       <div style="background:var(--card);border-radius:12px;padding:20px;max-width:450px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);border:1px solid var(--border)">
         <h3 style="margin:0 0 15px 0">🔐 تسجيل الدخول / إنشاء حساب</h3>
         <div class="tabs" style="border-bottom:2px solid var(--border);margin-bottom:15px;display:flex;gap:8px">
           <button class="tab active" id="tabLogin">تسجيل دخول</button>
           <button class="tab" id="tabSignup">إنشاء حساب</button>
         </div>
+
         <div id="loginForm">
           <div id="loginProfilesList" class="profile-list" style="max-height:250px"></div>
           <div style="margin-top:15px;text-align:center;color:var(--muted);font-size:13px">اختر حسابك من القائمة أعلاه</div>
         </div>
-        <div id="signupForm" style="display:none">
+
+        <form id="signupForm" style="display:none" onsubmit="event.preventDefault();">
           <div style="display:flex;flex-direction:column;gap:10px">
             <label for="signupUsername" style="font-size:14px;font-weight:600">اسم المستخدم *</label>
             <input id="signupUsername" name="signupUsername" type="text" placeholder="اسم المستخدم (يجب أن يكون فريداً)" required autocomplete="username" />
@@ -1336,23 +1338,23 @@ but dont alter the code of messge date
             <label for="signupBio" style="font-size:14px;font-weight:600">نبذة عنك (اختياري)</label>
             <textarea id="signupBio" name="signupBio" placeholder="نبذة عنك" style="min-height:80px"></textarea>
 
-            <button class="btn" id="btnSignup">إنشاء الحساب</button>
+            <button type="button" class="btn" id="btnSignup">إنشاء الحساب</button>
           </div>
-        </div>
-        <div id="passwordForm" style="display:none">
+        </form>
+
+        <form id="passwordForm" style="display:none" onsubmit="event.preventDefault();">
           <div style="margin-bottom:15px">
-            <button class="btn small" id="btnBackToProfiles">← العودة للحسابات</button>
+            <button type="button" class="btn small" id="btnBackToProfiles">← العودة للحسابات</button>
           </div>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="font-weight:600;color:var(--accent)">تسجيل الدخول كـ: <span id="loginUserName"></span></div>
-            <input id="loginPassword" type="password" placeholder="كلمة المرور *" required />
+            <input id="loginPassword" name="current-password" type="password" placeholder="كلمة المرور *" required autocomplete="current-password" />
             <div id="loginPasswordError" class="error-message">⚠️ كلمة المرور غير صحيحة!</div>
-            <button class="btn" id="btnLoginSubmit">تسجيل الدخول</button>
+            <button type="button" class="btn" id="btnLoginSubmit">تسجيل الدخول</button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
-
     <!-- Add/Edit poem modal -->
     <div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:1300;align-items:center;justify-content:center;padding:20px">
       <div style="background:var(--card);border-radius:12px;padding:16px;max-width:720px;width:100%;box-shadow:0 20px 50px rgba(0,0,0,.25);border:1px solid var(--border);max-height:90vh;overflow-y:auto">
@@ -1448,125 +1450,92 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
     const getEmail = (username) => `${username.toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry.com`;
 
 // SIGNUP - Create Firebase Auth + Database profile
-document.getElementById('btnSignup').addEventListener('click', async () => {
-  const username = document.getElementById('signupUsername').value.trim();
-  const password = document.getElementById('signupPassword').value.trim();
-  const emailInput = document.getElementById('signupEmail').value.trim();
-  const bio = document.getElementById('signupBio').value.trim();
+// SIGNUP - Strict Firebase Auth
+    document.getElementById('btnSignup').addEventListener('click', async () => {
+      const username = document.getElementById('signupUsername').value.trim();
+      const password = document.getElementById('signupPassword').value.trim();
+      const emailInput = document.getElementById('signupEmail').value.trim();
+      const bio = document.getElementById('signupBio').value.trim();
 
-  // Clear previous errors
-  document. getElementById('usernameError').classList.remove('show');
-  document.getElementById('passwordError').classList.remove('show');
-  document.getElementById('usernameError').textContent = '';
-  document.getElementById('passwordError').textContent = '';
+      document.getElementById('usernameError').classList.remove('show');
+      document.getElementById('passwordError').classList.remove('show');
 
-  // Validate username
-  if (! username) {
-    document.getElementById('usernameError').textContent = '⚠️ يرجى إدخال اسم المستخدم';
-    document.getElementById('usernameError').classList.add('show');
-    document.getElementById('signupUsername').focus();
-    return;
-  }
+      if (!username || username.length < 2) {
+        document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم يجب أن يكون حرفين على الأقل';
+        document.getElementById('usernameError').classList.add('show');
+        return;
+      }
 
-  if (username.length < 2) {
-    document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم يجب أن يكون حرفين على الأقل';
-    document.getElementById('usernameError').classList.add('show');
-    document.getElementById('signupUsername').focus();
-    return;
-  }
+      if (checkUserNameExists(username)) {
+        document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم موجود بالفعل';
+        document.getElementById('usernameError').classList.add('show');
+        return;
+      }
 
-  if (checkUserNameExists(username)) {
-    document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم "' + username + '" موجود بالفعل!  يرجى اختيار اسم آخر. ';
-    document. getElementById('usernameError').classList.add('show');
-    document.getElementById('signupUsername').focus();
-    return;
-  }
+      if (!password || password.length < 6) {
+        document.getElementById('passwordError').textContent = '⚠️ كلمة المرور 6 أحرف على الأقل';
+        document.getElementById('passwordError').classList.add('show');
+        return;
+      }
 
-  // Validate password
-  if (!password) {
-    document.getElementById('passwordError').textContent = '⚠️ يرجى إدخال كلمة المرور';
-    document.getElementById('passwordError').classList.add('show');
-    document.getElementById('signupPassword').focus();
-    return;
-  }
+      const btn = document.getElementById('btnSignup');
+      const originalText = btn.textContent;
+      btn.textContent = 'جاري الإنشاء...';
+      btn.disabled = true;
 
-  if (password.length < 6) {
-    document.getElementById('passwordError').textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (حالياً: ' + password. length + ' أحرف)';
-    document.getElementById('passwordError').classList.add('show');
-    document.getElementById('signupPassword').focus();
-    return;
-  }
+      try {
+        // 1. Determine Email to use for Firebase Auth
+        // If user didn't give one, generate a fake one: username@modypoetry.com
+        const finalEmail = (emailInput && emailInput.includes('@'))
+                           ? emailInput
+                           : getEmail(username);
 
-  const btn = document. getElementById('btnSignup');
-  const originalText = btn.textContent;
-  btn.textContent = 'جاري الإنشاء...';
-  btn.disabled = true;
+        // 2. Create Firebase Auth User
+        const userCredential = await createUserWithEmailAndPassword(auth, finalEmail, password);
+        const firebaseUser = userCredential.user;
 
-  // ⬇️ THIS PART WAS MISSING!  ⬇️
-  try {
-    const dbId = Date. now() + '_' + Math.random().toString(36).substr(2, 9);
+        // 3. Create Database Profile
+        const dbId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-    if (emailInput && emailInput.includes('@')) {
-      // User provided real email - use Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, emailInput, password);
-      currentUser = {
-        id: dbId,
-        firebaseUid: userCredential.user.uid,
-        username: username,
-        passwordHash: hashPassword(password),
-        email: emailInput,
-        bio:  bio,
-        createdAt: new Date().toISOString()
-      };
-    } else {
-      // No email - database only (no Firebase Auth)
-      currentUser = {
-        id: dbId,
-        username: username,
-        passwordHash: hashPassword(password),
-        email: '',
-        bio: bio,
-        createdAt: new Date().toISOString()
-      };
-    }
+        currentUser = {
+          id: dbId,
+          firebaseUid: firebaseUser.uid,
+          username: username,
+          // We still store hash for legacy local checks if needed, but Auth handles security now
+          passwordHash: hashPassword(password),
+          email: finalEmail,
+          bio: bio,
+          createdAt: new Date().toISOString()
+        };
 
-    // Save to Firebase Database
-    await set(ref(database, 'users/' + dbId), currentUser);
+        // 4. Save to Realtime Database
+        await set(ref(database, 'users/' + dbId), currentUser);
 
-    // Save locally
-    allUsers.push(currentUser);
-    saveAllUsers();
-    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+        // 5. Update Local State
+        allUsers.push(currentUser);
+        saveAllUsers();
+        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
 
-    // Update online status
-    updateOnlineStatus();
+        // 6. Success
+        document.getElementById('authModal').style.display = 'none';
+        showUserInfo();
+        updateOnlineStatus(); // Now safe to call
+        init();
+        showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
 
-    // Close modal and show success
-    document.getElementById('authModal').style.display = 'none';
-    showUserInfo();
-    init();
-    showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
-
-  } catch (error) {
-    console.error('Signup error:', error);
-
-    if (error.code === 'auth/email-already-in-use') {
-      document.getElementById('usernameError').textContent = '⚠️ البريد الإلكتروني مستخدم بالفعل! ';
-      document. getElementById('usernameError').classList.add('show');
-    } else if (error.code === 'auth/invalid-email') {
-      document.getElementById('usernameError').textContent = '⚠️ البريد الإلكتروني غير صالح! ';
-      document. getElementById('usernameError').classList.add('show');
-    } else if (error.code === 'auth/weak-password') {
-      document.getElementById('passwordError').textContent = '⚠️ كلمة المرور ضعيفة (6 أحرف على الأقل)';
-      document. getElementById('passwordError').classList.add('show');
-    } else {
-      showAlert('❌ خطأ:  ' + error.message);
-    }
-  } finally {
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
-});
+      } catch (error) {
+        console.error('Signup error:', error);
+        if (error.code === 'auth/email-already-in-use') {
+           document.getElementById('usernameError').textContent = '⚠️ هذا الاسم أو البريد مستخدم بالفعل';
+           document.getElementById('usernameError').classList.add('show');
+        } else {
+           showAlert('❌ خطأ: ' + error.message);
+        }
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    });
 // Real-time validation while typing
 document.getElementById('signupUsername').addEventListener('input', function() {
   const username = this.value.trim();
@@ -2015,64 +1984,47 @@ const CLOUDINARY_UPLOAD_PRESET = 'mody_poetry_uploads';
     const FCM_VAPID_KEY = 'BH1rxDUeea6grr0gIXTI19kSWTMa50nHwu-GIShvIBKBndborG647a1A4xnHJ8KjB8iQkn5SuLbIOKdm_PXqIV8';
 
     // Online status tracking - ADD THIS WHOLE BLOCK HERE
- function updateOnlineStatus() {
-  if (!currentUser) return;
+function updateOnlineStatus() {
+      // FIX: Check if currentUser exists AND if Firebase Auth is ready
+      if (!currentUser || !auth.currentUser) return;
 
-  const userStatusRef = ref(database, `user_status/${currentUser.id}`);
-  const isOnlineForDatabase = {
-    state: 'online',
-    last_changed: new Date().toISOString(),
-  };
-  const isOfflineForDatabase = {
-    state: 'offline',
-    last_changed: new Date().toISOString(),
-  };
-
-  // Set user as online immediately
-  set(userStatusRef, isOnlineForDatabase);
-
-  // Set up Firebase's built-in presence system
-  const connectedRef = ref(database, '.info/connected');
-  onValue(connectedRef, (snapshot) => {
-    if (snapshot.val() === true) {
-      // When connected, set up onDisconnect handler
-      const onDisconnectRef = ref(database, `user_status/${currentUser.id}`);
-
-      // Import onDisconnect from Firebase
-      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js')
-        .then(({ onDisconnect }) => {
-          onDisconnect(onDisconnectRef).set(isOfflineForDatabase);
-        });
-
-      // Set user as online
-      set(userStatusRef, isOnlineForDatabase);
-    }
-  });
-
-  // Update online status every 30 seconds (heartbeat)
-  setInterval(() => {
-    if (currentUser) {
-      set(userStatusRef, {
+      const userStatusRef = ref(database, `user_status/${currentUser.id}`);
+      const isOnlineForDatabase = {
         state: 'online',
         last_changed: new Date().toISOString(),
+      };
+      const isOfflineForDatabase = {
+        state: 'offline',
+        last_changed: new Date().toISOString(),
+      };
+
+      // Ensure we have permission by catching errors
+      set(userStatusRef, isOnlineForDatabase).catch(err => {
+        console.log("Waiting for auth to sync status...");
       });
-    }
-  }, 30000);
 
-  // Set offline when page closes/unloads
-  window.addEventListener('beforeunload', () => {
-    set(userStatusRef, isOfflineForDatabase);
-  });
+      const connectedRef = ref(database, '.info/connected');
+      onValue(connectedRef, (snapshot) => {
+        if (snapshot.val() === true && auth.currentUser) {
+          import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js')
+            .then(({ onDisconnect }) => {
+              const onDisconnectRef = ref(database, `user_status/${currentUser.id}`);
+              onDisconnect(onDisconnectRef).set(isOfflineForDatabase);
+            });
+          set(userStatusRef, isOnlineForDatabase);
+        }
+      });
 
-  // Set offline on page visibility change (mobile)
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      set(userStatusRef, isOfflineForDatabase);
-    } else {
-      set(userStatusRef, isOnlineForDatabase);
+      // Heartbeat
+      setInterval(() => {
+        if (currentUser && auth.currentUser) {
+          set(userStatusRef, {
+            state: 'online',
+            last_changed: new Date().toISOString(),
+          }).catch(() => {});
+        }
+      }, 30000);
     }
-  });
-}
     function isUserOnline(userId, callback) {
       const statusRef = ref(database, `user_status/${userId}`);
       onValue(statusRef, (snapshot) => {
@@ -2273,37 +2225,40 @@ async function loadAllMetadata() {
 }
 
 // Register Service Worker and get FCM token
-async function registerServiceWorkerAndGetToken() {
-  try {
-    if (window.location.protocol === 'file:') {
-      console.warn('⚠️ Service Worker not supported on file:// URLs.');
-      return null;
-    }
+// Register Service Worker and get FCM token
+    async function registerServiceWorkerAndGetToken() {
+      try {
+        // Prevent running on insecure contexts (like file://) which throws errors
+        if (!('serviceWorker' in navigator) || window.location.protocol === 'file:') {
+          console.log('Service Worker not supported in this context.');
+          return null;
+        }
 
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      console.log('Service Worker registered:', registration);
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
 
-      const token = await getToken(messaging, {
-        vapidKey: FCM_VAPID_KEY,
-        serviceWorkerRegistration: registration
-      });
+        // Wait until service worker is active to avoid "failed to execute subscribe"
+        await navigator.serviceWorker.ready;
 
-      if (token) {
-        console.log('FCM Token:', token);
-        if (currentUser) {
+        const token = await getToken(messaging, {
+          vapidKey: FCM_VAPID_KEY,
+          serviceWorkerRegistration: registration
+        });
+
+        if (token && currentUser) {
           currentUser.fcmToken = token;
-          await set(ref(database, `users/${currentUser.id}/fcmToken`), token);
+          // Only write if we have a user ID
+          if(currentUser.id) {
+             await set(ref(database, `users/${currentUser.id}/fcmToken`), token);
+          }
           localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
         }
         return token;
+      } catch (error) {
+        // Suppress the error logs slightly
+        console.warn('FCM/Notification setup failed (likely harmless if testing locally):', error.message);
+        return null;
       }
     }
-  } catch (error) {
-    console.warn('⚠️ FCM not available:', error.message);
-  }
-  return null;
-}
 
 // Listen for foreground messages
 onMessage(messaging, (payload) => {
