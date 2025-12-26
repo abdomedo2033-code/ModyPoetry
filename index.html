@@ -1040,6 +1040,181 @@ but dont alter the code of messge date
   display: none !important;
 }
 
+
+/* DM Modal - Full Screen Design */
+.dm-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-inner.dm-modal {
+  max-height: 100vh;
+  max-width: 1200px;
+  width: 100%;
+  height: 90vh;
+  overflow: hidden;
+  display:  flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+/* Fix header spacing */
+.modal-inner.dm-modal > div:first-child {
+  flex-shrink: 0;
+  padding:  0 0 10px 0;
+  margin:  0;
+}
+
+/* DM Content takes remaining space */
+.dm-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border:  none;
+  border-radius: 10px;
+  background:  var(--card);
+}
+
+/* DM Header inside content */
+
+ #dmHeader {
+  flex-shrink: 0;
+  padding: 2px  2px !important;
+  border-bottom:  .1px solid var(--border);
+  min-height:  0 !important;
+  height:  auto !important;
+  font-size:  18px !important;
+  display:  flex;
+  align-items: center;
+  gap: 2px;
+}
+
+
+
+
+/* Messages area */
+.dm-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 15px;
+  min-height: 0;
+  background: rgba(139,94,60,0.02);
+}
+
+
+/* Mobile responsive */
+@media (max-width:  768px) {
+  .modal-inner.dm-modal {
+    max-width: 100%;
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    padding: 8px;
+  }
+
+  .dm-layout {
+    height: calc(100vh - 60px);
+  }
+
+  .dm-messages {
+    padding: 10px;
+  }
+
+  .dm-input {
+    padding: 8px 10px;
+  }
+
+  #dmHeader {
+    padding: 8px 10px;
+  }
+
+  .dm-sidebar {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-inner.dm-modal {
+    padding: 5px;
+  }
+
+  .dm-input > div {
+    flex-wrap: wrap;
+  }
+
+  .dm-input textarea {
+    min-height: 36px;
+  }
+}
+
+
+/* DM Top Header Row - Avatar + Buttons on same line */
+. modal-inner.dm-modal > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding:  8px 5px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* Header with avatar (left side) */
+#dmHeader {
+  display: flex;
+  align-items:  center;
+  gap: 15px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 2 ! important;
+  border:  none ! important;
+  min-height: 0 !important;
+}
+
+/* Smaller avatar in header */
+#dmHeader .avatar-small,
+#dmHeader img {
+  width:  38px !important;
+  height: 38px !important;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+#dmHeader .avatar-container {
+  position: relative;
+  width: 32px;
+  height:  32px;
+}
+
+#dmHeader .online-indicator {
+  width: 14.5px;
+  height: 14.5px;
+  position: absolute;
+  bottom:  -7px;      /* 👈 Goes down below avatar border */
+  right:  -3px;       /* 👈 Goes slightly outside */
+  border:  3px solid var(--card);  /* 👈 White/card border around dot */
+  border-radius: 50%;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.2);
+}
+/* Buttons (right side) */
+.dm-conversations-toggle {
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+
+}
+
+
+
   </style>
 
 
@@ -2833,46 +3008,50 @@ function setupVirtualScrolling(messagesEl, messages, convId, withUser) {
 
 modal.innerHTML = `
     <div class="modal-inner dm-modal">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0px">
-        <h3 style="margin:0"></h3>
-        <div style="display:flex;gap:10px;align-items:center">
+      <div style="display: flex;justify-content:space-between;align-items:center;padding: 8px 0;border-bottom: 1px solid var(--border);margin-bottom:8px">
+
+        <!-- Left side: Avatar + Username -->
+        <div id="dmHeader" style="display:flex;align-items:center;gap:8px;font-size: 14px;font-weight:600;">
+          <span class="muted">اختر محادثة</span>
+        </div>
+
+        <!-- Right side: Buttons -->
+        <div style="display:flex;gap:8px;align-items:center">
           <button class="dm-conversations-toggle" id="toggleConversations">
-            <span> &nbsp;المحادثات&nbsp; </span>
+            <span>المحادثات</span>
             <span id="conversationsCount"></span>
           </button>
-          <button class="dm-conversations-toggle" id="closeDM"> &nbsp;✘&nbsp; </button>
+          <button class="dm-conversations-toggle" id="closeDM">✘</button>
         </div>
       </div>
+
       <div class="dm-layout">
         <div class="dm-sidebar" id="dmSidebar">
           <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;gap:8px">
-            <input id="dmSearch" type="text" placeholder="ابحث عن مستخدم..." style="flex:1" />
+            <input id="dmSearch" type="text" placeholder="ابحث عن مستخدم..." style="flex: 1" />
             <button class="btn small" id="dmStartNew">بدء</button>
           </div>
           <div id="dmConversationsList"></div>
         </div>
         <div class="dm-content">
-          <div id="dmHeader" style="padding:5px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:18px;font-weight:600;">
-            <span class="muted">اختر محادثة لعرض الرسائل</span>
-          </div>
           <div id="dmMessages" class="dm-messages"></div>
           <div class="dm-typing-indicator" id="dmTypingIndicator">
-            <span class="dm-typing-dots">...</span> يكتب
+            <span class="dm-typing-dots">... </span> يكتب
           </div>
-<div class="dm-input">
-  <div class="dm-image-upload" style="display:none" id="dmImageUploadPreview">
-    <div id="dmImagePreview"></div>
-    <button class="btn small" id="dmCancelImage">✖️</button>
-  </div>
-  <div style="display:flex;gap:8px;align-items:center">
-    <button class="btn small" id="dmToggleDir" title="تبديل الاتجاه">⇄</button>
-    <input type="file" id="dmImageInput" accept="image/*,video/*,audio/*" style="display:none">
-    <button class="btn small" id="dmImageBtn" title="إرفاق وسائط">📎</button>
-    <button class="btn small" id="dmEmojiBtn" title="إيموجي وGIF">😊</button>
-    <textarea id="dmText" dir="ltr" style="flex:1"></textarea>
-    <button class="btn small" id="dmSend">إرسال</button>
-  </div>
-</div>
+          <div class="dm-input">
+            <div class="dm-image-upload" style="display:none" id="dmImageUploadPreview">
+              <div id="dmImagePreview"></div>
+              <button class="btn small" id="dmCancelImage">✖️</button>
+            </div>
+            <div style="display:flex;gap: 8px;align-items:center">
+              <button class="btn small" id="dmToggleDir" title="تبديل الاتجاه">⇄</button>
+              <input type="file" id="dmImageInput" accept="image/*,video/*,audio/*" style="display:none">
+              <button class="btn small" id="dmImageBtn" title="إرفاق وسائط">📎</button>
+              <button class="btn small" id="dmEmojiBtn" title="إيموجي وGIF">😊</button>
+              <textarea id="dmText" dir="rtl" style="flex:1" placeholder="اكتب رسالة..."></textarea>
+              <button class="btn small" id="dmSend">إرسال</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
