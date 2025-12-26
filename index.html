@@ -1327,8 +1327,8 @@ but dont alter the code of messge date
             <div id="usernameError" class="error-message">⚠️ اسم المستخدم موجود بالفعل! يرجى اختيار اسم آخر.</div>
 
             <label for="signupPassword" style="font-size:14px;font-weight:600">كلمة المرور *</label>
-            <input id="signupPassword" name="signupPassword" type="password" placeholder="كلمة المرور (4 أحرف على الأقل)" required autocomplete="new-password" />
-            <div id="passwordError" class="error-message">⚠️ يرجى إدخال كلمة المرور (4 أحرف على الأقل)</div>
+            <input id="signupPassword" name="signupPassword" type="password" placeholder="كلمة المرور (6 أحرف على الأقل)" required autocomplete="new-password" />
+            <div id="passwordError" class="error-message">⚠️ يرجى إدخال كلمة المرور (6 أحرف على الأقل)</div>
 
             <label for="signupEmail" style="font-size:14px;font-weight:600">البريد الإلكتروني (اختياري)</label>
             <input id="signupEmail" name="signupEmail" type="email" placeholder="بريدك الإلكتروني" autocomplete="email" />
@@ -1451,11 +1451,11 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebas
 document.getElementById('btnSignup').addEventListener('click', async () => {
   const username = document.getElementById('signupUsername').value.trim();
   const password = document.getElementById('signupPassword').value.trim();
-  const emailInput = document.getElementById('signupEmail').value. trim();
+  const emailInput = document.getElementById('signupEmail').value.trim();
   const bio = document.getElementById('signupBio').value.trim();
 
   // Clear previous errors
-  document.getElementById('usernameError').classList.remove('show');
+  document. getElementById('usernameError').classList.remove('show');
   document.getElementById('passwordError').classList.remove('show');
   document.getElementById('usernameError').textContent = '';
   document.getElementById('passwordError').textContent = '';
@@ -1490,40 +1490,47 @@ document.getElementById('btnSignup').addEventListener('click', async () => {
     return;
   }
 
-  if (password. length < 6) {
-    document. getElementById('passwordError').textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (حالياً: ' + password. length + ' أحرف)';
+  if (password.length < 6) {
+    document.getElementById('passwordError').textContent = '⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل (حالياً: ' + password. length + ' أحرف)';
     document.getElementById('passwordError').classList.add('show');
     document.getElementById('signupPassword').focus();
     return;
   }
 
-  const btn = document.getElementById('btnSignup');
+  const btn = document. getElementById('btnSignup');
   const originalText = btn.textContent;
-  btn. textContent = 'جاري الإنشاء...';
+  btn.textContent = 'جاري الإنشاء...';
   btn.disabled = true;
 
-  const loginEmail = `${username. toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry. com`;
-
+  // ⬇️ THIS PART WAS MISSING!  ⬇️
   try {
-    // Create Firebase Auth account
-    const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
-    const firebaseUid = userCredential.user.uid;
+    const dbId = Date. now() + '_' + Math.random().toString(36).substr(2, 9);
 
-    // Create database ID
-    const dbId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    if (emailInput && emailInput.includes('@')) {
+      // User provided real email - use Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, emailInput, password);
+      currentUser = {
+        id: dbId,
+        firebaseUid: userCredential.user.uid,
+        username: username,
+        passwordHash: hashPassword(password),
+        email: emailInput,
+        bio:  bio,
+        createdAt: new Date().toISOString()
+      };
+    } else {
+      // No email - database only (no Firebase Auth)
+      currentUser = {
+        id: dbId,
+        username: username,
+        passwordHash: hashPassword(password),
+        email: '',
+        bio: bio,
+        createdAt: new Date().toISOString()
+      };
+    }
 
-    // Create user profile
-    currentUser = {
-      id:  dbId,
-      firebaseUid: firebaseUid,
-      username: username,
-      passwordHash: hashPassword(password),
-      email: emailInput || loginEmail,
-      bio: bio,
-      createdAt: new Date().toISOString()
-    };
-
-    // Save to database
+    // Save to Firebase Database
     await set(ref(database, 'users/' + dbId), currentUser);
 
     // Save locally
@@ -1531,40 +1538,35 @@ document.getElementById('btnSignup').addEventListener('click', async () => {
     saveAllUsers();
     localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
 
+    // Update online status
     updateOnlineStatus();
+
+    // Close modal and show success
     document.getElementById('authModal').style.display = 'none';
     showUserInfo();
     init();
-
     showSyncStatus('✅ تم إنشاء الحساب بنجاح!', 2000);
-    console.log('✅ New user created with Firebase Auth');
-    console.log('   Database ID:', dbId);
-    console.log('   Firebase UID:', firebaseUid);
 
   } catch (error) {
     console.error('Signup error:', error);
 
     if (error.code === 'auth/email-already-in-use') {
-      document.getElementById('usernameError').textContent = '⚠️ اسم المستخدم "' + username + '" مسجل بالفعل في النظام!  جرب اسم مختلف.';
-      document.getElementById('usernameError').classList.add('show');
-      document.getElementById('signupUsername').focus();
+      document.getElementById('usernameError').textContent = '⚠️ البريد الإلكتروني مستخدم بالفعل! ';
+      document. getElementById('usernameError').classList.add('show');
+    } else if (error.code === 'auth/invalid-email') {
+      document.getElementById('usernameError').textContent = '⚠️ البريد الإلكتروني غير صالح! ';
+      document. getElementById('usernameError').classList.add('show');
     } else if (error.code === 'auth/weak-password') {
-      document.getElementById('passwordError').textContent = '⚠️ كلمة المرور ضعيفة جداً - استخدم 6 أحرف على الأقل مع أرقام';
-      document.getElementById('passwordError').classList.add('show');
-      document.getElementById('signupPassword').focus();
-    } else if (error. code === 'auth/invalid-email') {
-      document. getElementById('usernameError').textContent = '⚠️ اسم المستخدم يحتوي على رموز غير مسموحة.  استخدم حروف وأرقام فقط.';
-      document.getElementById('usernameError').classList.add('show');
-      document.getElementById('signupUsername').focus();
+      document.getElementById('passwordError').textContent = '⚠️ كلمة المرور ضعيفة (6 أحرف على الأقل)';
+      document. getElementById('passwordError').classList.add('show');
     } else {
-      showAlert('❌ خطأ في التسجيل:  ' + error.message);
+      showAlert('❌ خطأ:  ' + error.message);
     }
   } finally {
     btn.textContent = originalText;
     btn.disabled = false;
   }
 });
-
 // Real-time validation while typing
 document.getElementById('signupUsername').addEventListener('input', function() {
   const username = this.value.trim();
@@ -1623,14 +1625,14 @@ document.getElementById('signupPassword').addEventListener('input', function() {
 
 // LOGIN - Auto-migrate anonymous users to Firebase Auth
 document.getElementById('btnLoginSubmit').addEventListener('click', async () => {
-  if (! selectedUserForLogin) return;
+  if (!selectedUserForLogin) return;
 
   const password = document.getElementById('loginPassword').value.trim();
   const username = selectedUserForLogin.username;
 
+  // UI cleanup
   document.getElementById('loginPasswordError').classList.remove('show');
-
-  if (! password) {
+  if (!password) {
     showAlert('⚠️ يرجى إدخال كلمة المرور');
     return;
   }
@@ -1640,97 +1642,135 @@ document.getElementById('btnLoginSubmit').addEventListener('click', async () => 
   btn.textContent = 'جاري التحقق...';
   btn.disabled = true;
 
-  const loginEmail = `${username. toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry.com`;
+  // canonical login email (the single source of truth)
+  const loginEmail = `${username.toLowerCase().trim().replace(/\s+/g, '.')}@modypoetry.com`;
 
   try {
-    // CASE 1: User already has Firebase Auth - try to sign in
+    // CASE A: User already migrated (has firebaseUid) -> sign in via Firebase only
     if (selectedUserForLogin.firebaseUid) {
       try {
         await signInWithEmailAndPassword(auth, loginEmail, password);
-        console.log('✅ Signed in with existing Firebase Auth');
+        console.log('✅ Signed in with Firebase (already migrated)', loginEmail);
         completeLogin(selectedUserForLogin);
       } catch (signInError) {
-        console.log('Sign in error:', signInError. code);
+        console.log('Firebase sign-in failed for migrated user:', signInError.code || signInError);
+        // show generic password error UI (same behavior as old flow)
         document.getElementById('loginPasswordError').classList.add('show');
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
+      return;
+    }
+
+    // CASE B: Not migrated yet -> verify password against local DB hash first
+    const passwordMatches = hashPassword(password) === selectedUserForLogin.passwordHash;
+    if (!passwordMatches) {
+      document.getElementById('loginPasswordError').classList.add('show');
       btn.textContent = originalText;
       btn.disabled = false;
       return;
     }
 
-    // CASE 2: User doesn't have Firebase Auth yet - verify old password first
-    const passwordMatches = hashPassword(password) === selectedUserForLogin. passwordHash;
+    // password is correct according to local DB
+    console.log('✅ Old password verified correctly for user:', username);
 
-    if (! passwordMatches) {
-      document.getElementById('loginPasswordError').classList.add('show');
-      btn.textContent = originalText;
-      btn. disabled = false;
-      return;
-    }
-
-    // Password correct!
-    console.log('✅ Old password verified correctly');
-
-    // Reset button state
-    btn.textContent = originalText;
-    btn.disabled = false;
-
-    // Check if password is long enough for Firebase Auth
+    // If password is too short for Firebase, prompt the user to update it before migration
     if (password.length < 6) {
-      console.log('⚠️ Password too short, showing update prompt');
-      // Password too short - prompt to update
-      promptPasswordUpdate(selectedUserForLogin, loginEmail, password);
+      console.log('⚠️ Password too short for Firebase; prompting update.');
+      btn.textContent = originalText;
+      btn.disabled = false;
+      promptPasswordUpdate(selectedUserForLogin, loginEmail, password); // keep existing signature
       return;
     }
 
-    // Password is 6+ chars - create Firebase Auth
+    // Create Firebase Auth account now (migration)
     btn.textContent = 'جاري التأمين...';
     btn.disabled = true;
-
-    console.log('🔄 Creating Firebase Auth for user:', username);
+    console.log('🔄 Creating Firebase Auth for user:', loginEmail);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, loginEmail, password);
       const newUid = userCredential.user.uid;
 
+      // Link in database: set firebaseUid and canonical email
       await update(ref(database, `users/${selectedUserForLogin.id}`), {
-        firebaseUid:  newUid
+        firebaseUid: newUid,
+        email: loginEmail,
+        migratedAt: Date.now()
       });
 
+      // update in-memory structures and persist
       selectedUserForLogin.firebaseUid = newUid;
-
-      const userIndex = allUsers.findIndex(u => u.id === selectedUserForLogin. id);
+      selectedUserForLogin.email = loginEmail;
+      const userIndex = allUsers.findIndex(u => u.id === selectedUserForLogin.id);
       if (userIndex > -1) {
         allUsers[userIndex].firebaseUid = newUid;
+        allUsers[userIndex].email = loginEmail;
         saveAllUsers();
       }
 
-      console. log('✅ Firebase Auth created and linked! ');
-      showSyncStatus('🔒 تم تأمين حسابك! ', 3000);
+      console.log('✅ Firebase Auth created and linked!');
+      showSyncStatus('🔒 تم تأمين حسابك!', 3000);
       completeLogin(selectedUserForLogin);
 
     } catch (authError) {
-      console.log('Auth creation error:', authError. code);
+      console.log('Auth creation error:', authError.code || authError);
 
-      if (authError.code === 'auth/email-already-in-use') {
+      // If email already in use, attempt to sign in with that canonical email and link UID
+      if (authError && authError.code === 'auth/email-already-in-use') {
         try {
+          console.log('auth/email-already-in-use — trying sign-in to link existing Firebase account');
           const userCredential = await signInWithEmailAndPassword(auth, loginEmail, password);
+          const existingUid = userCredential.user.uid;
+
+          // Save the firebaseUid to our DB (but keep canonical email as loginEmail)
           await update(ref(database, `users/${selectedUserForLogin.id}`), {
-            firebaseUid:  userCredential.user.uid
+            firebaseUid: existingUid,
+            email: loginEmail,
+            migratedAt: Date.now()
           });
-          selectedUserForLogin.firebaseUid = userCredential.user. uid;
-          console.log('✅ Existing Auth account linked! ');
+
+          selectedUserForLogin.firebaseUid = existingUid;
+          selectedUserForLogin.email = loginEmail;
+          const userIndex = allUsers.findIndex(u => u.id === selectedUserForLogin.id);
+          if (userIndex > -1) {
+            allUsers[userIndex].firebaseUid = existingUid;
+            allUsers[userIndex].email = loginEmail;
+            saveAllUsers();
+          }
+
+          console.log('✅ Existing Firebase account linked to local user');
+          showSyncStatus('🔒 تم ربط الحساب الموجود!', 3000);
           completeLogin(selectedUserForLogin);
+
         } catch (signInError) {
+          console.log('Sign-in with existing Firebase account failed:', signInError.code || signInError);
+          // user typed a password that doesn't match the existing Firebase account
           document.getElementById('loginPasswordError').classList.add('show');
         }
       } else {
-        showAlert('❌ خطأ:  ' + authError. message);
+        // Other createUser errors (network, file:// environment, etc.)
+        console.log('⚠️ Firebase Auth not available or other error — falling back to DB login', authError.message || authError);
+        // Fallback: allow local DB login to continue (keeps UX functional on file:// or offline)
+        showSyncStatus('⚠️ لا يمكن ربط الحساب الآن — تم تسجيل الدخول محلياً', 3000);
+        // Still update local record with canonical email (optional but helpful)
+        try {
+          await update(ref(database, `users/${selectedUserForLogin.id}`), { email: loginEmail });
+          selectedUserForLogin.email = loginEmail;
+          const userIndex = allUsers.findIndex(u => u.id === selectedUserForLogin.id);
+          if (userIndex > -1) {
+            allUsers[userIndex].email = loginEmail;
+            saveAllUsers();
+          }
+        } catch (uErr) {
+          console.log('Could not update email in DB during fallback:', uErr);
+        }
+        completeLogin(selectedUserForLogin);
       }
     }
-
   } catch (error) {
-    console. error('Login error:', error);
+    console.error('Login error:', error);
     showAlert('❌ خطأ في تسجيل الدخول');
   } finally {
     btn.textContent = originalText;
@@ -5883,6 +5923,22 @@ function getLikesCount(poemId) {
       showConfirm('⚠️ هل أنت متأكد من حذف ملفك الشخصي؟\n\n🔴 سيتم حذف جميع قصائدك والملفات المرفوعة من السحابة وحذف ملفك الشخصي.\n\n⚠️ هذا الإجراء لا يمكن التراجع عنه!', async () => {
         try {
           showSyncStatus('🔄 جاري حذف الملف...', 5000);
+
+              // ✅ ADD THIS:  Delete Firebase Auth account if exists
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.delete();
+          console.log('✅ Firebase Auth account deleted');
+        } catch (authError) {
+          console.error('Error deleting auth:', authError);
+          // If error is "requires recent login", user needs to re-authenticate
+          if (authError.code === 'auth/requires-recent-login') {
+            showAlert('⚠️ يرجى تسجيل الخروج ثم تسجيل الدخول مرة أخرى لحذف الحساب');
+            return;
+          }
+        }
+      }
+
     // User files remain in Cloudinary under mody_poems/{userId}/
 console.log('User media folder marked for cleanup:', `mody_poems/${currentUser.id}`);
           poems = poems.filter(p => p.userId !== currentUser.id);
