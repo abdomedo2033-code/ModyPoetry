@@ -3665,7 +3665,7 @@ if (targetUserId) {
 } else {
   // No conversations yet
   headerEl.innerHTML = '<span class="muted">💬 ابدأ محادثة جديدة</span>';
-  messagesEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">📭 لا توجد محادثات بعد<br><br>استخدم زر "بدء" للبحث عن مستخدم</div>';
+  messagesEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">📭 لا توجد محادثات بعد<br><br>استخدم زر "بدء" للبحث عن مستخدم<br><br>⚠️ ان لم تطهر المحادثات فقم بتسجيل الخروج ثم سجل مجددا</div>';
 }
   modal.addEventListener('click', e => {
     if (e.target === modal) {
