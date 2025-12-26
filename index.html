@@ -2199,16 +2199,21 @@ let currentFilteredPoems = []; // Add this new global variable
         return Object.keys(likes).length;
       } catch (error) { console.error('Error toggling like:', error); return 0; }
     }
-function getLikesCount(poemId) {
+async function getLikesCount(poemId) {
   // Use cache first
   if (cachedLikes[poemId]) {
     return Object.keys(cachedLikes[poemId]).length;
   }
   return 0;
 }
-    function isLiked(poemId) {
-  // Use cache
-  return !!(cachedLikes[poemId] && cachedLikes[poemId][currentUser.id]);
+
+async function isLiked(poemId) {
+  try {
+    const snapshot = await get(ref(database, `likes/${poemId}/${currentUser.id}`));
+    return snapshot.exists();
+  } catch {
+    return false;
+  }
 }
 
     // ✅ ADD THIS NEW FUNCTION
@@ -2884,54 +2889,20 @@ function setupDMScrollListener(messagesEl, convId, withUser) {
 }
     // Global DM list renderer - will be set when modal opens
     let globalRenderDMList = null;
-async function loadDMConversations() {
-  if (!currentUser) return [];
+function loadDMConversations() {
+  if (!currentUser) return;
 
-  try {
-    // ✅ Load data ONCE first
-    const snapshot = await get(ref(database, `dm_conversations/${currentUser.id}`));
-
-    if (snapshot.exists()) {
-      const allConvs = Object.values(snapshot.val());
-
-      // ✅ Filter out conversations with missing users
-      dmConversations = allConvs.filter(conv => {
-        const userExists = allUsers.find(u => u.id === conv.userId);
-        if (!userExists) {
-          console.warn('⚠️ Removing invalid conversation:', conv.userId);
-          // Remove from database
-          set(ref(database, `dm_conversations/${currentUser.id}/${conv.id}`), null)
-            .catch(err => console.error('Failed to remove invalid conversation:', err));
-          return false;
-        }
-        return true;
-      });
-    } else {
-      dmConversations = [];
-    }
+  const convRef = ref(database, `dm_conversations/${currentUser.id}`);
+  onValue(convRef, (snapshot) => {
+    dmConversations = snapshot.exists() ? Object.values(snapshot.val()) : [];
     updateDMBadge();
 
-    // ✅ Then setup listener for updates
-    const convRef = ref(database, `dm_conversations/${currentUser.id}`);
-    onValue(convRef, (snapshot) => {
-      if (snapshot.exists()) {
-        dmConversations = Object.values(snapshot.val());
-        updateDMBadge();
-
-        // Refresh list if modal is open
-        const dmModal = document.querySelector('.dm-modal');
-        if (dmModal && typeof globalRenderDMList === 'function') {
-          globalRenderDMList();
-        }
-      }
-    });
-
-    return dmConversations;
-
-  } catch (error) {
-    console.error('Error loading DM conversations:', error);
-    return [];
-  }
+    // If DM modal is open and renderer is available, refresh the list
+    const dmModal = document.querySelector('.dm-modal');
+    if (dmModal && typeof globalRenderDMList === 'function') {
+      globalRenderDMList();
+    }
+  });
 }
     function updateDMBadge() {
       const badge = document.getElementById('dmBadge');
@@ -3110,130 +3081,112 @@ modal.innerHTML = `
     }
   }
 
- function renderDMList() {
+  function renderDMList() {
   globalRenderDMList = renderDMList;
-  listEl.innerHTML = '';
 
-  if (!dmConversations || dmConversations.length === 0) {
-    listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
-    conversationsCount.textContent = '';
-    return;
-  }
+    listEl.innerHTML = '';
+    const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+    conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
 
-  const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
-  conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
-
- sorted.forEach(conv => {
-    // ✅ FIX: Find user properly
-    const user = allUsers.find(u => u.id === conv.userId);
-
-    // ✅ Skip if user not found (using return in forEach continues to next item)
-    if (!user) {
-      console.warn('⚠️ Skipping conversation - user not found:', conv.userId);
-      return; // This just skips this iteration, doesn't stop the loop
+    if (sorted.length === 0) {
+      listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
+      return;
     }
-
-    const username = user.username || 'مستخدم';
-    const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=8b5e3c&color=fff&size=32`;
-
-    const item = document.createElement('div');
-    item.className = 'dm-list-item';
+    sorted.forEach(conv => {
+      const user = allUsers.find(u => u.id === conv.userId);
+      const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`;
+      const item = document.createElement('div');
+      item.className = 'dm-list-item';
     item.innerHTML = `
-      <div class="avatar-container">
-        <img src="${avatarUrl}" class="avatar-small" alt="${escapeHtml(username)}">
-        <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
-      </div>
-      <div style="flex:1">
-        <div style="font-weight:700;color:var(--accent)">${escapeHtml(username)}</div>
-        <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
-      </div>
-      ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
-    `;
+        <div class="avatar-container">
+          <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
+          <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
+        </div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:var(--accent)">${escapeHtml(user?.username||'مستخدم')}</div>
+          <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
+        </div>
+        ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
+      `;
+      item.onclick = () => {
+        loadConversation(conv.userId);
+        sidebar.classList.remove('show');
+      };
+      listEl.appendChild(item);
+       // Update online indicators for all users in list - ADD THIS
+  // Set up real-time listeners for all users in list
+sorted.forEach(conv => {
+  const statusRef = ref(database, `user_status/${conv.userId}`);
+  onValue(statusRef, (snapshot) => {
+    const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+    if (!indicator) return;
 
-    listEl.appendChild(item);
+    if (snapshot.exists()) {
+      const status = snapshot.val();
+      const lastChanged = new Date(status.last_changed);
+      const now = new Date();
+      const diffMinutes = (now - lastChanged) / 1000 / 60;
+      const isOnline = status.state === 'online' && diffMinutes < 2;
 
-    item.onclick = () => {
-      loadConversation(conv.userId);
-      sidebar.classList.remove('show');
-    };
-
-    // Check online status
-    (async function checkStatus() {
-      const statusSnapshot = await get(ref(database, `user_status/${conv.userId}`));
-      const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
-      if (!indicator) return;
-
-      if (statusSnapshot.exists()) {
-        const status = statusSnapshot.val();
-        const lastChanged = new Date(status.last_changed);
-        const now = new Date();
-        const diffMinutes = (now - lastChanged) / 1000 / 60;
-        const isOnline = status.state === 'online' && diffMinutes < 2;
-        indicator.classList.toggle('offline', !isOnline);
+      if (isOnline) {
+        indicator.classList.remove('offline');
       } else {
         indicator.classList.add('offline');
       }
-    })();
-
-    // Setup realtime status listener
-    setTimeout(() => {
-      const statusRef = ref(database, `user_status/${conv.userId}`);
-      onValue(statusRef, (snapshot) => {
-        const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
-        if (!indicator) return;
-
-        if (snapshot.exists()) {
-          const status = snapshot.val();
-          const lastChanged = new Date(status.last_changed);
-          const now = new Date();
-          const diffMinutes = (now - lastChanged) / 1000 / 60;
-          const isOnline = status.state === 'online' && diffMinutes < 2;
-          indicator.classList.toggle('offline', !isOnline);
-        } else {
-          indicator.classList.add('offline');
-        }
-      });
-    }, 100);
+    } else {
+      indicator.classList.add('offline');
+    }
   });
-}
+});
+    });
+  }
 
-  async function loadConversation(withUserId) {
+
+async function loadConversation(withUserId) {
     await ensureConversationMeta(withUserId);
     const withUser = allUsers.find(u => u.id === withUserId);
     const convId = getConversationId(currentUser.id, withUserId);
     currentConversationId = convId;
+// ✅ Mark DM notifications from this user as read
     await markDMNotificationsAsRead(withUserId);
+  // ✅ Update notification badge immediately
     updateNotificationBadge();
 
-    headerEl.innerHTML = `
+headerEl.innerHTML = `
       <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
         <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" loading="lazy" class="avatar-small" />
         <span class="online-indicator" id="userOnlineIndicator"></span>
       </div>
       <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
-    `;
+     `;
 
-    const statusRef = ref(database, `user_status/${withUserId}`);
-    const statusUnsubscribe = onValue(statusRef, (snapshot) => {
-      const indicator = modal.querySelector('#userOnlineIndicator');
-      if (!indicator) return;
-      if (snapshot.exists()) {
-        const status = snapshot.val();
-        const lastChanged = new Date(status.last_changed);
-        const now = new Date();
-        const diffMinutes = (now - lastChanged) / 1000 / 60;
-        const isOnline = status.state === 'online' && diffMinutes < 2;
-        if (isOnline) {
-          indicator.classList.remove('offline');
-        } else {
-          indicator.classList.add('offline');
-        }
-      } else {
-        indicator.classList.add('offline');
-      }
-    });
+    // Monitor online status
+  // Monitor online status with real-time listener
+const statusRef = ref(database, `user_status/${withUserId}`);
+const statusUnsubscribe = onValue(statusRef, (snapshot) => {
+  const indicator = modal.querySelector('#userOnlineIndicator');
+  if (!indicator) return;
 
-    modal.dataset.statusUnsubscribe = 'active';
+  if (snapshot.exists()) {
+    const status = snapshot.val();
+    const lastChanged = new Date(status.last_changed);
+    const now = new Date();
+    const diffMinutes = (now - lastChanged) / 1000 / 60;
+    const isOnline = status.state === 'online' && diffMinutes < 2;
+
+    if (isOnline) {
+      indicator.classList.remove('offline');
+    } else {
+      indicator.classList.add('offline');
+    }
+  } else {
+    indicator.classList.add('offline');
+  }
+});
+
+// Store unsubscribe function to clean up later
+modal.dataset.statusUnsubscribe = 'active';
+
     messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
 
     const typingRef = ref(database, `dm_typing/${convId}/${withUserId}`);
@@ -3246,87 +3199,261 @@ modal.innerHTML = `
         indicator.classList.remove('show');
       }
     });
+// Detach previous conversation listener
+if (typeof dmMessagesUnsubscribe === 'function') {
+  dmMessagesUnsubscribe();
+  dmMessagesUnsubscribe = null;
+}
 
-    if (typeof dmMessagesUnsubscribe === 'function') {
-      dmMessagesUnsubscribe();
-      dmMessagesUnsubscribe = null;
+
+// Attach real-time messages listener
+const messagesRef = ref(database, `dm_messages/${convId}`);
+// Reset pagination
+dmMessagesLimit = 20;
+allDMMessages = [];
+
+isFirstLoad = true;
+previousMessagesCount = 0;
+dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
+
+  if (!msgsSnap.exists()) {
+    messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
+    allDMMessages = [];
+    isFirstLoad = false;
+    return;
+  }
+
+  const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+
+  // Mark unread as read (non-blocking)
+  const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
+  if (unread.length > 0) {
+    Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
+      .catch(err => console.error('Error marking messages as read:', err));
+  }
+
+  // First load: render everything
+  if (isFirstLoad) {
+    allDMMessages = newMessages;
+    renderDMMessages(convId, withUser);
+
+  // Force scroll to bottom multiple times to handle media loading
+  const scrollToBottom = () => {
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  };
+
+  setTimeout(scrollToBottom, 100);
+  setTimeout(scrollToBottom, 300);
+  setTimeout(scrollToBottom, 600);
+    setupDMScrollListener(messagesEl, convId, withUser);
+    isFirstLoad = false;
+    previousMessagesCount = newMessages.length;
+  } else {
+    // Incremental update: only update changed/new messages
+    const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
+
+    newMessages.forEach(newMsg => {
+      const existingMsg = oldMessagesMap.get(newMsg.id);
+
+      if (!existingMsg) {
+        // New message - add to end
+        allDMMessages.push(newMsg);
+        const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
+        messagesEl.appendChild(div);
+
+        // Scroll to bottom for new messages
+    // Scroll to bottom for new messages
+        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
+        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
+      } else {
+        // Check if message was updated (reactions, edits, read status)
+        const needsUpdate =
+          JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
+          existingMsg.edited !== newMsg.edited ||
+          existingMsg.text !== newMsg.text ||
+          existingMsg.read !== newMsg.read;
+
+        if (needsUpdate) {
+          // Update existing message element
+          const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
+          if (messageEl) {
+            // Update in allDMMessages array
+            const index = allDMMessages.findIndex(m => m.id === newMsg.id);
+            if (index !== -1) {
+              allDMMessages[index] = newMsg;
+            }
+
+            // Update DOM element
+            updateMessageElement(messageEl, newMsg, convId, allDMMessages);
+          }
+        }
+      }
+    });
+
+    previousMessagesCount = newMessages.length;
+  }
+
+  await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+});
+const dmTextarea = modal.querySelector('#dmText');
+const dmContent = modal.querySelector('.dm-content');
+setupMentionAutocomplete(dmTextarea, dmContent);
+
+// Auto-resize textarea
+dmTextarea.addEventListener('input', function() {
+  this.style.height = '20px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+ const sendBtn = modal.querySelector('#dmSend');
+let isSending = false; // Flag to prevent multiple sends
+
+sendBtn.onclick = async () => {
+  // Prevent multiple clicks
+  if (isSending) return;
+
+  const textEl = modal.querySelector('#dmText');
+  const text = textEl.value.trim();
+
+  if (!text && !selectedImage) {
+    showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
+    return;
+  }
+
+  // Disable button and set flag
+  isSending = true;
+  sendBtn.disabled = true;
+  sendBtn.style.opacity = '0.5';
+  sendBtn.style.cursor = 'not-allowed';
+  const originalText = sendBtn.textContent;
+  sendBtn.textContent = 'جاري الإرسال...';
+if (editingMessageId) {
+    try {
+      // Update message in Firebase
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
+      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
+
+      // Real-time listener will update the UI automatically
+      editingMessageId = null;
+      textEl.value = '';
+      document.getElementById('dmEditingIndicator')?.remove();
+      textEl.style.height = '20px';
+
+      showSyncStatus('✅ تم تعديل الرسالة', 1500);
+    } catch (error) {
+      showAlert('❌ فشل تعديل الرسالة');
     }
 
-    const messagesRef = ref(database, `dm_messages/${convId}`);
-    dmMessagesLimit = 20;
-    allDMMessages = [];
-    isFirstLoad = true;
-    previousMessagesCount = 0;
+    // Re-enable button after 1 second
+    setTimeout(() => {
+      isSending = false;
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
+      sendBtn.style.cursor = 'pointer';
+      sendBtn.textContent = originalText;
+    }, 1000);
 
-    dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
-      if (!msgsSnap.exists()) {
-        messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
-        allDMMessages = [];
-        isFirstLoad = false;
-        return;
-      }
+    return;
+  }
 
-      const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
-      const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
-      if (unread.length > 0) {
-        Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
-          .catch(err => console.error('Error marking messages as read:', err));
-      }
-
-      if (isFirstLoad) {
-        allDMMessages = newMessages;
-        renderDMMessages(convId, withUser);
-        const scrollToBottom = () => {
-          messagesEl.scrollTop = messagesEl.scrollHeight;
-        };
-        setTimeout(scrollToBottom, 100);
-        setTimeout(scrollToBottom, 300);
-        setTimeout(scrollToBottom, 600);
-        setupDMScrollListener(messagesEl, convId, withUser);
-        isFirstLoad = false;
-        previousMessagesCount = newMessages.length;
+  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+  const payload = {
+    id: msgId, convId, text,
+    from: currentUser.username, fromId: currentUser.id, toId: withUserId,
+    timestamp: new Date().toISOString()
+  };
+if (selectedImage) {
+    try {
+      // Check if it's a link or file upload
+      if (selectedImage.url && selectedImage.type === 'image/link') {
+        // It's a link - use directly
+        payload.imageUrl = selectedImage.url;
+        payload.fileType = 'image/link';
       } else {
-        const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
-        newMessages.forEach(newMsg => {
-          const existingMsg = oldMessagesMap.get(newMsg.id);
-          if (!existingMsg) {
-            allDMMessages.push(newMsg);
-            const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
-            messagesEl.appendChild(div);
-            setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
-            setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
-          } else {
-            const needsUpdate =
-              JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
-              existingMsg.edited !== newMsg.edited ||
-              existingMsg.text !== newMsg.text ||
-              existingMsg.read !== newMsg.read;
-            if (needsUpdate) {
-              const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
-              if (messageEl) {
-                const index = allDMMessages.findIndex(m => m.id === newMsg.id);
-                if (index !== -1) {
-                  allDMMessages[index] = newMsg;
-                }
-                updateMessageElement(messageEl, newMsg, convId, allDMMessages);
-              }
-            }
-          }
-        });
-        previousMessagesCount = newMessages.length;
+        // It's a file upload - upload to Firebase
+        showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
+        const uploaded = await uploadFileToCloudinary
+(selectedImage.file);
+        payload.imageUrl = uploaded.url;
+        payload.fileType = selectedImage.type;
       }
+      selectedImage = null;
+      modal.querySelector('#dmImageInput').value = '';
+      modal.querySelector('#dmImageUploadPreview').style.display = 'none';
+      modal.querySelector('#dmImagePreview').innerHTML = '';
+    } catch (error) {
+      showAlert('❌ فشل رفع الوسائط');
 
-      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+      // Re-enable button
+      setTimeout(() => {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.textContent = originalText;
+      }, 1000);
+
+      return;
+    }
+  }
+
+  if (replyingToMessage) {
+    payload.replyTo = replyingToMessage.id;
+    replyingToMessage = null;
+    document.getElementById('dmReplyingIndicator')?.remove();
+  }
+
+  try {
+    await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+
+    const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
+
+    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+      id: convId, userId: withUserId, username: withUser?.username || '',
+      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
     });
 
-    const dmTextarea = modal.querySelector('#dmText');
-    const dmContent = modal.querySelector('.dm-content');
-    setupMentionAutocomplete(dmTextarea, dmContent);
-
-    dmTextarea.addEventListener('input', function() {
-      this.style.height = '20px';
-      this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+    const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+    const theirMetaSnap = await get(theirMetaRef);
+    const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+    await set(theirMetaRef, {
+      id: convId, userId: currentUser.id, username: currentUser.username,
+      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
     });
+
+    await addNotification(withUserId, {
+      type: 'message', from: currentUser.username, fromId: currentUser.id,
+      messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
+      timestamp: payload.timestamp
+    });
+
+     textEl.value = '';
+    textEl.style.height = '20px';
+    showSyncStatus('✅ تم إرسال الرسالة', 1500);
+    await loadDMConversations();
+    renderDMList();
+ // Reset to show latest messages after sending
+    dmMessagesLimit = 20;
+    renderDMMessages(convId, withUser);
+    setTimeout(() => {
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }, 100);
+
+    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+  } catch (error) {
+    showAlert('❌ فشل إرسال الرسالة');
+  }
+
+  // Re-enable button after 1 second
+  setTimeout(() => {
+    isSending = false;
+    sendBtn.disabled = false;
+    sendBtn.style.opacity = '1';
+    sendBtn.style.cursor = 'pointer';
+    sendBtn.textContent = originalText;
+  }, 1000);
+};
+
   }
 
   const sendBtn = modal.querySelector('#dmSend');
@@ -3355,8 +3482,11 @@ modal.innerHTML = `
     if (editingMessageId) {
       try {
         await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/text`), text);
-        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/edited`), true);
-        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
+// Make sure messageId exists before marking as read
+if (messageId && messageId !== 'undefined') {
+  await set(ref(database, `dm_messages/${convId}/${messageId}/read`), true);
+}
+await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
 
         const msgIndex = allDMMessages.findIndex(m => m.id === editingMessageId);
         if (msgIndex !== -1) {
@@ -3574,8 +3704,7 @@ modal.innerHTML = `
       await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
     }, 3000);
   });
-
-  modal.querySelector('#dmStartNew').addEventListener('click', () => {
+ modal.querySelector('#dmStartNew').addEventListener('click', () => {
     const q = (modal.querySelector('#dmSearch').value || '').trim().toLowerCase();
     const candidates = allUsers.filter(u => u.id !== currentUser.id && u.username.toLowerCase().includes(q));
     listEl.innerHTML = '';
@@ -3597,22 +3726,25 @@ modal.innerHTML = `
         loadConversation(user.id);
         sidebar.classList.remove('show');
       };
-      listEl.appendChild(item);
+listEl.appendChild(item);
+      });
+
+      // Update online indicators for search results - ADD THIS
+      candidates.forEach(user => {
+        isUserOnline(user.id, (online) => {
+          const indicator = document.querySelector('.dm-list-indicator-' + user.id);
+          if (indicator) {
+            if (online) {
+              indicator.classList.remove('offline');
+            } else {
+              indicator.classList.add('offline');
+            }
+          }
+        });
+      });
+      // END OF ADDITION
     });
 
-    candidates.forEach(user => {
-      isUserOnline(user.id, (online) => {
-        const indicator = document.querySelector('.dm-list-indicator-' + user.id);
-        if (indicator) {
-          if (online) {
-            indicator.classList.remove('offline');
-          } else {
-            indicator.classList.add('offline');
-          }
-        }
-      });
-    });
-  });
 
   const closeMessageActions = function(e) {
     if (!e.target.closest('.dm-message')) {
@@ -3624,54 +3756,34 @@ modal.innerHTML = `
 
   document.addEventListener('click', closeMessageActions);
 
-  modal.querySelector('#closeDM').addEventListener('click', () => {
-    destroyDM();
-  });
+modal.querySelector('#closeDM').addEventListener('click', () => {
+  destroyDM();
+});
 
- // ✅ NEW CODE:
-// Load conversations and wait for data
-const conversations = await loadDMConversations();
-
-// Small delay to ensure UI is ready
-await new Promise(resolve => setTimeout(resolve, 150));
-
-// Render the list
-renderDMList();
-
-// Auto-open conversation
-if (targetUserId) {
-  // Direct target provided
-  const targetExists = allUsers.find(u => u.id === targetUserId);
-  if (targetExists) {
-    await ensureConversationMeta(targetUserId);
-    await loadConversation(targetUserId);
-  } else {
-    headerEl.innerHTML = '<span class="muted">⚠️ المستخدم غير موجود</span>';
+await loadDMConversations();
+  renderDMList();
+  if (targetUser) {
+    loadConversation(targetUserId);
+  } else if (dmConversations.length > 0) {
+    // Open the most recent conversation
+    const mostRecent = dmConversations.sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0))[0];
+    if (mostRecent && mostRecent.userId) {
+      loadConversation(mostRecent.userId);
+    }
   }
-} else if (conversations && conversations.length > 0) {
-  // Load most recent conversation
-  const sorted = [...conversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
-  const mostRecent = sorted[0];
 
-  if (mostRecent && mostRecent.userId) {
-    await loadConversation(mostRecent.userId);
-  } else {
-    headerEl.innerHTML = '<span class="muted">👋 اختر محادثة من القائمة</span>';
-  }
-} else {
-  // No conversations yet
-  headerEl.innerHTML = '<span class="muted">💬 ابدأ محادثة جديدة</span>';
-  messagesEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted)">📭 لا توجد محادثات بعد<br><br>استخدم زر "بدء" للبحث عن مستخدم<br><br>⚠️ ان لم تطهر المحادثات فقم بتسجيل الخروج ثم سجل مجددا</div>';
-}
   modal.addEventListener('click', e => {
-    if (e.target === modal) {
-      destroyDM();
-      return;
-    }
-    if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
-      sidebar.classList.remove('show');
-    }
-  });
+  // Clicked on overlay (outside inner content)
+  if (e.target === modal) {
+    destroyDM();
+    return;
+  }
+  // Hide sidebar if clicking outside it
+  if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
+    sidebar.classList.remove('show');
+  }
+});
+
 }
     // UI controls
     function showSyncStatus(message, duration = 2000) {
@@ -4366,7 +4478,7 @@ loadMoreBtn.onclick = function loadMore() {
 isRendering = false;
 renderTags();
 renderActiveSearchTags();
-function getCommentsCount(poemId) {
+async function getCommentsCount(poemId) {
   if (cachedComments[poemId]) {
     return Object.keys(cachedComments[poemId]).length;
   }
@@ -5169,9 +5281,8 @@ window.openModal = async function(poem) {
       const audiosHtml = (poem.audios || []).length > 0
         ? '<div class="media-container"><h4 style="margin-bottom:10px">🎵 الوسائط</h4>' + (poem.audios || []).map(audio => getAudioHtml(audio)).join('') + '</div>' : '';
   // ✅ ADD THESE TWO LINES HERE (before modal.innerHTML):
-const likesCount = getLikesCount(poem.id);
-  const userLiked = isLiked(poem.id);
-
+const likesCount = await getLikesCount(poem.id);
+const userLiked = await isLiked(poem.id);
 
         const imagesHtml = (poem.images || []).length > 0
   ? '<div class="media-container"><h4 style="margin-bottom:10px">🖼️ الصور</h4><div style="display:flex;gap:12px;flex-wrap:wrap">' +
@@ -6118,88 +6229,92 @@ document.getElementById('btnDeleteProfile').addEventListener('click', () => {
       renderTagsInForm(); renderAudiosInForm(); renderImagesPreview();
     });
 
+
+
+
+
+
+// ✅ Now the cleaned-up init() function
 async function init() {
-
   const poemGrid = document.getElementById('poemGrid');
-  poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...';
+  poemGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div style="font-weight:700;margin-top:8px">جاري التحميل...</div></div>';
 
+  loadAllUsers();
+  await loadAllUsersFromFirebase();
 
-      loadAllUsers();
-      await loadAllUsersFromFirebase();
-      if (!checkAuth()) return;
-// ADD THIS LINE - Initialize online status tracking
+  if (!checkAuth()) return;
+
   updateOnlineStatus();
-      // Request notification permission on first login
-      const hasPermission = await requestNotificationPermission();
 
+  const hasPermission = await requestNotificationPermission();
+  if (hasPermission) {
+    console.log('✅ Notification permission granted');
+  } else {
+    console.log('⚠️ Notification permission denied or not supported');
+  }
 
-       loadHiddenPoems();
-      loadFavorites();
-      loadFollowing();
-       // Load poems FIRST (critical)
+  loadHiddenPoems();
+  loadFavorites();
+  loadFollowing();
+
+  // Load poems FIRST (critical)
   await loadPoemsFromFirebase();
-
-  await loadAllMetadata(); // ✅ ADD THIS LINE
-
-  renderPoems(); // Show poems immediately
+  await loadAllMetadata();
+  renderPoems();
   initSortable();
 
   // Load these in background (non-critical)
   setTimeout(async () => {
     await loadNotifications();
-    await loadDMConversations();
+    loadDMConversations(); // Sets up listener
   }, 500);
 
-      setupFirebaseListener();
+  setupFirebaseListener();
 
-      // Listen for new notifications in real-time
-      const notifRef = ref(database, `notifications/${currentUser.id}`);
-      onValue(notifRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const newNotifications = Object.values(snapshot.val());
+  // Setup notification listener inline
+  const notifRef = ref(database, `notifications/${currentUser.id}`);
+  onValue(notifRef, (snapshot) => {
+    if (snapshot.exists()) {
+      const newNotifications = Object.values(snapshot.val());
 
-          // Find new notifications that aren't in our current list
-          newNotifications.forEach(notif => {
-            const existing = notifications.find(n => n.id === notif.id);
-            if (!existing && !notif.read) {
-              // This is a brand new notification - show browser notification
-              let title = 'Mody Poetry';
-              let body = '';
+      newNotifications.forEach(notif => {
+        const existing = notifications.find(n => n.id === notif.id);
+        if (!existing && !notif.read) {
+          let title = 'Mody Poetry';
+          let body = '';
 
-              if (notif.type === 'like') {
-                title = 'إعجاب جديد ❤️';
-                body = `${notif.from} أعجب بقصيدتك "${notif.poemTitle}"`;
-              } else if (notif.type === 'comment') {
-                title = 'تعليق جديد 💬';
-                body = `${notif.from} علق على قصيدتك "${notif.poemTitle}"`;
-              } else if (notif.type === 'follow') {
-                title = 'متابع جديد 👥';
-                body = `${notif.from} بدأ بمتابعتك`;
-              } else if (notif.type === 'mention') {
-                title = 'ذكرك في تعليق 📢';
-                body = `${notif.from} ذكرك في تعليق`;
-              } else if (notif.type === 'message') {
-                title = 'رسالة جديدة 💌';
-                body = `${notif.from}: ${notif.messagePreview}`;
-              } else if (notif.type === 'new_poem') {
-                title = 'قصيدة جديدة 🪶';
-                body = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`;
-              }
+          if (notif.type === 'like') {
+            title = 'إعجاب جديد ❤️';
+            body = `${notif.from} أعجب بقصيدتك "${notif.poemTitle}"`;
+          } else if (notif.type === 'comment') {
+            title = 'تعليق جديد 💬';
+            body = `${notif.from} علق على قصيدتك "${notif.poemTitle}"`;
+          } else if (notif.type === 'follow') {
+            title = 'متابع جديد 👥';
+            body = `${notif.from} بدأ بمتابعتك`;
+          } else if (notif.type === 'mention') {
+            title = 'ذكرك في تعليق 📢';
+            body = `${notif.from} ذكرك في تعليق`;
+          } else if (notif.type === 'message') {
+            title = 'رسالة جديدة 💌';
+            body = `${notif.from}: ${notif.messagePreview}`;
+          } else if (notif.type === 'new_poem') {
+            title = 'قصيدة جديدة 🪶';
+            body = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`;
+          }
 
-              showBrowserNotification(title, body, notif);
-            }
-          });
-
-          notifications = newNotifications;
-          renderNotifications();
-          updateNotificationBadge();
+          showBrowserNotification(title, body, notif);
         }
       });
 
-      renderPoems();
-      initSortable();
-      showSyncStatus('✅متصل ', 2000);
+      notifications = newNotifications;
+      renderNotifications();
+      updateNotificationBadge();
     }
+  });
+
+  showSyncStatus('✅ متصل', 2000);
+}
     init();
 document.querySelectorAll('.dm-message').forEach(msg => {
   msg.addEventListener('click', () => {
