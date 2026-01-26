@@ -4,8 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Mody Poetry</title>
+  <script>
+  (function() {
+    const savedTheme = localStorage.getItem('mody_theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  })();
+</script>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
-<link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/9087/9087118.png">
+<link rel="icon" type="image/png" href="https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png">
    <style>
     :root{--bg-gradient-1:#fff8f0;--bg-gradient-2:#fef3e8;--card:#ffffff;--muted:#8b7355;--accent:#3a1f0b;--brown:#b38660;--brown-hover:#a67c52;--text:#2e1a0f;--shadow:rgba(58,31,11,0.08);--shadow-lg:rgba(58,31,11,0.12);--border:#e8dcc8;--header-dark:#e8d2bf;--header-dark-2:#d9c0a6;--success:#28a745;--danger:#dc3545;--info:#17a2b8;--warning:#ffc107}
     [data-theme="dark"]{--bg-gradient-1:#1a1a1a;--bg-gradient-2:#2d2d2d;--card:#2a2a2a;--muted:#b8a088;--accent:#f4e4d7;--brown:rgba(201,150,107, .9);--brown-hover:#e0b080;--text:#e8dcc8;--shadow:rgba(0,0,0,0.3);--shadow-lg:rgba(0,0,0,0.5);--border:#4a4a4a;--header-dark:#3a3a3a;--header-dark-2:#2a2a2a}
@@ -46,13 +52,64 @@
 
     .container{max-width:1200px;margin:0 auto;padding:20px}
     header{background:linear-gradient(180deg,var(--header-dark) 0%, var(--header-dark-2) 100%);border-bottom:1px solid rgba(0,0,0,0.06);position:sticky;top:0;z-index:100;box-shadow:0 6px 28px rgba(0,0,0,0.08);transition:all 0.3s ease}
-    .header-content{max-width:1200px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .brand{display:flex;align-items:center;gap:12px}
-    .brand-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;background:rgba(58,31,11,0.06);color:var(--brown);box-shadow:0 4px 12px rgba(0,0,0,0.06)}
-    .brand h1{font-size:20px;font-weight:700;color:var(--accent)}
-    .brand p{font-size:13px;color:var(--muted);margin-top:2px}
-    nav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .btn{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:1.4px solid var(--brown);background:var(--card);color:var(--text);transition:all .18s ease}
+header {
+  background: linear-gradient(180deg, var(--header-dark) 0%, var(--header-dark-2) 100%);
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+  padding:  0px 0; /* Control header padding here */
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px; /* Only horizontal padding */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+ min-height: fit-content;
+ }
+
+.brand {
+  order: -1; /* Right side in RTL */
+  line-height: 0; /* Remove extra line spacing */
+}
+
+.brand img {
+  height: 80px;
+  width: auto;
+  display: block;
+  vertical-align: middle; /* Prevent baseline spacing */
+}
+
+/* Light mode logo (default) */
+.brand .logo-light {
+  display: block;
+}
+.brand .logo-dark {
+  display: none;
+}
+
+/* Dark mode logo */
+[data-theme="dark"] .brand .logo-light {
+  display: none;
+}
+[data-theme="dark"] .brand .logo-dark {
+  display: block;
+}
+
+nav {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+ .btn{padding:8px 12px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:1.4px solid var(--brown);background:var(--card);color:var(--text);transition:all .18s ease}
     .btn:hover{background:var(--brown);color:#fff;transform:translateY(-1px);box-shadow:0 4px 12px var(--shadow)}
 .btn-primary{background:var(--brown);color:#fff;border-color:var(--brown)}
 .btn-primary:hover{background:var(--brown-hover)}
@@ -88,8 +145,7 @@
     }
 
     .menu-divider{height:1px;background:var(--border);margin:6px 0}
-    .hero{background:var(--card);border-radius:14px;padding:16px;margin:20px 0;box-shadow:0 8px 32px var(--shadow-lg);border:1px solid var(--border)}
-    input[type="search"],input[type="text"],input[type="email"],input[type="url"],input[type="password"],textarea,select{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:15px;background:var(--card);color:var(--text);width:100%;font-family:'Cairo',sans-serif;transition:border 0.2s ease}
+ input[type="search"],input[type="text"],input[type="email"],input[type="url"],input[type="password"],textarea,select{padding:10px 12px;border-radius:8px;border:1.5px solid var(--border);font-size:15px;background:var(--card);color:var(--text);width:100%;font-family:'Cairo',sans-serif;transition:border 0.2s ease}
     input:focus,textarea:focus,select:focus{outline:none;border-color:var(--brown)}
     .search-filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:12px}
     .tags-wrapper{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -1212,8 +1268,90 @@ but dont alter the code of messge date
   border-radius: 8px;
 
 }
+/* Direction Toggle Button - Specific hover */
+#dmToggleDir:hover {
+  background: var(--brown) !important;
+  color: #fff !important;
+  border-color: var(--brown) !important;
+}
+/* Follow Button Styling */
+.follow-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 2px solid var(--brown);
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 120px;
+  white-space: nowrap;
+}
 
+/* Not Following State */
+.follow-btn.not-following {
+  background: transparent;
+  color: var(--brown);
+  border-color: var(--brown);
+}
 
+.follow-btn.not-following:hover {
+  background: var(--brown);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(139, 94, 60, 0.3);
+}
+
+/* Following State */
+.follow-btn.following {
+  background: var(--brown);
+  color: #fff;
+  border-color: var(--brown);
+}
+
+.follow-btn.following:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.3);
+}
+/* Chat Button - Blue accent */
+#chatBtn {
+  background: transparent;
+  color: var(--brown);
+  border: 2px solid var(--brown);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 100px;
+}
+
+#chatBtn:hover {
+  background: var(--brown);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(74, 144, 226, 0.4);
+}
+
+#chatBtn:active {
+  transform: translateY(0);
+}
+
+/* Follow button container */
+.follow-buttons-container {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  width: 100%;
+}
+
+.follow-buttons-container button {
+  flex: 1;
+}
 
   </style>
 
@@ -1221,76 +1359,62 @@ but dont alter the code of messge date
 
 </head>
 <body>
-  <header>
-    <div class="header-content">
-      <div class="brand">
-      <div class="brand-icon">
-    <img src="https://cdn-icons-png.flaticon.com/512/9087/9087118.png" alt="Brand Icon" width="32" height="32">
-  </div>
-        <div>
-          <h1>Mody Poetry</h1>
-          <p class="muted">قصائد مودي الذهبية - أقرأ شارك واستمتع</p>
+<header>
+  <div class="header-content">
+    <div class="brand">
+      <!-- Light mode logo -->
+      <img class="logo-light" src="https://res.cloudinary.com/dho1iqxul/image/upload/v1769435795/ChatGPT_Image_26_%D9%8A%D9%86%D8%A7%D9%8A%D8%B1_2026_02_50_28_%D9%85_lay9dw_c_crop_w_1380_h_700_ttuotd_c_crop_w_1350_h_700_ibhkiv.png" alt="Mody Poetry Logo">
+      <!-- Dark mode logo -->
+      <img class="logo-dark" src="https://res.cloudinary.com/dho1iqxul/image/upload/v1769435534/d765fbb7-3ac4-4881-815a-171e88f973f3_ouzudb_c_crop_w_1380_h_700_mhytn7.png" alt="Mody Poetry Logo">
+    </div>
+
+    <nav>
+<button class="icon-btn" id="btnThemeToggle" title="الوضع النهاري">☀️</button>
+<button class="btn small" id="btnAdd" title="أضف قصيدة">✏️ أضف</button>
+
+      <div class="menu-container">
+        <button class="icon-btn" id="btnNotifications" title="الإشعارات">
+          🔔
+          <span class="notification-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <div class="dropdown-menu" id="notificationsMenu" style="width:380px">
+          <div style="padding:10px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+            <span>الإشعارات</span>
+            <button class="btn small" id="clearAllNotifications" style="padding:4px 8px;font-size:11px">مسح الكل</button>
+          </div>
+          <div id="notificationsList" style="max-height:400px;overflow-y:auto;padding:6px"></div>
         </div>
       </div>
-      <nav>
-        <button class="icon-btn" id="btnThemeToggle" title="تبديل السمة">🌙</button>
 
-        <!-- Add poem: guard if not logged in -->
-        <button class="btn small" id="btnAdd" title="أضف قصيدة">✏️ أضف</button>
+      <div class="menu-container">
+        <button class="icon-btn" id="btnDM" title="الرسائل المباشرة">
+          💌
+          <span class="notification-badge" id="dmBadge" style="display:none">0</span>
+        </button>
+      </div>
 
-        <div class="menu-container">
-          <button class="icon-btn" id="btnNotifications" title="الإشعارات">
-            🔔
-            <span class="notification-badge" id="notifBadge" style="display:none">0</span>
-          </button>
-          <div class="dropdown-menu" id="notificationsMenu" style="width:380px">
-            <div style="padding:10px;font-weight:700;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-              <span>الإشعارات</span>
-              <button class="btn small" id="clearAllNotifications" style="padding:4px 8px;font-size:11px">مسح الكل</button>
-            </div>
-            <div id="notificationsList" style="max-height:400px;overflow-y:auto;padding:6px"></div>
-          </div>
+      <div class="menu-container">
+        <button class="btn small" id="menuToggle">☰ القائمة</button>
+        <div class="dropdown-menu" id="dropdownMenu">
+          <button class="menu-item" id="btnMyProfile">👤 ملفي الشخصي</button>
+          <button class="menu-item" id="btnFavorites">⭐ القصائد المفضلة</button>
+          <button class="menu-item" id="btnFollowing">👥 المتابَعون</button>
+          <div class="menu-divider"></div>
+          <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
+          <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
+          <div class="menu-divider"></div>
+          <button class="menu-item" id="btnDeleteProfile">🗑️ حذف الملف</button>
+          <button class="menu-item" id="btnLogout">🚪 تسجيل خروج</button>
         </div>
-
-        <div class="menu-container">
-          <button class="icon-btn" id="btnDM" title="الرسائل المباشرة">
-            💌
-            <span class="notification-badge" id="dmBadge" style="display:none">0</span>
-          </button>
-        </div>
-
-        <div class="menu-container">
-          <button class="btn small" id="menuToggle">☰ القائمة</button>
-          <div class="dropdown-menu" id="dropdownMenu">
-         <button class="menu-item" id="btnMyProfile">👤 ملفي الشخصي</button>
-            <button class="menu-item" id="btnFavorites">⭐ القصائد المفضلة</button>
-            <button class="menu-item" id="btnFollowing">👥 المتابَعون</button>
-            <div class="menu-divider"></div>
-
-            <!--
-            <button class="menu-item" id="btnEnableNotifications">🔔 تفعيل الإشعارات</button>
-            <div class="menu-divider"></div>
-            <button class="menu-item" id="btnReloadAndSort">🥳 جديد مودي</button>
-  -->
-            <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
-            <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
-            <div class="menu-divider"></div>
-            <button class="menu-item" id="btnDeleteProfile">🗑️ حذف الملف</button>
-            <button class="menu-item" id="btnLogout">🚪 تسجيل خروج</button>
-          </div>
-        </div>
-      </nav>
-    </div>
-  </header>
-
+      </div>
+    </nav>
+  </div>
+</header>
   <div id="syncStatus" class="sync-status"><span id="syncText">🔄 جاري المزامنة...</span></div>
 
-  <div id="userInfoDisplay" style="display:none;padding:10px 20px;background:rgba(139,94,60,0.1);border-bottom:1px solid var(--border)">
-    <div style="max-width:1200px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <div><span style="font-weight:600">👤 مرحباً، </span><span id="currentUserName" style="color:var(--brown)">---</span></div>
-    </div>
-  </div>
-
+<div id="userInfoDisplay" style="display:none;position:fixed;top:100px;left:50%;transform:translateX(-50%);padding:14px 28px;background:linear-gradient(135deg, var(--brown) 0%, var(--brown-hover) 100%);color:#fff;border-radius:50px;box-shadow:0 10px 30px rgba(0,0,0,0.4);z-index:9999;font-weight:600;font-size:16px;">
+  👤 مرحباً، <span id="currentUserName" style="color:#fff;">---</span>
+</div>
   <div class="container">
     <section class="hero">
       <label for="searchInput" style="display:none">البحث</label>
@@ -2070,31 +2194,39 @@ function updateOnlineStatus() {
     let isLoadingMoreMessages = false;
     let isUpdatingFromFirebase = false;
     let selectedUserForLogin = null;
+    let selectedImage = null;
+    let dmTextDirection = 'rtl';
+
 let cachedLikes = {};
 let cachedComments = {};
 
     let isRendering = false;
 let currentFilteredPoems = []; // Add this new global variable
 
-    function initTheme() {
-      const savedTheme = localStorage.getItem(THEME_KEY) || 'light';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      const btn = document.getElementById('btnThemeToggle');
-      btn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
-      btn.title = savedTheme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي';
-    }
-    function toggleTheme() {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem(THEME_KEY, newTheme);
-      const btn = document.getElementById('btnThemeToggle');
-      btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
-      btn.title = newTheme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي';
-    }
-    document.getElementById('btnThemeToggle').addEventListener('click', toggleTheme);
-    initTheme();
+// Find the initTheme() function and replace it with:
+function initTheme() {
+  const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  const btn = document.getElementById('btnThemeToggle');
 
+  if (btn) {
+    btn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    btn.title = savedTheme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي';
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem(THEME_KEY, newTheme);
+  const btn = document.getElementById('btnThemeToggle');
+  btn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+  btn.title = newTheme === 'dark' ? 'الوضع النهاري' : 'الوضع الليلي';
+}
+
+document.getElementById('btnThemeToggle').addEventListener('click', toggleTheme);
+initTheme();
     function hashPassword(password) {
       let hash = 0;
       for (let i = 0; i < password.length; i++) {
@@ -2143,24 +2275,44 @@ let currentFilteredPoems = []; // Add this new global variable
     }
     function isFavorite(poemId) { return favorites.includes(poemId); }
 
-    function loadFollowing() {
-      if (!currentUser) return;
-      const key = FOLLOWING_KEY + '_' + currentUser.id;
-      const stored = localStorage.getItem(key);
-      if (stored) { try { following = JSON.parse(stored); } catch { following = []; } }
-    }
-    function saveFollowing() {
-      if (!currentUser) return;
-      const key = FOLLOWING_KEY + '_' + currentUser.id;
-      localStorage.setItem(key, JSON.stringify(following));
-    }
-    function toggleFollow(userId) {
-      const index = following.indexOf(userId);
-      if (index > -1) { following.splice(index, 1); showSyncStatus('👋 تم إلغاء المتابعة', 2000); }
-      else { following.push(userId); showSyncStatus('✅ تمت المتابعة بنجاح', 2000); }
-      saveFollowing();
-    }
-    function isFollowing(userId) { return following.includes(userId); }
+function loadFollowing() {
+  if (!currentUser) return;
+  const key = FOLLOWING_KEY + '_' + currentUser.id;
+  const stored = localStorage.getItem(key);
+  if (stored) { try { following = JSON.parse(stored); } catch { following = []; } }
+}
+
+function saveFollowing() {
+  if (!currentUser) return;
+  const key = FOLLOWING_KEY + '_' + currentUser.id;
+  localStorage.setItem(key, JSON.stringify(following));
+  // ✅ Also save to Firebase
+  set(ref(database, `following/${currentUser.id}`), following).catch(err => {
+    console.error('Error saving following to Firebase:', err);
+  });
+}
+
+async function toggleFollow(userId) {
+  const index = following.indexOf(userId);
+  if (index > -1) {
+    following.splice(index, 1);
+    showSyncStatus('👋 تم إلغاء المتابعة', 2000);
+  } else {
+    following.push(userId);
+    showSyncStatus('✅ تمت المتابعة بنجاح', 2000);
+
+    // ✅ Send follow notification
+    await addNotification(userId, {
+      type: 'follow',
+      from: currentUser.username,
+      fromId: currentUser.id,
+      timestamp: new Date().toISOString()
+    });
+  }
+  saveFollowing();
+}
+
+function isFollowing(userId) { return following.includes(userId); }
 
     function loadHiddenPoems() {
       if (!currentUser) return;
@@ -2699,7 +2851,12 @@ if (m.text && m.text.trim()) {
     const escapedLink = escapeHtml(link);
     processedText = processedText.replace(new RegExp(escapedLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), `<a href="${link}" target="_blank" style="color:var(--brown);text-decoration:underline;word-break:break-all">${escapedLink}</a>`);
   });
-  textHtml = `<div class="bubble">${processedText}${editedLabel}</div>`;
+
+  // ✅ Apply text direction from message data
+  const messageDir = m.textDirection || 'rtl';
+  const dirStyle = `dir="${messageDir}" style="text-align:${messageDir === 'rtl' ? 'right' : 'left'}"`;
+
+  textHtml = `<div class="bubble" ${dirStyle}>${processedText}${editedLabel}</div>`;
     if (links.length > 0) {
       links.forEach(link => {
         const preview = renderLinkPreview(link);
@@ -3024,6 +3181,40 @@ modal.innerHTML = `
     </div>
   `;
   document.body.appendChild(modal);
+  // �� Load saved direction preference
+ const dmTextarea = modal.querySelector('#dmText');
+const dmContent = modal.querySelector('.dm-content');
+const dmToggleBtn = modal.querySelector('#dmToggleDir');
+
+
+// ✅ Load and apply saved direction preference
+const savedDirection = localStorage.getItem('mody_dm_direction') || 'rtl';
+dmTextDirection = savedDirection;
+dmTextarea.setAttribute('dir', savedDirection);
+dmTextarea.placeholder = savedDirection === 'rtl' ? 'اكتب رسالة...' : 'Type a message...';
+
+if (dmToggleBtn) {
+  // ✅ Only set text, no background/color
+  if (savedDirection === 'ltr') {
+    dmToggleBtn.textContent =  '←';
+    dmToggleBtn.title = 'التبديل للعربية';
+  } else {
+    dmToggleBtn.textContent = '→';
+    dmToggleBtn.title = 'Switch to English';
+  }
+
+  // ✅ Clear any inline styles
+  dmToggleBtn.style.background = '';
+  dmToggleBtn.style.color = '';
+}
+
+setupMentionAutocomplete(dmTextarea, dmContent);
+
+// Auto-resize textarea
+dmTextarea.addEventListener('input', function() {
+  this.style.height = '20px';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
 
   const listEl = modal.querySelector('#dmConversationsList');
   const messagesEl = modal.querySelector('#dmMessages');
@@ -3033,8 +3224,7 @@ modal.innerHTML = `
   const conversationsCount = modal.querySelector('#conversationsCount');
   let currentConversationId = null;
   let typingTimeout = null;
-  let selectedImage = null;
-  let isFirstLoad = true;
+   let isFirstLoad = true;
   let previousMessagesCount = 0;
   let isDMOpen = true;
 
@@ -3051,13 +3241,37 @@ modal.innerHTML = `
     if (modal && modal.parentNode) modal.remove();
     isDMOpen = false;
   }
+modal.querySelector('#dmToggleDir').addEventListener('click', function() {
+  const textarea = modal.querySelector('#dmText');
+  const currentDir = textarea.getAttribute('dir') || 'rtl';
+  const newDir = currentDir === 'rtl' ? 'ltr' : 'rtl';
 
-  modal.querySelector('#dmToggleDir').addEventListener('click', function() {
-    const textarea = modal.querySelector('#dmText');
-    const currentDir = textarea.getAttribute('dir') || 'rtl';
-    textarea.setAttribute('dir', currentDir === 'rtl' ? 'ltr' : 'rtl');
-    this.textContent = currentDir === 'rtl' ? '→' : '←';
-  });
+  // Update textarea direction
+  textarea.setAttribute('dir', newDir);
+
+  // Update placeholder text
+  textarea.placeholder = newDir === 'rtl' ? 'اكتب رسالة...' : 'Type a message...';
+
+  // ✅ FIXED: Remove background color styles, only change text
+  if (newDir === 'ltr') {
+    this.textContent =  '←';
+    this.title = 'التبديل للعربية';
+  } else {
+    this.textContent = '→';
+    this.title = 'Switch to English';
+  }
+
+  // ✅ Remove inline styles to let CSS handle hover
+  this.style.background = '';
+  this.style.color = '';
+
+  // Save preference
+  dmTextDirection = newDir;
+  localStorage.setItem('mody_dm_direction', newDir);
+
+  // Focus textarea after direction change
+  textarea.focus();
+});
 
   async function ensureConversationMeta(withUserId) {
     const withUser = allUsers.find(u => u.id === withUserId);
@@ -3295,8 +3509,7 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
 
   await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
 });
-const dmTextarea = modal.querySelector('#dmText');
-const dmContent = modal.querySelector('.dm-content');
+ const dmContent = modal.querySelector('.dm-content');
 setupMentionAutocomplete(dmTextarea, dmContent);
 
 // Auto-resize textarea
@@ -3304,36 +3517,37 @@ dmTextarea.addEventListener('input', function() {
   this.style.height = '20px';
   this.style.height = Math.min(this.scrollHeight, 120) + 'px';
 });
- const sendBtn = modal.querySelector('#dmSend');
-let isSending = false; // Flag to prevent multiple sends
+
+  const sendBtn = modal.querySelector('#dmSend');
+let isSending = false;
 
 sendBtn.onclick = async () => {
-  // Prevent multiple clicks
   if (isSending) return;
 
   const textEl = modal.querySelector('#dmText');
   const text = textEl.value.trim();
 
+  // ✅ FIX: Check selectedImage BEFORE showing empty message alert
   if (!text && !selectedImage) {
     showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
     return;
   }
 
-  // Disable button and set flag
+  // Disable button
   isSending = true;
   sendBtn.disabled = true;
   sendBtn.style.opacity = '0.5';
   sendBtn.style.cursor = 'not-allowed';
   const originalText = sendBtn.textContent;
   sendBtn.textContent = 'جاري الإرسال...';
-if (editingMessageId) {
-    try {
-      // Update message in Firebase
-      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/text`), text);
-      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/edited`), true);
-      await set(ref(database, `dm_messages/${convId}/${editingMessageId}/editedAt`), new Date().toISOString());
 
-      // Real-time listener will update the UI automatically
+  // EDITING MODE
+  if (editingMessageId) {
+    try {
+      await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/text`), text);
+      await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/edited`), true);
+      await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
+
       editingMessageId = null;
       textEl.value = '';
       document.getElementById('dmEditingIndicator')?.remove();
@@ -3344,7 +3558,6 @@ if (editingMessageId) {
       showAlert('❌ فشل تعديل الرسالة');
     }
 
-    // Re-enable button after 1 second
     setTimeout(() => {
       isSending = false;
       sendBtn.disabled = false;
@@ -3352,39 +3565,54 @@ if (editingMessageId) {
       sendBtn.style.cursor = 'pointer';
       sendBtn.textContent = originalText;
     }, 1000);
-
     return;
   }
 
-  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
+  // SENDING NEW MESSAGE MODE
+  const convId = currentConversationId;
+  const withUserId = convId.split('_').find(id => id !== currentUser.id);
+  const withUser = allUsers.find(u => u.id === withUserId);
+  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
   const payload = {
-    id: msgId, convId, text,
-    from: currentUser.username, fromId: currentUser.id, toId: withUserId,
-    timestamp: new Date().toISOString()
+    id: msgId,
+    convId,
+    text,
+    from: currentUser.username,
+    fromId: currentUser.id,
+    toId: withUserId,
+    timestamp: new Date().toISOString(),
+     textDirection: dmTextDirection
   };
-if (selectedImage) {
+
+
+  // ✅ Handle media (GIFs/images/videos)
+  if (selectedImage) {
     try {
-      // Check if it's a link or file upload
-      if (selectedImage.url && selectedImage.type === 'image/link') {
-        // It's a link - use directly
+      // ✅ GIF or direct link - NO upload needed
+      if (selectedImage.type === 'image/gif' || selectedImage.type === 'image/link') {
         payload.imageUrl = selectedImage.url;
-        payload.fileType = 'image/link';
+        payload.fileType = selectedImage.type;
       } else {
-        // It's a file upload - upload to Firebase
+        // File upload to Cloudinary
         showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-        const uploaded = await uploadFileToCloudinary
-(selectedImage.file);
+        const uploaded = await uploadFileToCloudinary(selectedImage.file);
         payload.imageUrl = uploaded.url;
         payload.fileType = selectedImage.type;
       }
-      selectedImage = null;
-      modal.querySelector('#dmImageInput').value = '';
-      modal.querySelector('#dmImageUploadPreview').style.display = 'none';
+
+      // ✅ Clear selected image and preview IMMEDIATELY after adding to payload
+      const preview = modal.querySelector('#dmImageUploadPreview');
+      preview.style.display = 'none';
       modal.querySelector('#dmImagePreview').innerHTML = '';
+      delete preview.dataset.gifUrl;
+      modal.querySelector('#dmImageInput').value = '';
+      selectedImage = null; // ✅ Clear AFTER using it
+
     } catch (error) {
+      console.error('Media upload error:', error);
       showAlert('❌ فشل رفع الوسائط');
 
-      // Re-enable button
       setTimeout(() => {
         isSending = false;
         sendBtn.disabled = false;
@@ -3392,59 +3620,84 @@ if (selectedImage) {
         sendBtn.style.cursor = 'pointer';
         sendBtn.textContent = originalText;
       }, 1000);
-
       return;
     }
   }
 
+  // Handle reply
   if (replyingToMessage) {
     payload.replyTo = replyingToMessage.id;
     replyingToMessage = null;
     document.getElementById('dmReplyingIndicator')?.remove();
   }
 
+  // Send to Firebase
   try {
     await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
 
-    const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
+    const lastMsgText = text || (
+      payload.fileType === 'image/gif' ? '🎭 GIF' :
+      payload.fileType?.startsWith('video/') ? '🎥 فيديو' :
+      payload.fileType?.startsWith('audio/') ? '🎵 صوت' :
+      payload.imageUrl ? '📷 صورة' : ''
+    );
 
+    // Update conversation metadata
     await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
-      id: convId, userId: withUserId, username: withUser?.username || '',
-      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
+      id: convId,
+      userId: withUserId,
+      username: withUser?.username || '',
+      lastMessage: lastMsgText,
+      updatedAt: payload.timestamp,
+      unreadCount: 0
     });
 
     const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
     const theirMetaSnap = await get(theirMetaRef);
     const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+
     await set(theirMetaRef, {
-      id: convId, userId: currentUser.id, username: currentUser.username,
-      lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
+      id: convId,
+      userId: currentUser.id,
+      username: currentUser.username,
+      lastMessage: lastMsgText,
+      updatedAt: payload.timestamp,
+      unreadCount: theirUnread
     });
 
+    // Send notification
     await addNotification(withUserId, {
-      type: 'message', from: currentUser.username, fromId: currentUser.id,
-      messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
+      type: 'message',
+      from: currentUser.username,
+      fromId: currentUser.id,
+      messagePreview: text ? text.substring(0, 50) + (text.length > 50 ? '...' : '') : lastMsgText,
       timestamp: payload.timestamp
     });
 
-     textEl.value = '';
+    // Clear input
+    textEl.value = '';
     textEl.style.height = '20px';
-    showSyncStatus('✅ تم إرسال الرسالة', 1500);
+
+    showSyncStatus('✅ تم إرسال الرس��لة', 1500);
+
+    // Refresh conversations list
     await loadDMConversations();
     renderDMList();
- // Reset to show latest messages after sending
-    dmMessagesLimit = 20;
-    renderDMMessages(convId, withUser);
+
+    // Clear typing indicator
+    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+
+    // Scroll to bottom
     setTimeout(() => {
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }, 100);
 
-    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
   } catch (error) {
+    console.error('Send error:', error);
     showAlert('❌ فشل إرسال الرسالة');
   }
 
-  // Re-enable button after 1 second
+  // Re-enable button
   setTimeout(() => {
     isSending = false;
     sendBtn.disabled = false;
@@ -3453,160 +3706,8 @@ if (selectedImage) {
     sendBtn.textContent = originalText;
   }, 1000);
 };
-
   }
 
-  const sendBtn = modal.querySelector('#dmSend');
-  let isSending = false;
-
-  sendBtn.onclick = async () => {
-    if (isSending) return;
-    const textEl = modal.querySelector('#dmText');
-    const text = textEl.value.trim();
-    const preview = modal.querySelector('#dmImageUploadPreview');
-    if (preview && preview.dataset.gifUrl && !selectedImage) {
-      selectedImage = { url: preview.dataset.gifUrl, type: 'image/gif' };
-    }
-    if (!text && !selectedImage) {
-      showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
-      return;
-    }
-
-    isSending = true;
-    sendBtn.disabled = true;
-    sendBtn.style.opacity = '0.5';
-    sendBtn.style.cursor = 'not-allowed';
-    const originalText = sendBtn.textContent;
-    sendBtn.textContent = 'جاري الإرسال...';
-
-    if (editingMessageId) {
-      try {
-        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/text`), text);
-// Make sure messageId exists before marking as read
-if (messageId && messageId !== 'undefined') {
-  await set(ref(database, `dm_messages/${convId}/${messageId}/read`), true);
-}
-await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
-
-        const msgIndex = allDMMessages.findIndex(m => m.id === editingMessageId);
-        if (msgIndex !== -1) {
-          allDMMessages[msgIndex].text = text;
-          allDMMessages[msgIndex].edited = true;
-          allDMMessages[msgIndex].editedAt = new Date().toISOString();
-        }
-
-        editingMessageId = null;
-        textEl.value = '';
-        document.getElementById('dmEditingIndicator')?.remove();
-        textEl.style.height = '20px';
-        const withUser = allUsers.find(u => u.id === currentConversationId.split('_').find(id => id !== currentUser.id));
-        renderDMMessages(currentConversationId, withUser);
-        showSyncStatus('✅ تم تعديل الرسالة', 1500);
-      } catch (error) {
-        showAlert('❌ فشل تعديل الرسالة');
-      }
-
-      setTimeout(() => {
-        isSending = false;
-        sendBtn.disabled = false;
-        sendBtn.style.opacity = '1';
-        sendBtn.style.cursor = 'pointer';
-        sendBtn.textContent = originalText;
-      }, 1000);
-      return;
-    }
-
-    const convId = currentConversationId;
-    const withUserId = convId.split('_').find(id => id !== currentUser.id);
-    const withUser = allUsers.find(u => u.id === withUserId);
-    const msgId = Date.now() + '_' + Math.random().toString(36).substr(2,9);
-    const payload = {
-      id: msgId, convId, text,
-      from: currentUser.username, fromId: currentUser.id, toId: withUserId,
-      timestamp: new Date().toISOString()
-    };
-
-    if (selectedImage) {
-      try {
-        if (selectedImage.url && (selectedImage.type === 'image/link' || selectedImage.type === 'image/gif')) {
-          payload.imageUrl = selectedImage.url;
-          payload.fileType = selectedImage.type;
-        } else {
-          showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-          const uploaded = await uploadFileToCloudinary(selectedImage.file);
-          payload.imageUrl = uploaded.url;
-          payload.fileType = selectedImage.type;
-        }
-        selectedImage = null;
-        modal.querySelector('#dmImageInput').value = '';
-        modal.querySelector('#dmImageUploadPreview').style.display = 'none';
-        modal.querySelector('#dmImagePreview').innerHTML = '';
-        delete preview.dataset.gifUrl;
-      } catch (error) {
-        showAlert('❌ فشل رفع الوسائط');
-        setTimeout(() => {
-          isSending = false;
-          sendBtn.disabled = false;
-          sendBtn.style.opacity = '1';
-          sendBtn.style.cursor = 'pointer';
-          sendBtn.textContent = originalText;
-        }, 1000);
-        return;
-      }
-    }
-
-    if (replyingToMessage) {
-      payload.replyTo = replyingToMessage.id;
-      replyingToMessage = null;
-      document.getElementById('dmReplyingIndicator')?.remove();
-    }
-
-    try {
-      await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
-      const lastMsgText = text || (payload.fileType?.startsWith('video/') ? '🎥 فيديو' : payload.fileType?.startsWith('audio/') ? '🎵 صوت' : '📷 صورة');
-
-      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
-        id: convId, userId: withUserId, username: withUser?.username || '',
-        lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: 0
-      });
-
-      const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
-      const theirMetaSnap = await get(theirMetaRef);
-      const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
-      await set(theirMetaRef, {
-        id: convId, userId: currentUser.id, username: currentUser.username,
-        lastMessage: lastMsgText, updatedAt: payload.timestamp, unreadCount: theirUnread
-      });
-
-      await addNotification(withUserId, {
-        type: 'message', from: currentUser.username, fromId: currentUser.id,
-        messagePreview: text ? text.substring(0,50) + (text.length>50?'...':'') : lastMsgText,
-        timestamp: payload.timestamp
-      });
-
-      textEl.value = '';
-      textEl.style.height = '20px';
-      showSyncStatus('✅ تم إرسال الرسالة', 1500);
-      await loadDMConversations();
-      renderDMList();
-      dmMessagesLimit = 20;
-      renderDMMessages(convId, withUser);
-      setTimeout(() => {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      }, 100);
-      await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
-    } catch (error) {
-      showAlert('❌ فشل إرسال الرسالة');
-    }
-
-    setTimeout(() => {
-      isSending = false;
-      sendBtn.disabled = false;
-      sendBtn.style.opacity = '1';
-      sendBtn.style.cursor = 'pointer';
-      sendBtn.textContent = originalText;
-    }, 1000);
-  };
 
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('show');
@@ -3655,8 +3756,7 @@ await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId
     reader.readAsDataURL(file);
   });
 
-  const dmTextarea = modal.querySelector('#dmText');
-  let linkPreviewTimeout;
+   let linkPreviewTimeout;
 
   dmTextarea.addEventListener('input', function() {
     clearTimeout(linkPreviewTimeout);
@@ -3679,19 +3779,42 @@ await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId
     }, 500);
   });
 
-  modal.querySelector('#dmCancelImage').addEventListener('click', () => {
-    selectedImage = null;
-    modal.querySelector('#dmImageInput').value = '';
-    const preview = modal.querySelector('#dmImageUploadPreview');
-    preview.style.display = 'none';
-    modal.querySelector('#dmImagePreview').innerHTML = '';
-  });
+ modal.querySelector('#dmCancelImage').addEventListener('click', () => {
+  selectedImage = null;
+  modal.querySelector('#dmImageInput').value = '';
+  const preview = modal.querySelector('#dmImageUploadPreview');
+  preview.style.display = 'none';
+  modal.querySelector('#dmImagePreview').innerHTML = '';
+  delete preview.dataset.gifUrl; // ✅ Clear GIF dataset
+});
 
-  modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    window.openEmojiGifPicker();
-  });
+modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  window.openEmojiGifPicker((selectedItem) => {
+    // ✅ Handle emoji/GIF selection
+    if (selectedItem.type === 'emoji') {
+      const dmText = modal.querySelector('#dmText');
+      const cursorPos = dmText.selectionStart;
+      const textBefore = dmText.value.substring(0, cursorPos);
+      const textAfter = dmText.value.substring(cursorPos);
+      dmText.value = textBefore + selectedItem.emoji + textAfter;
+      dmText.setSelectionRange(cursorPos + selectedItem.emoji.length, cursorPos + selectedItem.emoji.length);
+      dmText.focus();
+    } else if (selectedItem.type === 'gif') {
+      // ✅ Set GIF as selected image
+      selectedImage = { url: selectedItem.url, type: 'image/gif' };
 
+      // ✅ Show preview
+      const preview = modal.querySelector('#dmImageUploadPreview');
+      const previewContainer = modal.querySelector('#dmImagePreview');
+      previewContainer.innerHTML = `<img src="${selectedItem.url}" style="max-width:100px;max-height:100px;border-radius:8px">`;
+      preview.style.display = 'flex';
+
+      // ✅ Store GIF URL in dataset (for reference only)
+      preview.dataset.gifUrl = selectedItem.url;
+    }
+  });
+});
   modal.querySelector('#dmText').addEventListener('input', async function() {
     if (!currentConversationId) return;
     const convId = currentConversationId;
@@ -5165,18 +5288,24 @@ window.openEmojiGifPicker = function () {
         img.style.cssText = 'width:100%;height:120px;object-fit:cover;border-radius:8px;cursor:pointer;transition:transform .15s;';
         img.onmouseover = () => img.style.transform = 'scale(1.03)';
         img.onmouseout = () => img.style.transform = 'scale(1)';
-        img.onclick = () => {
-          const preview = dmModal.querySelector('#dmImageUploadPreview');
-          const previewContainer = dmModal.querySelector('#dmImagePreview');
-          if (preview && previewContainer) {
-            previewContainer.innerHTML = `<img src="${gif.images.fixed_height.url}" style="max-width:100px;max-height:100px;border-radius:8px">`;
-            preview.style.display = 'flex';
-            preview.dataset.gifUrl = gif.images.original.url;
-          }
-          removePicker();
-          const textarea = dmModal.querySelector('#dmText');
-          if (textarea) textarea.focus();
-        };
+      img.onclick = () => {
+  const preview = dmModal.querySelector('#dmImageUploadPreview');
+  const previewContainer = dmModal.querySelector('#dmImagePreview');
+  if (preview && previewContainer) {
+    previewContainer.innerHTML = `<img src="${gif.images.fixed_height.url}" style="max-width:100px;max-height:100px;border-radius:8px">`;
+    preview.style.display = 'flex';
+    preview.dataset.gifUrl = gif.images.original.url;
+
+    // ✅ Set selectedImage properly for GIF
+    selectedImage = {
+      url: gif.images.original.url,
+      type: 'image/gif'
+    };
+  }
+  removePicker();
+  const textarea = dmModal.querySelector('#dmText');
+  if (textarea) textarea.focus();
+};
         gifGrid.appendChild(img);
       });
     } catch (err) {
@@ -5704,13 +5833,13 @@ document.getElementById('btnMyProfile').addEventListener('click', async () => { 
 
       const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=120`;
 
-      const followBtn = !isOwnProfile ? `
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="follow-btn ${isFollowingUser ? 'following' : 'not-following'}" id="followBtn" style="flex:1">
-            ${isFollowingUser ? '✓ متابَع' : '+ متابعة'}
-          </button>
-          <button class="btn" id="chatBtn" style="padding:8px 20px">💬 محادثة</button>
-        </div>` : '';
+     const followBtn = !isOwnProfile ? `
+  <div class="follow-buttons-container">
+    <button class="follow-btn ${isFollowingUser ? 'following' : 'not-following'}" id="followBtn" data-following="${isFollowingUser}">
+      ${isFollowingUser ? '✓ متابَع' : '+ متابعة'}
+    </button>
+    <button id="chatBtn">💬 محادثة</button>
+  </div>` : '';
 
       modal.innerHTML = `
         <div class="modal-inner user-profile-modal">
@@ -5809,16 +5938,15 @@ if (isOwnProfile) {
   }
 }
       if (!isOwnProfile) {
-        modal.querySelector('#followBtn').addEventListener('click', function() {
-          toggleFollow(user.id);
-          if (isFollowing(user.id)) {
-            addNotification(user.id, { type: 'follow', from: currentUser.username, fromId: currentUser.id, timestamp: new Date().toISOString() });
-          }
-          const btn = this;
-          const nowFollowing = isFollowing(user.id);
-          btn.textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
-          btn.className = 'follow-btn ' + (nowFollowing ? 'following' : 'not-following');
-        });
+ modal.querySelector('#followBtn').addEventListener('click', async function() {
+  await toggleFollow(user.id);
+
+  const btn = this;
+  const nowFollowing = isFollowing(user.id);
+  btn.textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
+  btn.className = 'follow-btn ' + (nowFollowing ? 'following' : 'not-following');
+});
+
 const chatBtn = modal.querySelector('#chatBtn');
 if (chatBtn) {
   chatBtn.addEventListener('click', () => {
@@ -6135,10 +6263,31 @@ document.getElementById('btnDeleteProfile').addEventListener('click', () => {
       document.getElementById('authModal').style.display = 'flex';
       return false;
     }
-    function showUserInfo() {
-      document.getElementById('currentUserName').textContent = currentUser.username;
-      document.getElementById('userInfoDisplay').style.display = 'block';
-    }
+function showUserInfo() {
+  document.getElementById('currentUserName').textContent = currentUser.username;
+  const userInfoEl = document.getElementById('userInfoDisplay');
+
+  // Show with animation
+  userInfoEl.style.display = 'block';
+  userInfoEl.style.opacity = '0';
+  userInfoEl.style.transform = 'translateX(-50%) translateY(-20px)';
+
+  // Animate in
+  setTimeout(() => {
+    userInfoEl.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+    userInfoEl.style.opacity = '1';
+    userInfoEl.style.transform = 'translateX(-50%) translateY(0)';
+  }, 50);
+
+  // Auto-hide after 2.5 seconds
+  setTimeout(() => {
+    userInfoEl.style.opacity = '0';
+    userInfoEl.style.transform = 'translateX(-50%) translateY(-20px)';
+    setTimeout(() => {
+      userInfoEl.style.display = 'none';
+    }, 400);
+  }, 2500);
+}
     document.getElementById('btnLogout').addEventListener('click', () => {
       showConfirm('هل تريد تسجيل الخروج؟', () => { localStorage.removeItem(USER_KEY); location.reload(); });
     });
@@ -6182,46 +6331,53 @@ document.getElementById('btnDeleteProfile').addEventListener('click', () => {
       };
 
 
-  if (editingPoem) {
+if (editingPoem) {
   const index = poems.findIndex(p => p.id === editingPoem.id);
   if (index !== -1) {
-    // ✅ Keep the original manualOrder when editing
     poems[index] = {
       ...poemData,
       id: editingPoem.id,
-      manualOrder: editingPoem.manualOrder // Preserve position
+      manualOrder: editingPoem.manualOrder
     };
   }
-        editingPoem = null;
-        showSyncStatus('✅ تم تحديث القصيدة', 2000);
-    } else {
+  editingPoem = null;
+  showSyncStatus('✅ تم تحديث القصيدة', 2000);
+} else {
   poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   poems.push(poemData);
 
-        showSyncStatus('✅ تم نشر القصيدة', 2000);
+  showSyncStatus('✅ تم نشر القصيدة', 2000);
 
-        allUsers.forEach(user => {
-          if (user.id !== currentUser.id) {
-            const userFollowing = localStorage.getItem(FOLLOWING_KEY + '_' + user.id);
-            if (userFollowing) {
-              try {
-                const followingList = JSON.parse(userFollowing);
-                if (followingList.includes(currentUser.id)) {
-                  addNotification(user.id, {
-                    type: 'new_poem',
-                    from: currentUser.username,
-                    fromId: currentUser.id,
-                    poemId: poemData.id,
-                    poemTitle: poemData.title,
-                    timestamp: new Date().toISOString()
-                  });
-                }
-              } catch {}
-            }
+  // ✅ FIXED: Send notifications to all followers from Firebase
+  try {
+    // Get all users' following lists from Firebase
+    const followingSnapshot = await get(ref(database, 'following'));
+    if (followingSnapshot.exists()) {
+      const allFollowing = followingSnapshot.val();
+
+      // Check each user to see if they follow the current user
+      for (const userId in allFollowing) {
+        if (userId !== currentUser.id) {
+          const userFollowingList = allFollowing[userId] || [];
+
+          // If this user follows the current user (post author)
+          if (userFollowingList.includes(currentUser.id)) {
+            await addNotification(userId, {
+              type: 'new_poem',
+              from: currentUser.username,
+              fromId: currentUser.id,
+              poemId: poemData.id,
+              poemTitle: poemData.title,
+              timestamp: new Date().toISOString()
+            });
           }
-        });
+        }
       }
-
+    }
+  } catch (error) {
+    console.error('Error sending new poem notifications:', error);
+  }
+}
       await savePoemsToFirebase();
       document.getElementById('addModal').style.display = 'none';
       this.reset();
@@ -6257,6 +6413,16 @@ async function init() {
   loadFavorites();
   loadFollowing();
 
+// ✅ Load following from Firebase
+try {
+  const followingSnapshot = await get(ref(database, `following/${currentUser.id}`));
+  if (followingSnapshot.exists()) {
+    following = followingSnapshot.val() || [];
+    saveFollowing(); // Sync to localStorage
+  }
+} catch (error) {
+  console.error('Error loading following from Firebase:', error);
+}
   // Load poems FIRST (critical)
   await loadPoemsFromFirebase();
   await loadAllMetadata();
