@@ -119,7 +119,8 @@ nav {
     .icon-btn{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:20px;position:relative;border:1.4px solid var(--brown);background:var(--card);color:var(--text)}
     .menu-container{position:relative}
 .dropdown-menu{
-      position:absolute;top:calc(100% + 8px);left:0;
+        position:fixed; /* ✅ Changed from absolute to fixed */
+top:calc(100% + 8px);left:0;
       background:var(--card);
       border-radius:10px;
       box-shadow:0 12px 32px var(--shadow-lg);
@@ -127,7 +128,7 @@ nav {
       min-width:240px;
       max-width:320px;
       display:none;
-      z-index:200;
+ z-index:9999; /* ✅ Higher z-index */
       padding:8px;
       max-height:500px;
       overflow-y:auto
@@ -179,8 +180,17 @@ nav {
       cursor:grab;font-size:14px;color:var(--muted);z-index:10
     }
     .drag-handle:active{cursor:grabbing}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:20px;z-index:1200;overflow-y:auto}
-.modal-inner{
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px; /* ✅ No padding */
+  z-index:1200;
+  overflow:hidden; /* ✅ No scroll on modal */
+}.modal-inner{
   background:var(--card);
   max-width:900px;
   width:100%;
@@ -1462,6 +1472,227 @@ but dont alter the code of messge date
   color: #fff;
 }
 
+
+.quick-tag {
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.quick-tag:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.quick-tag.added {
+  background: var(--brown);
+  color: #fff;
+  border-color: var(--brown);
+  opacity: 1;
+}
+
+/* WhatsApp-Style Simple Audio Player - Full Width */
+/* WhatsApp-Style Simple Audio Player - Full Width Fixed */
+.audio-player {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: 0 2px 8px var(--shadow);
+  transition: all 0.2s ease;
+}
+
+.audio-player:hover {
+  box-shadow: 0 4px 12px var(--shadow-lg);
+}
+
+.audio-play-btn {
+  width: 36px;
+  height: 36px;
+  background: var(--brown);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.audio-play-btn:hover {
+  background: var(--brown-hover);
+  transform: scale(1.1);
+}
+
+.audio-play-btn:active {
+  transform: scale(0.95);
+}
+
+.audio-timeline {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.audio-progress-container {
+  position: relative;
+  height: 4px;
+  background: rgba(139,94,60,0.2);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.audio-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--brown);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.audio-time {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-menu-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text);
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.audio-menu-btn:hover {
+  background: rgba(139,94,60,0.1);
+  border-color: var(--brown);
+}
+
+/* ✅ Fixed menu dropdown positioning */
+.audio-menu-dropdown {
+  position: fixed; /* ✅ Changed from absolute to fixed */
+  background: var(--card);
+  border: 2px solid var(--brown);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px var(--shadow-lg);
+  min-width: 160px;
+  z-index: 9999; /* ✅ Very high z-index to appear above everything */
+  display: none;
+  padding: 6px;
+}
+
+.audio-menu-dropdown.show {
+  display: block;
+}
+
+.audio-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: right;
+}
+
+.audio-menu-item:hover {
+  background: rgba(139,94,60,0.1);
+}
+
+.audio-menu-item.active {
+  background: rgba(139,94,60,0.15);
+  color: var(--brown);
+  font-weight: 600;
+}
+
+.audio-menu-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* Hide original audio element */
+.audio-player audio {
+  display: none;
+}
+
+/* Simple play/pause icons */
+.play-icon::before {
+  content: '▶';
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+.pause-icon::before {
+  content: '⏸';
+  font-size: 12px;
+}
+
+/* ✅ Force full width in all contexts */
+.media-item {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.media-item .audio-player {
+  width: 100%;
+  max-width: none;
+}
+
+/* ✅ Make DM messages wider to accommodate audio player */
+
+.dm-message .audio-player {
+  width: 100%;
+  max-width: none;
+  min-width: 320px;
+}
+
+/* ✅ Ensure bubble doesn't restrict width */
+.dm-message .bubble {
+  max-width: 100%;
+  width: 100%;
+}
+
+/* ✅ Modal content shouldn't restrict */
+.modal-content .audio-player {
+  width: 100%;
+  max-width: none;
+}
+
+
   </style>
 
 
@@ -1607,9 +1838,26 @@ but dont alter the code of messge date
             <label for="inputExcerpt" style="font-size:14px;font-weight:600;margin-bottom:4px">مقتطف (اختياري)</label>
             <input id="inputExcerpt" name="poemExcerpt" type="text" placeholder="مقتطف" />
 
-            <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الوسوم (اضغط Enter)</label>
-            <div id="tagsDisplay" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px"></div>
-            <input id="inputTagField" type="text" placeholder="اكتب وسم واضغط Enter" />
+ <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">الوسوم</label>
+
+<!-- Predefined Tags (Click to add) -->
+<div style="margin-bottom:10px">
+
+  <div style="display:flex;gap:6px;flex-wrap:wrap">
+    <button type="button" class="tag quick-tag" data-tag="إيماني">إيماني</button>
+    <button type="button" class="tag quick-tag" data-tag="أمل">أمل</button>
+    <button type="button" class="tag quick-tag" data-tag="حب">حب</button>
+    <button type="button" class="tag quick-tag" data-tag="حزن">حزن</button>
+    <button type="button" class="tag quick-tag" data-tag="فرح">فرح</button>
+
+  </div>
+</div>
+
+<!-- Current Tags Display -->
+<div id="tagsDisplay" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;min-height:32px;padding:4px;background:rgba(139,94,60,0.03);border-radius:6px;border:1px dashed var(--border)"></div>
+
+<!-- Tag Input Field -->
+<input id="inputTagField" type="text" placeholder="أو اكتب وسم جديد واضغط Enter" />
           </div>
 
           <div>
@@ -1621,7 +1869,7 @@ but dont alter the code of messge date
           <div>
             <label style="display:block;margin-bottom:6px;font-size:14px;font-weight:600">🎤 الوسائط (أغاني / فيديوهات)</label>
             <div id="audioDisplay" class="audio-list"></div>
-            <div style="margin-top:8px"><input type="file" id="inputAudioFile" accept="audio/*,video/*" multiple style="font-size:13px" /></div>
+             <div style="margin-top:8px"><input type="file" id="inputAudioFile" accept="audio/*,video/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,.opus,.webm,.mp4,.mov,.avi,.mkv" multiple style="font-size:13px" /></div>
             <div style="display:flex;gap:8px;margin-top:8px">
               <input id="inputAudioLink" type="url" placeholder="أو الصق رابط (YouTube, SoundCloud, إلخ)" style="flex:1" />
               <button type="button" id="btnAddAudioLink" class="btn small">➕ إضافة</button>
@@ -2967,7 +3215,395 @@ function extractLinks(text) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.match(urlRegex) || [];
 }
+   function getYouTubeEmbedUrl(url) {
+  try {
+    const urlObj = new URL(url);
+    let videoId = null;
+    if (urlObj.hostname.includes('youtube.com')) {
+      videoId = urlObj.searchParams.get('v');
+    } else if (urlObj.hostname.includes('youtu.be')) {
+      videoId = urlObj.pathname.slice(1).split('?')[0];
+    }
 
+    if (videoId) {
+      // إزالة أي معاملات إضافية من videoId
+      videoId = videoId.split('&')[0];
+      return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}`;
+    }
+  } catch {}
+  return null;
+}
+
+    function getSoundCloudEmbedUrl(url) {
+      if (url.includes('soundcloud.com')) return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
+      return null;
+    }
+
+    function getGifEmbedUrl(url) {
+      // Giphy links
+      if (url.includes('giphy.com')) {
+        const giphyMatch = url.match(/giphy\.com\/gifs\/.*?-([a-zA-Z0-9]+)$/);
+        if (giphyMatch) {
+          return `https://media.giphy.com/media/${giphyMatch[1]}/giphy.gif`;
+        }
+      }
+
+      // Tenor links
+      if (url.includes('tenor.com')) {
+        const tenorMatch = url.match(/tenor\.com\/view\/.*?-(\d+)$/);
+        if (tenorMatch) {
+          return url; // Tenor links work directly
+        }
+      }
+
+      // Direct GIF links
+      if (url.toLowerCase().endsWith('.gif')) {
+        return url;
+      }
+
+      return null;
+    }
+
+    // Link preview functions
+function isYouTubeLink(url) {
+  return url.includes('youtube.com') || url.includes('youtu.be');
+}
+
+function isSpotifyLink(url) {
+  return url.includes('spotify.com');
+}
+
+function isSoundCloudLink(url) {
+  return url.includes('soundcloud.com');
+}
+
+function isGiphyLink(url) {
+  return url.includes('giphy.com') || url.includes('tenor.com');
+}
+
+function getYouTubeEmbedId(url) {
+  const urlObj = new URL(url);
+  if (urlObj.hostname.includes('youtube.com')) {
+    return urlObj.searchParams.get('v');
+  } else if (urlObj.hostname.includes('youtu.be')) {
+    return urlObj.pathname.slice(1);
+  }
+  return null;
+}
+
+function getSpotifyEmbedUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        const pathMatch = urlObj.pathname.match(/\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
+        if (pathMatch) {
+          return `https://open.spotify.com/embed/${pathMatch[1]}/${pathMatch[2]}`;
+        }
+      } catch {}
+      return null;
+    }
+
+
+
+
+// Create Simple WhatsApp-Style Audio Player with Menu
+function createAudioPlayer(audioUrl, title = 'ملف صوتي', isVoiceNote = false) {
+  const playerId = 'audio-' + Math.random().toString(36).substr(2, 9);
+
+  const playerHTML = `
+    <div class="audio-player" id="${playerId}">
+      <button class="audio-play-btn" data-player="${playerId}">
+        <span class="play-icon"></span>
+      </button>
+
+      <div class="audio-timeline">
+        <div class="audio-progress-container" data-player="${playerId}">
+          <div class="audio-progress-bar"></div>
+        </div>
+        <div class="audio-time">
+          <span class="audio-duration">0:00</span>
+        </div>
+      </div>
+
+      <div style="position:relative">
+        <button class="audio-menu-btn" data-player="${playerId}">
+          ⋮
+        </button>
+        <div class="audio-menu-dropdown" data-player="${playerId}">
+          <button class="audio-menu-item speed-item" data-speed="0.5">
+            <span>0.5x</span>
+          </button>
+          <button class="audio-menu-item speed-item" data-speed="0.75">
+            <span>0.75x</span>
+          </button>
+          <button class="audio-menu-item speed-item active" data-speed="1">
+            <span>1x عادي</span>
+          </button>
+          <button class="audio-menu-item speed-item" data-speed="1.25">
+            <span>1.25x</span>
+          </button>
+          <button class="audio-menu-item speed-item" data-speed="1.5">
+            <span>1.5x</span>
+          </button>
+          <button class="audio-menu-item speed-item" data-speed="2">
+            <span>2x</span>
+          </button>
+          <div class="audio-menu-divider"></div>
+          <a href="${audioUrl}" download class="audio-menu-item">
+            <span>⬇️</span>
+            <span>تحميل</span>
+          </a>
+        </div>
+      </div>
+
+      <audio preload="metadata" data-player="${playerId}">
+        <source src="${audioUrl}">
+      </audio>
+    </div>
+  `;
+
+  return {
+    html: playerHTML,
+    setup: () => setupAudioPlayer(playerId)
+  };
+}
+
+// Setup Simple Audio Player with Menu
+// Setup Simple Audio Player with Menu
+function setupAudioPlayer(playerId) {
+  const player = document.getElementById(playerId);
+  if (!player) {
+    console.warn('Audio player not found:', playerId);
+    return;
+  }
+
+  const audio = player.querySelector('audio');
+  const playBtn = player.querySelector('.audio-play-btn');
+  const playIcon = playBtn?.querySelector('.play-icon');
+  const progressContainer = player.querySelector('.audio-progress-container');
+  const progressBar = player.querySelector('.audio-progress-bar');
+  const durationEl = player.querySelector('.audio-duration');
+  const menuBtn = player.querySelector('.audio-menu-btn');
+  const menuDropdown = player.querySelector('.audio-menu-dropdown');
+  const speedItems = player.querySelectorAll('.speed-item');
+
+  // Safety check
+  if (!audio || !playBtn || !playIcon || !progressContainer || !progressBar || !durationEl) {
+    console.warn('Audio player elements not found for:', playerId);
+    return;
+  }
+
+  // Format time
+  function formatTime(seconds) {
+    if (isNaN(seconds) || !isFinite(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  // Update progress
+  function updateProgress() {
+    if (!audio.duration || !isFinite(audio.duration)) return;
+    const percent = (audio.currentTime / audio.duration) * 100;
+    if (progressBar) progressBar.style.width = percent + '%';
+    if (durationEl) durationEl.textContent = formatTime(audio.duration - audio.currentTime);
+  }
+
+  // Play/Pause
+  playBtn.addEventListener('click', () => {
+    if (audio.paused) {
+      audio.play();
+      playIcon.className = 'pause-icon';
+    } else {
+      audio.pause();
+      playIcon.className = 'play-icon';
+    }
+  });
+
+  // Time update
+  audio.addEventListener('timeupdate', updateProgress);
+
+  // Duration loaded
+  audio.addEventListener('loadedmetadata', () => {
+    if (durationEl && audio.duration) {
+      durationEl.textContent = formatTime(audio.duration);
+    }
+  });
+
+  // Ended
+  audio.addEventListener('ended', () => {
+    playIcon.className = 'play-icon';
+    if (progressBar) progressBar.style.width = '0%';
+    audio.currentTime = 0;
+    if (durationEl && audio.duration) {
+      durationEl.textContent = formatTime(audio.duration);
+    }
+  });
+
+  // Seek by clicking
+  progressContainer.addEventListener('click', (e) => {
+    if (!audio.duration) return;
+    const rect = progressContainer.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    audio.currentTime = percent * audio.duration;
+  });
+
+  // ✅ Menu toggle with smart positioning
+// ✅ Menu toggle with smart positioning - closes on scroll
+if (menuBtn && menuDropdown) {
+
+  // Function to position menu relative to button
+  function positionMenu() {
+    const btnRect = menuBtn.getBoundingClientRect();
+    const menuHeight = 300; // Approximate menu height
+    const menuWidth = 160;
+
+    // Position above or below button depending on space
+    if (btnRect.top > menuHeight) {
+      // Enough space above
+      menuDropdown.style.top = (btnRect.top - menuHeight) + 'px';
+    } else {
+      // Show below
+      menuDropdown.style.top = (btnRect.bottom + 5) + 'px';
+    }
+
+    // Position left or right depending on space
+    if (btnRect.right + menuWidth > window.innerWidth) {
+      // Not enough space on right, align to right edge of button
+      menuDropdown.style.left = 'auto';
+      menuDropdown.style.right = (window.innerWidth - btnRect.right) + 'px';
+    } else {
+      // Align to left edge of button
+      menuDropdown.style.left = btnRect.left + 'px';
+      menuDropdown.style.right = 'auto';
+    }
+  }
+
+  // Close menu function
+  function closeMenu() {
+    menuDropdown.classList.remove('show');
+    window.removeEventListener('scroll', closeMenuOnScroll, true);
+  }
+
+  // Close menu on scroll
+  function closeMenuOnScroll() {
+    closeMenu();
+  }
+
+  // Open/close menu
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    if (menuDropdown.classList.contains('show')) {
+      closeMenu();
+    } else {
+      positionMenu();
+      menuDropdown.classList.add('show');
+      // Close menu if user scrolls
+      window.addEventListener('scroll', closeMenuOnScroll, true);
+    }
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!player.contains(e.target) && !menuDropdown.contains(e.target)) {
+      closeMenu();
+    }
+  });
+}
+  // Speed control
+  speedItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const speed = parseFloat(item.dataset.speed);
+      audio.playbackRate = speed;
+
+      // Update active state
+      speedItems.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+
+      // Close menu
+      if (menuDropdown) menuDropdown.classList.remove('show');
+    });
+  });
+}
+function getAudioHtml(audio) {
+  if (!audio) return '';
+  let audioUrl = '';
+  if (typeof audio === 'string') audioUrl = audio;
+  else if (audio.url) audioUrl = audio.url;
+  else return '';
+
+  const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
+  if (youtubeEmbed) {
+    return `<div class="media-item"><iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+  }
+
+  const gifEmbed = getGifEmbedUrl(audioUrl);
+  if (gifEmbed) {
+    const imgId = 'gif-' + Math.random().toString(36).substr(2, 9);
+    return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+      <div style="position:absolute;top:8px;right:8px;z-index:10">
+        <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
+      </div>
+      <img id="${imgId}" src="${gifEmbed}" loading="lazy"  onclick="window.open('${audioUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block">
+    </div>`;
+  }
+
+  const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
+  if (soundcloudEmbed) {
+    return `<div class="media-item"><iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe></div>`;
+  }
+
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma', '.opus', '.webm'];
+  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.3gp', '.wmv'];
+  const lowerUrl = audioUrl.toLowerCase();
+  const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
+  const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
+
+  if (isDirectAudio) {
+  const fileName = audio.name || audioUrl.split('/').pop().split('?')[0];
+  const player = createAudioPlayer(audioUrl, fileName, false);
+  // ✅ Don't setup here - will be done after rendering
+  return `<div class="media-item">${player.html}</div>`;
+}
+
+  if (isDirectVideo) {
+    const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
+    return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+      <div style="position:absolute;top:8px;right:8px;z-index:10">
+        <button onclick="window.resizeMedia('${videoId}')" class="media-size-btn">🔍</button>
+      </div>
+      <video id="${videoId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+        <source src="${audioUrl}">متصفحك لا يدعم تشغيل الفيديو
+      </video>
+    </div>`;
+  }
+
+  // ✅ Use professional player for uploaded audio files
+  if (audio.url && audio.type && audio.name) {
+    const isVideo = audio.type.startsWith('video/');
+    const isAudio = audio.type.startsWith('audio/');
+
+if (isAudio) {
+  const player = createAudioPlayer(audio.url, audio.name, false);
+  // ✅ Don't setup here - will be done after rendering
+  return `<div class="media-item">${player.html}</div>`;
+}
+    if (isVideo) {
+      const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
+      return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
+        <div style="position:absolute;top:8px;right:8px;z-index:10">
+          <button onclick="window.resizeMedia('${videoId}')" class="media-size-btn">🔍</button>
+        </div>
+        <video id="${videoId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
+          <source src="${audio.url}" type="${audio.type}">
+        </video>
+      </div>`;
+    }
+  }
+
+  return '';
+}
 // Helper to build message element - MOVED TO GLOBAL SCOPE
 function buildMessageElement(m, convId, withUser, allMessages) {
   const div = document.createElement('div');
@@ -2989,18 +3625,21 @@ function buildMessageElement(m, convId, withUser, allMessages) {
 
   const editedLabel = m.edited ? '<span style="font-size:10px;color:#ffc107;font-weight:600;margin-left:4px"><br> (معدّل) </span>' : '';
 
-  let mediaHtml = '';
-  if (m.imageUrl) {
-    const fileType = m.fileType || '';
-    const mediaId = 'dm-media-' + m.id;
-    if (fileType.startsWith('video/')) {
-      mediaHtml = `<div style="position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;display:inline-block;margin-top:8px;max-width:100%"><div style="position:absolute;top:8px;right:8px;z-index:10"><button onclick="window.resizeMedia('${mediaId}')" class="media-size-btn">🔍</button></div><video id="${mediaId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px"><source src="${m.imageUrl}" type="${fileType}"></video></div>`;
-    } else if (fileType.startsWith('audio/')) {
-      mediaHtml = `<audio controls style="max-width:100%;margin-top:8px"><source src="${m.imageUrl}" type="${fileType}"></audio>`;
-    } else {
-      mediaHtml = `<div style="position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;display:inline-block;margin-top:8px;max-width:100%"><div style="position:absolute;top:8px;right:8px;z-index:10"><button onclick="window.resizeMedia('${mediaId}')" class="media-size-btn">🔍</button></div><img id="${mediaId}" src="${m.imageUrl}" onclick="window.open('${m.imageUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;display:block;border-radius:8px"></div>`;
-    }
+let mediaHtml = '';
+if (m.imageUrl) {
+  const fileType = m.fileType || '';
+  const mediaId = 'dm-media-' + m.id;
+  if (fileType.startsWith('video/')) {
+    mediaHtml = `<div style="position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;display:inline-block;margin-top:8px;max-width:100%"><div style="position:absolute;top:8px;right:8px;z-index:10"><button onclick="window.resizeMedia('${mediaId}')" class="media-size-btn">🔍</button></div><video id="${mediaId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px"><source src="${m.imageUrl}" type="${fileType}"></video></div>`;
+  } else if (fileType.startsWith('audio/')) {
+    // ✅ Use professional audio player for DM audio
+    const player = createAudioPlayer(m.imageUrl, 'رسالة صوتية', m.isVoiceNote || false);
+    setTimeout(() => player.setup(), 100);
+    mediaHtml = player.html;
+  } else {
+    mediaHtml = `<div style="position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;display:inline-block;margin-top:8px;max-width:100%"><div style="position:absolute;top:8px;right:8px;z-index:10"><button onclick="window.resizeMedia('${mediaId}')" class="media-size-btn">🔍</button></div><img id="${mediaId}" src="${m.imageUrl}" onclick="window.open('${m.imageUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;display:block;border-radius:8px"></div>`;
   }
+}
 
 let textHtml = '';
 if (m.text && m.text.trim()) {
@@ -3055,6 +3694,7 @@ if (m.text && m.text.trim()) {
 
   return div;
 }
+
 
 // Helper to update existing message
  function updateMessageElement(div, m, convId, allMessages) {
@@ -3355,8 +3995,9 @@ modal.innerHTML = `
             </div>
             <div style="display:flex;gap: 8px;align-items:center">
               <button class="btn small" id="dmToggleDir" title="تبديل الاتجاه">⇄</button>
-              <input type="file" id="dmImageInput" accept="image/*,video/*,audio/*" style="display:none">
-              <button class="btn small" id="dmImageBtn" title="إرفاق وسائط">📎</button>
+<input type="file" id="dmImageInput" accept="image/*,video/*,audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.wma,.opus,.webm,.mp4,.mov,.avi,.mkv" style="display:none">
+
+<button class="btn small" id="dmImageBtn" title="إرفاق وسائط">📎</button>
               <button class="btn small" id="dmEmojiBtn" title="إيموجي وGIF">😊</button>
               <textarea id="dmText" dir="rtl" style="flex:1" placeholder="اكتب رسالة..."></textarea>
 
@@ -3696,19 +4337,59 @@ dmTextarea.addEventListener('input', function() {
   let previousMessagesCount = 0;
   let isDMOpen = true;
 
-  function destroyDM() {
-    if (currentConversationId) {
-      set(ref(database, `dm_typing/${currentConversationId}/${currentUser.id}`), null).catch(() => {});
-      set(ref(database, `dm_conversations/${currentUser.id}/${currentConversationId}/unreadCount`), 0).catch(() => {});
-    }
-    if (typeof dmMessagesUnsubscribe === 'function') {
-      dmMessagesUnsubscribe();
-      dmMessagesUnsubscribe = null;
-    }
-    document.removeEventListener('click', closeMessageActions);
-    if (modal && modal.parentNode) modal.remove();
-    isDMOpen = false;
+function destroyDM() {
+  // ✅ Check if user is recording voice
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    showConfirm('⚠️ أنت تسجل رسالة صوتية\n\nهل تريد إلغاء التسجيل والخروج؟', () => {
+      // Cancel recording
+      cancelRecording();
+      // Close DM
+      performDMClose();
+    });
+    return;
   }
+
+  // ✅ Check if user is typing
+  const dmText = modal?.querySelector('#dmText');
+  if (dmText && dmText.value.trim().length > 0) {
+    showConfirm('⚠️ لديك رسالة لم يتم إرسالها\n\nهل تريد حذفها والخروج؟', () => {
+      performDMClose();
+    });
+    return;
+  }
+
+  // ✅ Check if user has selected an image
+  if (selectedImage) {
+    showConfirm('⚠️ لديك وسائط لم يتم إرسالها\n\nهل تريد حذفها والخروج؟', () => {
+      performDMClose();
+    });
+    return;
+  }
+
+  // No activity, close directly
+  performDMClose();
+}
+
+// Actual DM closing logic (extracted to avoid repetition)
+function performDMClose() {
+  if (currentConversationId) {
+    set(ref(database, `dm_typing/${currentConversationId}/${currentUser.id}`), null).catch(() => {});
+    set(ref(database, `dm_conversations/${currentUser.id}/${currentConversationId}/unreadCount`), 0).catch(() => {});
+  }
+
+  // ✅ Cancel any ongoing recording
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    cancelRecording();
+  }
+
+  if (typeof dmMessagesUnsubscribe === 'function') {
+    dmMessagesUnsubscribe();
+    dmMessagesUnsubscribe = null;
+  }
+  document.removeEventListener('click', closeMessageActions);
+  if (modal && modal.parentNode) modal.remove();
+  isDMOpen = false;
+}
 modal.querySelector('#dmToggleDir').addEventListener('click', function() {
   const textarea = modal.querySelector('#dmText');
   const currentDir = textarea.getAttribute('dir') || 'rtl';
@@ -4195,16 +4876,29 @@ sendBtn.onclick = async () => {
     modal.querySelector('#dmImageInput').click();
   });
 
-  modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const isImage = file.type.startsWith('image/');
-    const isVideo = file.type.startsWith('video/');
-    const isAudio = file.type.startsWith('audio/');
-    if (!isImage && !isVideo && !isAudio) {
-      showAlert('⚠️ يرجى اختيار صورة، فيديو، أو ملف صوتي');
-      return;
-    }
+ modal.querySelector('#dmImageInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // ✅ Check by MIME type
+  const isImage = file.type.startsWith('image/');
+  const isVideo = file.type.startsWith('video/');
+  const isAudio = file.type.startsWith('audio/');
+
+  // ✅ Also check by extension for files with incorrect MIME types
+  const fileName = file.name.toLowerCase();
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma', '.opus', '.webm'];
+  const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'];
+  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+
+  const hasAudioExt = audioExtensions.some(ext => fileName.endsWith(ext));
+  const hasVideoExt = videoExtensions.some(ext => fileName.endsWith(ext));
+  const hasImageExt = imageExtensions.some(ext => fileName.endsWith(ext));
+
+  if (!isImage && !isVideo && !isAudio && !hasImageExt && !hasVideoExt && !hasAudioExt) {
+    showAlert('⚠️ يرجى اختيار صورة، فيديو، أو ملف صوتي\n\nالصيغ المدعومة:\n🖼️ JPG, PNG, GIF, WEBP\n🎵 MP3, WAV, OGG, M4A, AAC, FLAC\n🎥 MP4, MOV, AVI, MKV');
+    return;
+  }
 
     const reader = new FileReader();
     reader.onload = function(event) {
@@ -4348,6 +5042,20 @@ listEl.appendChild(item);
   document.addEventListener('click', closeMessageActions);
 
 modal.querySelector('#closeDM').addEventListener('click', () => {
+  destroyDM();
+});
+
+modal.addEventListener('click', e => {
+  // Clicked on overlay (outside inner content)
+  if (e.target === modal) {
+    destroyDM();
+    return;
+  }
+  // Hide sidebar if clicking outside it
+  if (!e.target.closest('#dmSidebar') && !e.target.closest('.dm-conversations-toggle')) {
+    sidebar.classList.remove('show');
+  }
+});modal.querySelector('#closeDM').addEventListener('click', () => {
   destroyDM();
 });
 
@@ -4569,25 +5277,69 @@ window.resizeMedia = function(mediaId) {
 }
 
     async function saveUserToFirebase() { try { await set(ref(database, 'users/' + currentUser.id), currentUser); } catch (e) {} }
-    async function savePoemsToFirebase() {
-    if (!auth.currentUser || !currentUser) return;
-      if (isUpdatingFromFirebase) return;
-      try { showSyncStatus('🔄 جاري المزامنة...'); await set(ref(database, 'poems'), poems); showSyncStatus('✅ تم المزامنة بنجاح!'); }
-      catch (error) { console.error('Sync error:', error); showSyncStatus('❌ فشلت المزامنة', 3000); }
-    const poemsRef = ref(database, 'poems');
-    }
-    async function loadPoemsFromFirebase() {
-      try {
-        const snapshot = await get(ref(database, 'poems'));
-        if (snapshot.exists()) {
-          isUpdatingFromFirebase = true;
-          const data = snapshot.val();
-          poems = Array.isArray(data) ? data : (data ? Object.values(data) : []);
-          renderPoems();
-          isUpdatingFromFirebase = false;
+  async function savePoemsToFirebase() {
+  if (!auth.currentUser || !currentUser) return;
+  if (isUpdatingFromFirebase) return;
+
+  try {
+    showSyncStatus('🔄 جاري المزامنة...');
+
+    // ✅ Clean poems data - remove undefined values
+    const cleanedPoems = poems.map(poem => {
+      const cleaned = { ...poem };
+
+      // Remove undefined properties
+      Object.keys(cleaned).forEach(key => {
+        if (cleaned[key] === undefined) {
+          delete cleaned[key];
         }
-      } catch (error) { console.error('Load error:', error); }
+      });
+
+      // Ensure manualOrder exists (set to 0 if missing)
+      if (cleaned.manualOrder === undefined || cleaned.manualOrder === null) {
+        cleaned.manualOrder = 0;
+      }
+
+      // Ensure arrays exist
+      if (!cleaned.tags) cleaned.tags = [];
+      if (!cleaned.audios) cleaned.audios = [];
+      if (!cleaned.images) cleaned.images = [];
+
+      return cleaned;
+    });
+
+    await set(ref(database, 'poems'), cleanedPoems);
+    showSyncStatus('✅ تم المزامنة بنجاح!');
+
+  } catch (error) {
+    console.error('Sync error:', error);
+    showSyncStatus('❌ فشلت المزامنة', 3000);
+  }
+}
+  async function loadPoemsFromFirebase() {
+  try {
+    const snapshot = await get(ref(database, 'poems'));
+    if (snapshot.exists()) {
+      isUpdatingFromFirebase = true;
+      const data = snapshot.val();
+      poems = Array.isArray(data) ? data : (data ? Object.values(data) : []);
+
+      // ✅ Ensure all poems have required fields
+      poems = poems.map(poem => ({
+        ...poem,
+        manualOrder: poem.manualOrder !== undefined ? poem.manualOrder : 0,
+        tags: poem.tags || [],
+        audios: poem.audios || [],
+        images: poem.images || []
+      }));
+
+      renderPoems();
+      isUpdatingFromFirebase = false;
     }
+  } catch (error) {
+    console.error('Load error:', error);
+  }
+}
   function setupFirebaseListener() {
   const poemsRef = ref(database, 'poems');
   onValue(poemsRef, async (snapshot) => {
@@ -4710,15 +5462,36 @@ window.resizeMedia = function(mediaId) {
       }
       e.target.value = '';
     });
-    document.getElementById('inputAudioFile').addEventListener('change', async function(e) {
-      const files = e.target.files;
-      for (const file of Array.from(files)) {
-        try { const uploadedFile = await uploadFileToCloudinary
-(file); currentAudios.push(uploadedFile); renderAudiosInForm(); }
-        catch (error) { console.error('Upload failed:', error); }
-      }
-      e.target.value = '';
-    });
+   document.getElementById('inputAudioFile').addEventListener('change', async function(e) {
+  const files = e.target.files;
+  for (const file of Array.from(files)) {
+    // ✅ Accept all audio and video formats
+    const isAudio = file.type.startsWith('audio/');
+    const isVideo = file.type.startsWith('video/');
+
+    // ✅ Also check by file extension for formats with incorrect MIME types
+    const fileName = file.name.toLowerCase();
+    const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac', '.wma', '.opus', '.webm'];
+    const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm'];
+    const hasAudioExt = audioExtensions.some(ext => fileName.endsWith(ext));
+    const hasVideoExt = videoExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!isAudio && !isVideo && !hasAudioExt && !hasVideoExt) {
+      showAlert('⚠️ يرجى اختيار ملف صوتي أو فيديو\n\nالصيغ المدعومة:\n🎵 MP3, WAV, OGG, M4A, AAC, FLAC, WMA, OPUS\n🎥 MP4, MOV, AVI, MKV, WEBM');
+      continue;
+    }
+
+    try {
+      const uploadedFile = await uploadFileToCloudinary(file);
+      currentAudios.push(uploadedFile);
+      renderAudiosInForm();
+    } catch (error) {
+      console.error('Upload failed:', error);
+      showAlert('❌ فشل رفع الملف: ' + file.name + '\n\n' + error.message);
+    }
+  }
+  e.target.value = '';
+});
     document.getElementById('btnAddAudioLink').addEventListener('click', function() {
       const link = document.getElementById('inputAudioLink').value.trim();
       if (!link) { showAlert('⚠️ يرجى إدخال رابط'); return; }
@@ -4746,23 +5519,95 @@ window.resizeMedia = function(mediaId) {
     }
     window.removeImage = function(index) { currentImages.splice(index, 1); renderImagesPreview(); };
 
-    function renderTagsInForm() {
-      const display = document.getElementById('tagsDisplay');
-      display.innerHTML = '';
-      currentTags.forEach((tag, index) => {
-        const badge = document.createElement('span');
-        badge.className = 'tag-badge';
-        badge.innerHTML = escapeHtml(tag) + ' <button type="button" onclick="window.removeTag(' + index + ')">×</button>';
-        display.appendChild(badge);
-      });
-    }
-    function addTag() {
-      const tag = document.getElementById('inputTagField').value.trim();
-      if (tag && !currentTags.includes(tag)) { currentTags.push(tag); renderTagsInForm(); document.getElementById('inputTagField').value = ''; }
-    }
-    window.removeTag = function(index) { currentTags.splice(index, 1); renderTagsInForm(); };
-    document.getElementById('inputTagField').addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); addTag(); } });
 
+  // Add tag function
+function addTag(tagName) {
+  const tag = tagName ? tagName.trim() : document.getElementById('inputTagField').value.trim();
+
+  if (!tag) {
+    showAlert('⚠️ يرجى إدخال وسم');
+    return;
+  }
+
+  if (currentTags.includes(tag)) {
+    showAlert('⚠️ هذا الوسم موجود بالفعل');
+    return;
+  }
+
+  currentTags.push(tag);
+  renderTagsInForm();
+  document.getElementById('inputTagField').value = '';
+
+  // Update quick tag button state
+  updateQuickTagButtons();
+}
+
+// Remove tag function
+window.removeTag = function(index) {
+  currentTags.splice(index, 1);
+  renderTagsInForm();
+  updateQuickTagButtons();
+};
+
+// Render tags in form
+function renderTagsInForm() {
+  const display = document.getElementById('tagsDisplay');
+  display.innerHTML = '';
+
+  if (currentTags.length === 0) {
+    display.innerHTML = '<span style="color:var(--muted);font-size:13px">لا توجد وسوم (اختر من الأعلى أو اكتب وسم جديد)</span>';
+  } else {
+    currentTags.forEach((tag, index) => {
+      const badge = document.createElement('span');
+      badge.className = 'tag-badge';
+      badge.innerHTML = escapeHtml(tag) + ' <button type="button" onclick="window.removeTag(' + index + ')">×</button>';
+      display.appendChild(badge);
+    });
+  }
+}
+
+// Update quick tag button states
+function updateQuickTagButtons() {
+  const quickTags = document.querySelectorAll('.quick-tag');
+  quickTags.forEach(btn => {
+    const tagName = btn.dataset.tag;
+    if (currentTags.includes(tagName)) {
+      btn.classList.add('added');
+    } else {
+      btn.classList.remove('added');
+    }
+  });
+}
+
+// Setup quick tag buttons (call this in modal setup)
+function setupQuickTagButtons() {
+  const quickTags = document.querySelectorAll('.quick-tag');
+  quickTags.forEach(btn => {
+    btn.addEventListener('click', function(e) {
+      e.preventDefault();
+      const tagName = this.dataset.tag;
+
+      // Toggle: remove if exists, add if doesn't
+      const index = currentTags.indexOf(tagName);
+      if (index > -1) {
+        currentTags.splice(index, 1);
+      } else {
+        currentTags.push(tagName);
+      }
+
+      renderTagsInForm();
+      updateQuickTagButtons();
+    });
+  });
+}
+
+// Enter key handler for tag input
+document.getElementById('inputTagField').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addTag();
+  }
+});
     function renderAudiosInForm() {
       const display = document.getElementById('audioDisplay');
       display.innerHTML = '';
@@ -4782,15 +5627,67 @@ window.resizeMedia = function(mediaId) {
     }
     window.removeAudio = function(index) { currentAudios.splice(index, 1); renderAudiosInForm(); };
 
-    document.getElementById('menuToggle').addEventListener('click', function(e) {
-      e.stopPropagation();
-      document.getElementById('dropdownMenu').classList.toggle('show');
-    });
-    document.getElementById('btnNotifications').addEventListener('click', function(e) {
-      e.stopPropagation();
-      document.getElementById('notificationsMenu').classList.toggle('show');
-      document.getElementById('dropdownMenu').classList.remove('show');
-    });
+document.getElementById('menuToggle').addEventListener('click', function(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('dropdownMenu');
+
+  if (menu.classList.contains('show')) {
+    menu.classList.remove('show');
+    window.removeEventListener('scroll', closeMenuOnScroll, true);
+  } else {
+    // ✅ Calculate smart position
+    const btnRect = this.getBoundingClientRect();
+    const menuWidth = 240;
+    const menuHeight = 400; // Approximate
+
+    let top = btnRect.bottom + 8;
+    let left = btnRect.left;
+
+    // ✅ Check bottom overflow
+    if (top + menuHeight > window.innerHeight) {
+      top = btnRect.top - menuHeight - 8;
+    }
+
+    // ✅ Check right overflow
+    if (left + menuWidth > window.innerWidth) {
+      left = window.innerWidth - menuWidth - 10;
+    }
+
+    // ✅ Check left overflow
+    if (left < 10) {
+      left = 10;
+    }
+
+    // ✅ Check top overflow
+    if (top < 10) {
+      top = btnRect.bottom + 8; // Force below
+    }
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    menu.classList.add('show');
+
+    window.addEventListener('scroll', closeMenuOnScroll, true);
+  }
+});
+
+
+// ✅ Add this function
+function closeMenuOnScroll() {
+  document.getElementById('dropdownMenu').classList.remove('show');
+  window.removeEventListener('scroll', closeMenuOnScroll, true);
+}
+document.getElementById('btnNotifications').addEventListener('click', function(e) {
+  e.stopPropagation();
+  document.getElementById('notificationsMenu').classList.toggle('show');
+  document.getElementById('dropdownMenu').classList.remove('show');
+});
+
+// ✅ Add this function
+function closeNotifMenuOnScroll() {
+  document.getElementById('notificationsMenu').classList.remove('show');
+  window.removeEventListener('scroll', closeNotifMenuOnScroll, true);
+}
     document.getElementById('btnDM').addEventListener('click', function(e) {
       e.stopPropagation();
       openDMWindow();
@@ -5124,161 +6021,6 @@ isRendering = false;
 renderTags();
 renderActiveSearchTags();
 
-   function getYouTubeEmbedUrl(url) {
-  try {
-    const urlObj = new URL(url);
-    let videoId = null;
-    if (urlObj.hostname.includes('youtube.com')) {
-      videoId = urlObj.searchParams.get('v');
-    } else if (urlObj.hostname.includes('youtu.be')) {
-      videoId = urlObj.pathname.slice(1).split('?')[0];
-    }
-
-    if (videoId) {
-      // إزالة أي معاملات إضافية من videoId
-      videoId = videoId.split('&')[0];
-      return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&origin=${window.location.origin}`;
-    }
-  } catch {}
-  return null;
-}
-    function getSoundCloudEmbedUrl(url) {
-      if (url.includes('soundcloud.com')) return `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true`;
-      return null;
-    }
-
-    function getGifEmbedUrl(url) {
-      // Giphy links
-      if (url.includes('giphy.com')) {
-        const giphyMatch = url.match(/giphy\.com\/gifs\/.*?-([a-zA-Z0-9]+)$/);
-        if (giphyMatch) {
-          return `https://media.giphy.com/media/${giphyMatch[1]}/giphy.gif`;
-        }
-      }
-
-      // Tenor links
-      if (url.includes('tenor.com')) {
-        const tenorMatch = url.match(/tenor\.com\/view\/.*?-(\d+)$/);
-        if (tenorMatch) {
-          return url; // Tenor links work directly
-        }
-      }
-
-      // Direct GIF links
-      if (url.toLowerCase().endsWith('.gif')) {
-        return url;
-      }
-
-      return null;
-    }
- function getAudioHtml(audio) {
-  if (!audio) return '';
-  let audioUrl = '';
-  if (typeof audio === 'string') audioUrl = audio;
-  else if (audio.url) audioUrl = audio.url;
-  else return '';
-
-  const youtubeEmbed = getYouTubeEmbedUrl(audioUrl);
-  if (youtubeEmbed) {
-    return `<div class="media-item"><iframe src="${youtubeEmbed}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
-  }
-
-  // GIF with resize controls
-  const gifEmbed = getGifEmbedUrl(audioUrl);
-  if (gifEmbed) {
-    const imgId = 'gif-' + Math.random().toString(36).substr(2, 9);
-    return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
-      <div style="position:absolute;top:8px;right:8px;z-index:10">
-        <button onclick="window.resizeMedia('${imgId}')" class="media-size-btn">🔍</button>
-      </div>
-      <img id="${imgId}" src="${gifEmbed}" loading="lazy"  onclick="window.open('${audioUrl}','_blank')" style="cursor:pointer;width:300px;height:auto;max-width:100%;border-radius:8px;display:block">
-    </div>`;
-  }
-
-  const soundcloudEmbed = getSoundCloudEmbedUrl(audioUrl);
-  if (soundcloudEmbed) {
-    return `<div class="media-item"><iframe height="166" scrolling="no" frameborder="no" allow="autoplay" src="${soundcloudEmbed}"></iframe></div>`;
-  }
-
-  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.aac', '.flac'];
-  const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv'];
-  const lowerUrl = audioUrl.toLowerCase();
-  const isDirectAudio = audioExtensions.some(ext => lowerUrl.includes(ext));
-  const isDirectVideo = videoExtensions.some(ext => lowerUrl.includes(ext));
-
-  if (isDirectAudio) {
-    return `<div class="media-item"><audio controls><source src="${audioUrl}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
-  }
-  if (isDirectVideo) {
-    const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
-    return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
-      <div style="position:absolute;top:8px;right:8px;z-index:10">
-        <button onclick="window.resizeMedia('${videoId}')" class="media-size-btn">🔍</button>
-      </div>
-      <video id="${videoId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
-        <source src="${audioUrl}">متصفحك لا يدعم تشغيل الفيديو
-      </video>
-    </div>`;
-  }
-
-  if (audio.url && audio.type && audio.name) {
-    const isVideo = audio.type.startsWith('video/');
-    if (isVideo) {
-      const videoId = 'video-' + Math.random().toString(36).substr(2, 9);
-      return `<div class="media-item" style="display:inline-block;position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;margin-top:8px">
-        <div style="position:absolute;top:8px;right:8px;z-index:10">
-          <button onclick="window.resizeMedia('${videoId}')" class="media-size-btn">🔍</button>
-        </div>
-        <video id="${videoId}" controls style="width:300px;height:auto;max-width:100%;display:block;border-radius:8px">
-          <source src="${audio.url}" type="${audio.type}">
-        </video>
-      </div>`;
-    } else {
-      return `<div class="media-item"><audio controls><source src="${audio.url}" type="${audio.type}">متصفحك لا يدعم تشغيل الملفات الصوتية</audio></div>`;
-    }
-  }
-
-  return '';
-}
-    // Link preview functions
-function isYouTubeLink(url) {
-  return url.includes('youtube.com') || url.includes('youtu.be');
-}
-
-function isSpotifyLink(url) {
-  return url.includes('spotify.com');
-}
-
-function isSoundCloudLink(url) {
-  return url.includes('soundcloud.com');
-}
-
-function isGiphyLink(url) {
-  return url.includes('giphy.com') || url.includes('tenor.com');
-}
-
-function getYouTubeEmbedId(url) {
-  const urlObj = new URL(url);
-  if (urlObj.hostname.includes('youtube.com')) {
-    return urlObj.searchParams.get('v');
-  } else if (urlObj.hostname.includes('youtu.be')) {
-    return urlObj.pathname.slice(1);
-  }
-  return null;
-}
-
-function getSpotifyEmbedUrl(url) {
-      try {
-        const urlObj = new URL(url);
-        const pathMatch = urlObj.pathname.match(/\/(track|album|playlist|episode)\/([a-zA-Z0-9]+)/);
-        if (pathMatch) {
-          return `https://open.spotify.com/embed/${pathMatch[1]}/${pathMatch[2]}`;
-        }
-      } catch {}
-      return null;
-    }
-
-
 
     async function loadCommentsFromFirebase(poemId) {
       try { const snapshot = await get(ref(database, `comments/${poemId}`)); if (snapshot.exists()) return Object.values(snapshot.val()); return []; }
@@ -5516,11 +6258,10 @@ window.cancelReplying = function() {
   }
 };
 window.dmReact = function(messageId) {
-  const emojis = ['🤍', '👍', '😂', '😮', '😭', '💩', '💀'];
+  const emojis = ['🤍', '👍','😊', '😂', '😮', '😭', '💩', '💀'];
   const modal = document.querySelector('.dm-modal');
   if (!modal) return;
 
-  // Get conversation ID from message element
   const messageEl = modal.querySelector(`[data-message-id="${messageId}"]`);
   const convId = messageEl?.dataset.conversationId;
 
@@ -5529,46 +6270,143 @@ window.dmReact = function(messageId) {
     return;
   }
 
+  // Remove any existing picker first
+  const existingPicker = document.querySelector('.emoji-reaction-picker');
+  if (existingPicker) {
+    existingPicker.remove();
+    return;
+  }
+
   const emojiPicker = document.createElement('div');
-  emojiPicker.style.cssText = 'position:fixed;background:var(--card);border:2px solid var(--brown);border-radius:8px;padding:8px;display:flex;gap:8px;z-index:10000;box-shadow:0 4px 12px var(--shadow-lg)';
+  emojiPicker.className = 'emoji-reaction-picker';
+  emojiPicker.style.cssText = `
+    position: fixed;
+    background: var(--card);
+    border: 2px solid var(--brown);
+    border-radius: 20px;
+    padding: 6px;
+    display: flex;
+    gap: 4px;
+    z-index: 10000;
+    box-shadow: 0 8px 24px var(--shadow-lg);
+    animation: emojiPopIn 0.2s ease;
+  `;
 
   emojis.forEach(emoji => {
     const btn = document.createElement('button');
     btn.textContent = emoji;
-    btn.style.cssText = 'background:none;border:none;font-size:24px;cursor:pointer;padding:4px;transition:transform 0.2s';
-    btn.onmouseover = () => btn.style.transform = 'scale(1.2)';
-    btn.onmouseout = () => btn.style.transform = 'scale(1)';
+    btn.style.cssText = `
+      background: transparent;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 12px;
+      transition: all 0.15s ease;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    `;
+
+    btn.onmouseover = () => {
+      btn.style.background = 'rgba(139,94,60,0.1)';
+      btn.style.transform = 'scale(1.25)';
+    };
+
+    btn.onmouseout = () => {
+      btn.style.background = 'transparent';
+      btn.style.transform = 'scale(1)';
+    };
+
     btn.onclick = async () => {
       await window.toggleReaction(convId, messageId, emoji);
-      emojiPicker.remove();
+      emojiPicker.style.animation = 'emojiPopOut 0.15s ease';
+      setTimeout(() => {
+        emojiPicker.remove();
+        window.removeEventListener('scroll', closePickerOnScroll, true);
+      }, 150);
 
-      // Close message actions and refresh
       document.querySelectorAll('.dm-message.active').forEach(msg => {
         msg.classList.remove('active');
       });
     };
+
     emojiPicker.appendChild(btn);
   });
 
-  if (messageEl) {
-    const rect = messageEl.getBoundingClientRect();
-    emojiPicker.style.top = (rect.bottom + 5) + 'px';
-    emojiPicker.style.left = rect.left + 'px';
-  }
-
   document.body.appendChild(emojiPicker);
 
+  // ✅ Advanced smart positioning
+  if (messageEl) {
+    const rect = messageEl.getBoundingClientRect();
+    const pickerRect = emojiPicker.getBoundingClientRect();
+    const pickerWidth = pickerRect.width || 340; // Fallback
+    const pickerHeight = pickerRect.height || 56;
+
+    const padding = 10; // Safety padding from edges
+    let top = rect.bottom + 8;
+    let left = rect.left;
+
+    // ✅ Horizontal positioning
+    // Try to center on message first
+    left = rect.left + (rect.width / 2) - (pickerWidth / 2);
+
+    // Check right overflow
+    if (left + pickerWidth > window.innerWidth - padding) {
+      left = window.innerWidth - pickerWidth - padding;
+    }
+
+    // Check left overflow
+    if (left < padding) {
+      left = padding;
+    }
+
+    // ✅ Vertical positioning
+    // Check if fits below
+    if (top + pickerHeight > window.innerHeight - padding) {
+      // Show above instead
+      top = rect.top - pickerHeight - 8;
+
+      // If still doesn't fit (message at very top)
+      if (top < padding) {
+        // Force below with scrollable window
+        top = rect.bottom + 8;
+
+        // If really tight, position at bottom of screen
+        if (top + pickerHeight > window.innerHeight) {
+          top = window.innerHeight - pickerHeight - padding;
+        }
+      }
+    }
+
+    emojiPicker.style.top = top + 'px';
+    emojiPicker.style.left = left + 'px';
+  }
+
+  // ✅ Close on scroll
+  const closePickerOnScroll = () => {
+    emojiPicker.style.animation = 'emojiPopOut 0.15s ease';
+    setTimeout(() => {
+      emojiPicker.remove();
+      window.removeEventListener('scroll', closePickerOnScroll, true);
+      document.removeEventListener('click', closeOnClick);
+    }, 150);
+  };
+
+  // ✅ Close on click outside
   setTimeout(() => {
     const closeOnClick = (e) => {
-      if (!emojiPicker.contains(e.target)) {
-        emojiPicker.remove();
-        document.removeEventListener('click', closeOnClick);
+      if (!emojiPicker.contains(e.target) && !e.target.closest('.dm-action-btn')) {
+        closePickerOnScroll();
       }
     };
     document.addEventListener('click', closeOnClick);
+    window.addEventListener('scroll', closePickerOnScroll, true);
   }, 100);
 
-  // Close message actions
+  // Close active message actions
   document.querySelectorAll('.dm-message.active').forEach(msg => {
     msg.classList.remove('active');
   });
@@ -5995,19 +6833,12 @@ const userLiked = await isLiked(poem.id);
   <button class="actions-trigger icon-btn" id="actionsTrigger" title="خيارات">
     ☰
   </button>
-  <div class="actions-dropdown" id="actionsDropdown">
-
-                  <button class="action-item" id="favoritePoem">${isFav ?
-'⭐ إزالة من المفضلة' : '☆ إضافة للمفضلة'}</button>
-                  ${(poem.userId && poem.userId !== currentUser?.id) ?
-'<button class="action-item" id="dmPoet">💌 رسالة للكاتب</button>' : ''}
-                  ${canEdit ?
-'<button class="action-item" id="editPoem">✏️ تعديل القصيدة</button>' : ''}
-                  ${canDelete ?
-'<button class="action-item" id="deletePoem">🗑️ حذف القصيدة</button>' : ''}
-                  ${!canEdit ?
-'<button class="action-item" id="hidePoem">🙈 إخفاء القصيدة</button>' : ''}
-                </div>
+ <div class="actions-dropdown" id="actionsDropdown">
+  <button class="action-item" id="favoritePoem">${isFav ? '⭐ إزالة من المفضلة' : '☆ إضافة للمفضلة'}</button>
+  ${(poem.userId && poem.userId !== currentUser?.id) ? '<button class="action-item" id="dmPoet">💌 رسالة للكاتب</button>' : ''}
+  ${canEdit ? '<button class="action-item" id="editPoem">✏️ تعديل القصيدة</button>' : ''}
+  ${canDelete ? '<button class="action-item" id="deletePoem">🗑️ حذف القصيدة</button>' : ''}
+</div>
               </div>
 
               <button class="icon-btn" id="closeModal" title="إغلاق">✖️</button>
@@ -6034,41 +6865,68 @@ const userLiked = await isLiked(poem.id);
       // ... باقي الدالة (مثل document.body.appendChild(modal);) يجب أن يأتي هنا.
 document.body.appendChild(modal);
 
+// ✅ Setup all audio players after modal is in DOM
+setTimeout(() => {
+  const allPlayers = modal.querySelectorAll('.audio-player');
+  allPlayers.forEach(playerEl => {
+    const playerId = playerEl.id;
+    if (playerId) {
+      setupAudioPlayer(playerId);
+    }
+  });
+}, 300);
       // Actions menu toggle with smart positioning
-      const trigger = modal.querySelector('#actionsTrigger');
-      const dropdown = modal.querySelector('#actionsDropdown');
-      trigger.addEventListener('click', (e) => {
-        e.stopPropagation();
+const trigger = modal.querySelector('#actionsTrigger');
+const dropdown = modal.querySelector('#actionsDropdown');
 
-        // Calculate position
-        const rect = trigger.getBoundingClientRect();
-        const dropdownWidth = 180;
-        const dropdownHeight = 280;
+// Close dropdown function
+function closeDropdown() {
+  dropdown.classList.remove('show');
+  window.removeEventListener('scroll', closeDropdownOnScroll, true);
+}
 
-        // Position below button, aligned to right
-        let top = rect.bottom + 5;
-        let left = rect.right - dropdownWidth;
+// Close on scroll
+function closeDropdownOnScroll() {
+  closeDropdown();
+}
 
-        // Check if it goes off screen on right
-        if (left < 10) left = 10;
-        if (left + dropdownWidth > window.innerWidth - 10) {
-          left = window.innerWidth - dropdownWidth - 10;
-        }
+trigger.addEventListener('click', (e) => {
+  e.stopPropagation();
 
-        // Check if it goes off screen on bottom
-        if (top + dropdownHeight > window.innerHeight - 10) {
-          top = rect.top - dropdownHeight - 5;
-        }
+  if (dropdown.classList.contains('show')) {
+    closeDropdown();
+  } else {
+    // Calculate position
+    const rect = trigger.getBoundingClientRect();
+    const dropdownWidth = 180;
+    const dropdownHeight = 280;
 
-        dropdown.style.top = top + 'px';
-        dropdown.style.left = left + 'px';
-        dropdown.classList.toggle('show');
-      });
+    let top = rect.bottom + 5;
+    let left = rect.right - dropdownWidth;
 
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.actions-menu-container')) dropdown.classList.remove('show');
-      });
+    if (left < 10) left = 10;
+    if (left + dropdownWidth > window.innerWidth - 10) {
+      left = window.innerWidth - dropdownWidth - 10;
+    }
 
+    if (top + dropdownHeight > window.innerHeight - 10) {
+      top = rect.top - dropdownHeight - 5;
+    }
+
+    dropdown.style.top = top + 'px';
+    dropdown.style.left = left + 'px';
+    dropdown.classList.add('show');
+
+    // ✅ Add scroll listener
+    window.addEventListener('scroll', closeDropdownOnScroll, true);
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.actions-menu-container')) {
+    closeDropdown();
+  }
+});
      modal.querySelector('#modalLikeBtn').addEventListener('click', async function() {
   const newCount = await toggleLike(poem.id);
   const newLiked = await isLiked(poem.id);
@@ -6134,19 +6992,24 @@ modal.querySelector('#favoritePoem').addEventListener('click', async () => {
 
       // Edit
       if (canEdit) {
-        modal.querySelector('#editPoem').addEventListener('click', () => {
-          editingPoem = poem;
-          document.getElementById('inputTitle').value = poem.title || '';
-          document.getElementById('inputAuthor').value = poem.author || '';
-          document.getElementById('inputText').value = poem.text || '';
-          document.getElementById('inputExcerpt').value = poem.excerpt || '';
-          currentTags = poem.tags || []; renderTagsInForm();
-          currentAudios = poem.audios || []; renderAudiosInForm();
-          currentImages = poem.images || []; renderImagesPreview();
-          document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
-          document.getElementById('addModal').style.display = 'flex';
-          modal.remove();
-        });
+    modal.querySelector('#editPoem').addEventListener('click', () => {
+  editingPoem = poem;
+  document.getElementById('inputTitle').value = poem.title || '';
+  document.getElementById('inputAuthor').value = poem.author || '';
+  document.getElementById('inputText').value = poem.text || '';
+  document.getElementById('inputExcerpt').value = poem.excerpt || '';
+  currentTags = poem.tags || [];
+  renderTagsInForm();
+  currentAudios = poem.audios || [];
+  renderAudiosInForm();
+  currentImages = poem.images || [];
+  renderImagesPreview();
+  setupQuickTagButtons(); // ✅ Setup quick tag buttons
+  updateQuickTagButtons(); // ✅ Update button states for existing tags
+  document.getElementById('modalFormTitle').textContent = '✏️ تعديل القصيدة';
+  document.getElementById('addModal').style.display = 'flex';
+  modal.remove();
+});
       }
 
       // Delete
@@ -6178,15 +7041,7 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
         });
       }
 
-      // Hide
-      if (!canEdit && modal.querySelector('#hidePoem')) {
-        modal.querySelector('#hidePoem').addEventListener('click', () => {
-          toggleHidePoem(poem.id);
-          renderPoems();
-          modal.remove();
-          showSyncStatus('✅ تم إخفاء القصيدة من جهازك', 2000);
-        });
-      }
+
 
      // At the end of the function, add close handler:
   const closeModal = () => {
@@ -6200,12 +7055,13 @@ if (img.publicId) console.log('Image marked for deletion:', img.publicId);
     if (e.target === modal) closeModal();
   });
 
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') {
-      closeModal();
-      document.removeEventListener('keydown', esc);
-    }
-  });
+// ESC key to close DM
+document.addEventListener('keydown', function escHandler(e) {
+  if (e.key === 'Escape' && modal && modal.parentNode) {
+    destroyDM(); // ✅ Will show warning if needed
+    document.removeEventListener('keydown', escHandler);
+  }
+});
 };
 
 
@@ -6864,20 +7720,24 @@ function showUserInfo() {
     });
 
     // Fix: Add button should require auth
-    document.getElementById('btnAdd').addEventListener('click', () => {
-      if (!currentUser) {
-        showAlert('⚠️ يرجى تسجيل الدخول أولاً لإضافة قصيدة');
-        document.getElementById('authModal').style.display = 'flex';
-        return;
-      }
-      editingPoem = null;
-      document.getElementById('poemForm').reset();
-      currentTags = []; currentAudios = []; currentImages = [];
-      renderTagsInForm(); renderAudiosInForm(); renderImagesPreview();
-      document.getElementById('modalFormTitle').textContent = '✏️ أضف قصيدة';
-      document.getElementById('addModal').style.display = 'flex';
-    });
-
+   document.getElementById('btnAdd').addEventListener('click', () => {
+  if (!currentUser) {
+    showAlert('⚠️ يرجى تسجيل الدخول أولاً لإضافة قصيدة');
+    document.getElementById('authModal').style.display = 'flex';
+    return;
+  }
+  editingPoem = null;
+  document.getElementById('poemForm').reset();
+  currentTags = [];
+  currentAudios = [];
+  currentImages = [];
+  renderTagsInForm();
+  renderAudiosInForm();
+  renderImagesPreview();
+  setupQuickTagButtons(); // ✅ Setup quick tag buttons
+  document.getElementById('modalFormTitle').textContent = '✏️ أضف قصيدة';
+  document.getElementById('addModal').style.display = 'flex';
+});
     document.getElementById('btnCancelAdd').addEventListener('click', () => {
       editingPoem = null;
       document.getElementById('addModal').style.display = 'none';
@@ -6908,12 +7768,12 @@ if (editingPoem) {
     poems[index] = {
       ...poemData,
       id: editingPoem.id,
-      manualOrder: editingPoem.manualOrder
+      manualOrder: editingPoem.manualOrder !== undefined ? editingPoem.manualOrder : 0 // ✅ Ensure manualOrder exists
     };
   }
   editingPoem = null;
   showSyncStatus('✅ تم تحديث القصيدة', 2000);
-} else {
+}else {
   poemData.id = 'p-' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   poems.push(poemData);
 
@@ -7050,8 +7910,7 @@ try {
     }
   });
 
-  showSyncStatus('✅ متصل', 2000);
-}
+ }
     init();
 document.querySelectorAll('.dm-message').forEach(msg => {
   msg.addEventListener('click', () => {
