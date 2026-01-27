@@ -3652,8 +3652,7 @@ async function loadAllMetadata() {
       try {
         // Prevent running on insecure contexts (like file://) which throws errors
         if (!('serviceWorker' in navigator) || window.location.protocol === 'file:') {
-          console.log('Service Worker not supported in this context.');
-          return null;
+           return null;
         }
 
         const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
@@ -4762,6 +4761,136 @@ function loadDMConversations() {
     }
   });
 }
+// ✅ Repair conversations with missing/incorrect user data
+async function repairConversations() {
+  if (!currentUser) return;
+
+  try {
+    console.log('🔧 Starting repair of conversations...');
+
+    const convSnapshot = await get(ref(database, `dm_conversations/${currentUser.id}`));
+    if (!convSnapshot.exists()) {
+      console.log('✅ No conversations to repair');
+      return;
+    }
+
+    const conversations = convSnapshot.val();
+    const repairs = [];
+    let repairedCount = 0;
+    let deletedCount = 0;
+
+    for (const convId in conversations) {
+      const conv = conversations[convId];
+
+      // ✅ Skip self-conversations (these should be deleted)
+      if (conv.userId === currentUser.id) {
+        console.log('🗑️ Deleting self-conversation');
+        repairs.push(
+          set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), null)
+        );
+        deletedCount++;
+        continue;
+      }
+
+      // ✅ Try to find the user
+      let user = allUsers.find(u => u.id === conv.userId);
+
+      // ✅ If user not found by userId, try to find by username
+      if (!user && conv.username) {
+        user = allUsers.find(u => u.username === conv.username);
+        if (user) {
+          console.log(`🔧 Repairing conversation: username "${conv.username}" → userId "${user.id}"`);
+          // Update the conversation with correct userId
+          repairs.push(
+            set(ref(database, `dm_conversations/${currentUser.id}/${convId}/userId`), user.id)
+          );
+          repairedCount++;
+        }
+      }
+
+      // ✅ If we found the user but username is missing/wrong, fix it
+      if (user && (!conv.username || conv.username === 'مستخدم')) {
+        console.log(`🔧 Updating username for conversation with ${user.id} → "${user.username}"`);
+        repairs.push(
+          set(ref(database, `dm_conversations/${currentUser.id}/${convId}/username`), user.username)
+        );
+        repairedCount++;
+      }
+
+      // ✅ If still no user found and no username, check messages to find the other user
+      if (!user && !conv.username) {
+        console.log('🔍 Trying to find user from messages in conversation:', convId);
+
+        try {
+          const messagesSnapshot = await get(ref(database, `dm_messages/${convId}`));
+          if (messagesSnapshot.exists()) {
+            const messages = Object.values(messagesSnapshot.val());
+
+            // Find a message from the other user
+            const otherUserMessage = messages.find(m => m.fromId !== currentUser.id);
+            if (otherUserMessage) {
+              const otherUser = allUsers.find(u => u.id === otherUserMessage.fromId);
+              if (otherUser) {
+                console.log(`🔧 Found user from messages: ${otherUser.username} (${otherUser.id})`);
+                repairs.push(
+                  set(ref(database, `dm_conversations/${currentUser.id}/${convId}/userId`), otherUser.id),
+                  set(ref(database, `dm_conversations/${currentUser.id}/${convId}/username`), otherUser.username)
+                );
+                repairedCount++;
+              } else {
+                console.warn('⚠️ User not found in allUsers:', otherUserMessage.fromId);
+                // Don't delete - maybe user will be loaded later
+              }
+            } else {
+              console.warn('⚠️ No messages from other user found');
+              // Don't delete - maybe it's a new conversation
+            }
+          } else {
+            console.warn('⚠️ No messages found in conversation:', convId);
+            // Don't delete empty conversations - they might be newly created
+          }
+        } catch (msgError) {
+          console.error('Error checking messages:', msgError);
+        }
+      }
+
+      // ✅ ONLY delete if the conversation has no messages AND no identifiable user
+      if (!user && !conv.username) {
+        try {
+          const messagesSnapshot = await get(ref(database, `dm_messages/${convId}`));
+          const hasMessages = messagesSnapshot.exists();
+
+          if (!hasMessages) {
+            console.log('🗑️ Deleting empty conversation with no user data:', convId);
+            repairs.push(
+              set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), null)
+            );
+            deletedCount++;
+          } else {
+            console.warn('⚠️ Keeping conversation with messages but unknown user:', convId);
+          }
+        } catch (err) {
+          console.error('Error checking messages for deletion:', err);
+        }
+      }
+    }
+
+    // ✅ Execute all repairs at once
+    if (repairs.length > 0) {
+      await Promise.all(repairs);
+      console.log(`✅ Repaired: ${repairedCount} | Deleted: ${deletedCount}`);
+      if (repairedCount > 0 || deletedCount > 0) {
+        showSyncStatus(`🔧 تم إصلاح ${repairedCount} محادثة وحذف ${deletedCount} محادثة فارغة`, 3000);
+      }
+    } else {
+      console.log('✅ All conversations are valid');
+    }
+
+  } catch (error) {
+    console.error('❌ Error repairing conversations:', error);
+  }
+}
+
    function updateDMBadge() {
   const badge = document.getElementById('dmBadge');
   const unread = dmConversations.filter(c => c.unreadCount && c.unreadCount > 0).length;
@@ -5306,66 +5435,176 @@ modal.querySelector('#dmToggleDir').addEventListener('click', function() {
   textarea.focus();
 });
 
-  async function ensureConversationMeta(withUserId) {
-    const withUser = allUsers.find(u => u.id === withUserId);
-    const convId = getConversationId(currentUser.id, withUserId);
-    const myMetaRef = ref(database, `dm_conversations/${currentUser.id}/${convId}`);
-    const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+ async function ensureConversationMeta(withUserId) {
+  const withUser = allUsers.find(u => u.id === withUserId);
 
-    const myMetaSnap = await get(myMetaRef);
-    if (!myMetaSnap.exists()) {
-      await set(myMetaRef, {
-        id: convId, userId: withUserId, username: withUser?.username || '',
-        lastMessage: '', updatedAt: null, unreadCount: 0
-      });
-    }
-    const theirMetaSnap = await get(theirMetaRef);
-    if (!theirMetaSnap.exists()) {
-      await set(theirMetaRef, {
-        id: convId, userId: currentUser.id, username: currentUser.username,
-        lastMessage: '', updatedAt: null, unreadCount: 0
-      });
-    }
+  // ✅ If user doesn't exist, don't create conversation
+  if (!withUser) {
+    console.error('Cannot create conversation with non-existent user:', withUserId);
+    return;
   }
 
-  function renderDMList() {
+  const convId = getConversationId(currentUser.id, withUserId);
+  const myMetaRef = ref(database, `dm_conversations/${currentUser.id}/${convId}`);
+  const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+
+  const myMetaSnap = await get(myMetaRef);
+  if (!myMetaSnap.exists()) {
+    await set(myMetaRef, {
+      id: convId,
+      userId: withUserId,
+      username: withUser.username, // ✅ Use actual username
+      lastMessage: '',
+      updatedAt: new Date().toISOString(), // ✅ Set timestamp
+      unreadCount: 0
+    });
+    console.log('✅ Created conversation metadata for current user');
+  }
+
+  const theirMetaSnap = await get(theirMetaRef);
+  if (!theirMetaSnap.exists()) {
+    await set(theirMetaRef, {
+      id: convId,
+      userId: currentUser.id,
+      username: currentUser.username,
+      lastMessage: '',
+      updatedAt: new Date().toISOString(), // ✅ Set timestamp
+      unreadCount: 0
+    });
+    console.log('✅ Created conversation metadata for other user');
+  }
+}
+function renderDMList() {
   globalRenderDMList = renderDMList;
 
-    listEl.innerHTML = '';
-    const sorted = [...dmConversations].sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
-    conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
+  listEl.innerHTML = '';
 
-    if (sorted.length === 0) {
-      listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
-      return;
+  // ✅ Filter out deleted users - don't show them at all
+  const validConversations = dmConversations.filter(conv => {
+    // Skip if it's yourself
+    if (conv.userId === currentUser.id) return false;
+
+    // ✅ Try to find the user
+    let user = allUsers.find(u => u.id === conv.userId);
+
+    // If not found by ID, try by username
+    if (!user && conv.username) {
+      user = allUsers.find(u => u.username === conv.username);
     }
-    sorted.forEach(conv => {
-      const user = allUsers.find(u => u.id === conv.userId);
-      const avatarUrl = user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`;
-      const item = document.createElement('div');
-      item.className = 'dm-list-item';
+
+    // ✅ HIDE if user doesn't exist
+    if (!user) {
+      console.log('🙈 Hiding conversation with deleted user:', conv.username || conv.userId);
+      return false;
+    }
+
+    return true;
+  });
+
+  const sorted = validConversations.sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0));
+  conversationsCount.textContent = sorted.length > 0 ? `(${sorted.length})` : '';
+
+  if (sorted.length === 0) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا توجد محادثات بعد</div>';
+    return;
+  }
+
+  sorted.forEach(conv => {
+    const user = allUsers.find(u => u.id === conv.userId);
+
+    // ✅ This should never happen now, but safe guard
+    if (!user) return;
+
+    const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`;
+    const item = document.createElement('div');
+    item.className = 'dm-list-item';
+
+    // Highlight if this is the current conversation
+    if (currentConversationId === conv.id) {
+      item.style.background = 'rgba(139,94,60,0.15)';
+      item.style.borderLeft = '3px solid var(--brown)';
+    }
+
     item.innerHTML = `
-        <div class="avatar-container">
-          <img src="${avatarUrl}" class="avatar-small" alt="${user?.username||''}">
-          <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
-        </div>
-        <div style="flex:1">
-          <div style="font-weight:700;color:var(--accent)">${escapeHtml(user?.username||'مستخدم')}</div>
-          <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'')}</div>
-        </div>
-        ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
-      `;
-      item.onclick = () => {
-        loadConversation(conv.userId);
-        sidebar.classList.remove('show');
-      };
-      listEl.appendChild(item);
-       // Update online indicators for all users in list - ADD THIS
-  // Set up real-time listeners for all users in list
-sorted.forEach(conv => {
-  const statusRef = ref(database, `user_status/${conv.userId}`);
-  onValue(statusRef, (snapshot) => {
-    const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+      <div class="avatar-container">
+        <img src="${avatarUrl}" class="avatar-small" alt="${user.username}">
+        <span class="online-indicator dm-list-indicator-${conv.userId}"></span>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--accent)">${escapeHtml(user.username)}</div>
+        <div style="font-size:12px;color:var(--muted)">${escapeHtml(conv.lastMessage||'ابدأ محادثة')}</div>
+      </div>
+      ${conv.unreadCount ? `<span class="notification-badge" style="display:flex">${conv.unreadCount}</span>` : ''}
+    `;
+
+    item.onclick = () => {
+      loadConversation(conv.userId);
+      sidebar.classList.remove('show');
+    };
+
+    listEl.appendChild(item);
+
+    // Update online indicators
+    const statusRef = ref(database, `user_status/${conv.userId}`);
+    onValue(statusRef, (snapshot) => {
+      const indicator = document.querySelector('.dm-list-indicator-' + conv.userId);
+      if (!indicator) return;
+
+      if (snapshot.exists()) {
+        const status = snapshot.val();
+        const lastChanged = new Date(status.last_changed);
+        const now = new Date();
+        const diffMinutes = (now - lastChanged) / 1000 / 60;
+        const isOnline = status.state === 'online' && diffMinutes < 2;
+
+        if (isOnline) {
+          indicator.classList.remove('offline');
+        } else {
+          indicator.classList.add('offline');
+        }
+      } else {
+        indicator.classList.add('offline');
+      }
+    });
+  });
+}
+
+async function loadConversation(withUserId) {
+  // ✅ Prevent chatting with yourself
+  if (withUserId === currentUser.id) {
+    showAlert('⚠️ لا يمكنك بدء محادثة مع نفسك!');
+    return;
+  }
+
+  // ✅ Check if user still exists BEFORE doing anything else
+  const withUser = allUsers.find(u => u.id === withUserId);
+  if (!withUser) {
+    showAlert('⚠️ هذا المستخدم غير موجود');
+    return;
+  }
+
+  // ✅ NOW create conversation metadata and convId
+  await ensureConversationMeta(withUserId);
+  const convId = getConversationId(currentUser.id, withUserId);
+  currentConversationId = convId;
+
+  // ✅ Mark DM notifications from this user as read
+  await markDMNotificationsAsRead(withUserId);
+  updateNotificationBadge();
+
+  // Update header
+  headerEl.innerHTML = `
+    <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
+      <img src="${withUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser.username)}&background=8b5e3c&color=fff&size=32`}" loading="lazy" class="avatar-small" />
+      <span class="online-indicator" id="userOnlineIndicator"></span>
+    </div>
+    <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser.username)}</div>
+  `;
+
+  // Monitor online status with real-time listener
+  const statusRef = ref(database, `user_status/${withUserId}`);
+  const statusUnsubscribe = onValue(statusRef, (snapshot) => {
+    const indicator = modal.querySelector('#userOnlineIndicator');
     if (!indicator) return;
 
     if (snapshot.exists()) {
@@ -5384,267 +5623,165 @@ sorted.forEach(conv => {
       indicator.classList.add('offline');
     }
   });
-});
-    });
-  }
 
+  // Store unsubscribe function to clean up later
+  modal.dataset.statusUnsubscribe = 'active';
 
-async function loadConversation(withUserId) {
-    await ensureConversationMeta(withUserId);
-    const withUser = allUsers.find(u => u.id === withUserId);
-    const convId = getConversationId(currentUser.id, withUserId);
-    currentConversationId = convId;
-// ✅ Mark DM notifications from this user as read
-    await markDMNotificationsAsRead(withUserId);
-  // ✅ Update notification badge immediately
-    updateNotificationBadge();
+  messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
 
-headerEl.innerHTML = `
-      <div class="avatar-container" style="cursor:pointer" onclick="window.openUserProfile('${withUserId}')">
-        <img src="${withUser?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(withUser?.username||'مستخدم')}&background=8b5e3c&color=fff&size=32`}" loading="lazy" class="avatar-small" />
-        <span class="online-indicator" id="userOnlineIndicator"></span>
-      </div>
-      <div style="font-weight:700;color:var(--accent);cursor:pointer" onclick="window.openUserProfile('${withUserId}')">${escapeHtml(withUser?.username || '')}</div>
-     `;
-
-    // Monitor online status
-  // Monitor online status with real-time listener
-const statusRef = ref(database, `user_status/${withUserId}`);
-const statusUnsubscribe = onValue(statusRef, (snapshot) => {
-  const indicator = modal.querySelector('#userOnlineIndicator');
-  if (!indicator) return;
-
-  if (snapshot.exists()) {
-    const status = snapshot.val();
-    const lastChanged = new Date(status.last_changed);
-    const now = new Date();
-    const diffMinutes = (now - lastChanged) / 1000 / 60;
-    const isOnline = status.state === 'online' && diffMinutes < 2;
-
-    if (isOnline) {
-      indicator.classList.remove('offline');
+  const typingRef = ref(database, `dm_typing/${convId}/${withUserId}`);
+  onValue(typingRef, (snapshot) => {
+    const typingData = snapshot.val();
+    const indicator = modal.querySelector('#dmTypingIndicator');
+    if (typingData && typingData.typing && (Date.now() - typingData.timestamp < 4000)) {
+      indicator.classList.add('show');
     } else {
-      indicator.classList.add('offline');
+      indicator.classList.remove('show');
     }
-  } else {
-    indicator.classList.add('offline');
-  }
-});
+  });
 
-// Store unsubscribe function to clean up later
-modal.dataset.statusUnsubscribe = 'active';
-
-    messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">جارِ التحميل...</div>';
-
-    const typingRef = ref(database, `dm_typing/${convId}/${withUserId}`);
-    onValue(typingRef, (snapshot) => {
-      const typingData = snapshot.val();
-      const indicator = modal.querySelector('#dmTypingIndicator');
-      if (typingData && typingData.typing && (Date.now() - typingData.timestamp < 4000)) {
-        indicator.classList.add('show');
-      } else {
-        indicator.classList.remove('show');
-      }
-    });
-// Detach previous conversation listener
-if (typeof dmMessagesUnsubscribe === 'function') {
-  dmMessagesUnsubscribe();
-  dmMessagesUnsubscribe = null;
-}
-
-
-// Attach real-time messages listener
-const messagesRef = ref(database, `dm_messages/${convId}`);
-// Reset pagination
-dmMessagesLimit = 20;
-allDMMessages = [];
-
-isFirstLoad = true;
-previousMessagesCount = 0;
-dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
-
-  if (!msgsSnap.exists()) {
-    messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
-    allDMMessages = [];
-    isFirstLoad = false;
-    return;
+  // Detach previous conversation listener
+  if (typeof dmMessagesUnsubscribe === 'function') {
+    dmMessagesUnsubscribe();
+    dmMessagesUnsubscribe = null;
   }
 
-  const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
+  // Attach real-time messages listener
+  const messagesRef = ref(database, `dm_messages/${convId}`);
+  // Reset pagination
+  dmMessagesLimit = 20;
+  allDMMessages = [];
 
-  // Mark unread as read (non-blocking)
-  const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
-  if (unread.length > 0) {
-    Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
-      .catch(err => console.error('Error marking messages as read:', err));
-  }
+  isFirstLoad = true;
+  previousMessagesCount = 0;
 
-  // First load: render everything
-  if (isFirstLoad) {
-    allDMMessages = newMessages;
-    renderDMMessages(convId, withUser);
+  dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
+    if (!msgsSnap.exists()) {
+      messagesEl.innerHTML = '<div style="padding:10px;color:var(--muted)">ابدأ المحادثة برسالة أولى.</div>';
+      allDMMessages = [];
+      isFirstLoad = false;
+      return;
+    }
 
-  // Force scroll to bottom multiple times to handle media loading
-  const scrollToBottom = () => {
-    messagesEl.scrollTop = messagesEl.scrollHeight;
-  };
+    const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
 
-  setTimeout(scrollToBottom, 100);
-  setTimeout(scrollToBottom, 300);
-  setTimeout(scrollToBottom, 600);
-    setupDMScrollListener(messagesEl, convId, withUser);
-    isFirstLoad = false;
-    previousMessagesCount = newMessages.length;
-  } else {
-    // Incremental update: only update changed/new messages
-    const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
+    // Mark unread as read (non-blocking)
+    const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
+    if (unread.length > 0) {
+      Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
+        .catch(err => console.error('Error marking messages as read:', err));
+    }
 
-    newMessages.forEach(newMsg => {
-      const existingMsg = oldMessagesMap.get(newMsg.id);
+    // First load: render everything
+    if (isFirstLoad) {
+      allDMMessages = newMessages;
+      renderDMMessages(convId, withUser);
 
-      if (!existingMsg) {
-        // New message - add to end
-        allDMMessages.push(newMsg);
-        const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
-        messagesEl.appendChild(div);
+      // Force scroll to bottom multiple times to handle media loading
+      const scrollToBottom = () => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      };
 
-        // Scroll to bottom for new messages
-    // Scroll to bottom for new messages
-        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
-        setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
-      } else {
-        // Check if message was updated (reactions, edits, read status)
-        const needsUpdate =
-          JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
-          existingMsg.edited !== newMsg.edited ||
-          existingMsg.text !== newMsg.text ||
-          existingMsg.read !== newMsg.read;
+      setTimeout(scrollToBottom, 100);
+      setTimeout(scrollToBottom, 300);
+      setTimeout(scrollToBottom, 600);
+      setupDMScrollListener(messagesEl, convId, withUser);
+      isFirstLoad = false;
+      previousMessagesCount = newMessages.length;
+    } else {
+      // Incremental update: only update changed/new messages
+      const oldMessagesMap = new Map(allDMMessages.map(m => [m.id, m]));
 
-        if (needsUpdate) {
-          // Update existing message element
-          const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
-          if (messageEl) {
-            // Update in allDMMessages array
-            const index = allDMMessages.findIndex(m => m.id === newMsg.id);
-            if (index !== -1) {
-              allDMMessages[index] = newMsg;
+      newMessages.forEach(newMsg => {
+        const existingMsg = oldMessagesMap.get(newMsg.id);
+
+        if (!existingMsg) {
+          // New message - add to end
+          allDMMessages.push(newMsg);
+          const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
+          messagesEl.appendChild(div);
+
+          // Scroll to bottom for new messages
+          setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 50);
+          setTimeout(() => messagesEl.scrollTop = messagesEl.scrollHeight, 200);
+        } else {
+          // Check if message was updated (reactions, edits, read status)
+          const needsUpdate =
+            JSON.stringify(existingMsg.reactions) !== JSON.stringify(newMsg.reactions) ||
+            existingMsg.edited !== newMsg.edited ||
+            existingMsg.text !== newMsg.text ||
+            existingMsg.read !== newMsg.read;
+
+          if (needsUpdate) {
+            // Update existing message element
+            const messageEl = messagesEl.querySelector(`[data-message-id="${newMsg.id}"]`);
+            if (messageEl) {
+              // Update in allDMMessages array
+              const index = allDMMessages.findIndex(m => m.id === newMsg.id);
+              if (index !== -1) {
+                allDMMessages[index] = newMsg;
+              }
+
+              // Update DOM element
+              updateMessageElement(messageEl, newMsg, convId, allDMMessages);
             }
-
-            // Update DOM element
-            updateMessageElement(messageEl, newMsg, convId, allDMMessages);
           }
         }
-      }
-    });
+      });
 
-    previousMessagesCount = newMessages.length;
-  }
-
-  await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
-});
- const dmContent = modal.querySelector('.dm-content');
-setupMentionAutocomplete(dmTextarea, dmContent);
-
-// Auto-resize textarea
-dmTextarea.addEventListener('input', function() {
-  this.style.height = '20px';
-  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-});
-
-  const sendBtn = modal.querySelector('#dmSend');
-let isSending = false;
-
-sendBtn.onclick = async () => {
-  if (isSending) return;
-
-  const textEl = modal.querySelector('#dmText');
-  const text = textEl.value.trim();
-
-  // ✅ FIX: Check selectedImage BEFORE showing empty message alert
-  if (!text && !selectedImage) {
-    showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
-    return;
-  }
-
-  // Disable button
-  isSending = true;
-  sendBtn.disabled = true;
-  sendBtn.style.opacity = '0.5';
-  sendBtn.style.cursor = 'not-allowed';
-  const originalText = sendBtn.textContent;
-  sendBtn.textContent = 'جاري الإرسال...';
-
-  // EDITING MODE
-  if (editingMessageId) {
-    try {
-      await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/text`), text);
-      await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/edited`), true);
-      await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
-
-      editingMessageId = null;
-      textEl.value = '';
-      document.getElementById('dmEditingIndicator')?.remove();
-      textEl.style.height = '20px';
-
-      showSyncStatus('✅ تم تعديل الرسالة', 1500);
-    } catch (error) {
-      showAlert('❌ فشل تعديل الرسالة');
+      previousMessagesCount = newMessages.length;
     }
 
-    setTimeout(() => {
-      isSending = false;
-      sendBtn.disabled = false;
-      sendBtn.style.opacity = '1';
-      sendBtn.style.cursor = 'pointer';
-      sendBtn.textContent = originalText;
-    }, 1000);
-    return;
-  }
+    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}/unreadCount`), 0);
+  });
 
-  // SENDING NEW MESSAGE MODE
-  const convId = currentConversationId;
-  const withUserId = convId.split('_').find(id => id !== currentUser.id);
-  const withUser = allUsers.find(u => u.id === withUserId);
-  const msgId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  const dmContent = modal.querySelector('.dm-content');
+  setupMentionAutocomplete(dmTextarea, dmContent);
 
-  const payload = {
-    id: msgId,
-    convId,
-    text,
-    from: currentUser.username,
-    fromId: currentUser.id,
-    toId: withUserId,
-    timestamp: new Date().toISOString(),
-     textDirection: dmTextDirection
-  };
+  // Auto-resize textarea
+  dmTextarea.addEventListener('input', function() {
+    this.style.height = '20px';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
 
+  const sendBtn = modal.querySelector('#dmSend');
+  let isSending = false;
 
-  // ✅ Handle media (GIFs/images/videos)
-  if (selectedImage) {
-    try {
-      // ✅ GIF or direct link - NO upload needed
-      if (selectedImage.type === 'image/gif' || selectedImage.type === 'image/link') {
-        payload.imageUrl = selectedImage.url;
-        payload.fileType = selectedImage.type;
-      } else {
-        // File upload to Cloudinary
-        showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
-        const uploaded = await uploadFileToCloudinary(selectedImage.file);
-        payload.imageUrl = uploaded.url;
-        payload.fileType = selectedImage.type;
+  sendBtn.onclick = async () => {
+    if (isSending) return;
+
+    const textEl = modal.querySelector('#dmText');
+    const text = textEl.value.trim();
+
+    if (!text && !selectedImage) {
+      showAlert('⚠️ يرجى كتابة رسالة أو اختيار وسائط');
+      return;
+    }
+
+    // Disable button
+    isSending = true;
+    sendBtn.disabled = true;
+    sendBtn.style.opacity = '0.5';
+    sendBtn.style.cursor = 'not-allowed';
+    const originalText = sendBtn.textContent;
+    sendBtn.textContent = 'جاري الإرسال...';
+
+    // EDITING MODE
+    if (editingMessageId) {
+      try {
+        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/text`), text);
+        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/edited`), true);
+        await set(ref(database, `dm_messages/${currentConversationId}/${editingMessageId}/editedAt`), new Date().toISOString());
+
+        editingMessageId = null;
+        textEl.value = '';
+        document.getElementById('dmEditingIndicator')?.remove();
+        textEl.style.height = '20px';
+
+        showSyncStatus('✅ تم تعديل الرسالة', 1500);
+      } catch (error) {
+        showAlert('❌ فشل تعديل الرسالة');
       }
-
-      // ✅ Clear selected image and preview IMMEDIATELY after adding to payload
-      const preview = modal.querySelector('#dmImageUploadPreview');
-      preview.style.display = 'none';
-      modal.querySelector('#dmImagePreview').innerHTML = '';
-      delete preview.dataset.gifUrl;
-      modal.querySelector('#dmImageInput').value = '';
-      selectedImage = null; // ✅ Clear AFTER using it
-
-    } catch (error) {
-      console.error('Media upload error:', error);
-      showAlert('❌ فشل رفع الوسائط');
 
       setTimeout(() => {
         isSending = false;
@@ -5655,94 +5792,162 @@ sendBtn.onclick = async () => {
       }, 1000);
       return;
     }
-  }
 
-  // Handle reply
-  if (replyingToMessage) {
-    payload.replyTo = replyingToMessage.id;
-    replyingToMessage = null;
-    document.getElementById('dmReplyingIndicator')?.remove();
-  }
+    // SENDING NEW MESSAGE MODE
+    const convId = currentConversationId;
+    const withUserId = convId.split('_').find(id => id !== currentUser.id);
+    const recipientUser = allUsers.find(u => u.id === withUserId);
 
-  // Send to Firebase
-  try {
-    await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+    // ✅ Validate recipient still exists
+    if (!recipientUser) {
+      showAlert('⚠️ هذا المستخدم غير موجود');
+      setTimeout(() => {
+        isSending = false;
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = '1';
+        sendBtn.style.cursor = 'pointer';
+        sendBtn.textContent = originalText;
+      }, 1000);
+      return;
+    }
 
-    const lastMsgText = text || (
-      payload.fileType === 'image/gif' ? '🎭 GIF' :
-      payload.fileType?.startsWith('video/') ? '🎥 فيديو' :
-      payload.fileType?.startsWith('audio/') ? '🎵 صوت' :
-      payload.imageUrl ? '📷 صورة' : ''
-    );
+    const msgId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
-    // Update conversation metadata
-    await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
-      id: convId,
-      userId: withUserId,
-      username: withUser?.username || '',
-      lastMessage: lastMsgText,
-      updatedAt: payload.timestamp,
-      unreadCount: 0
-    });
-
-    const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
-    const theirMetaSnap = await get(theirMetaRef);
-    const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
-
-    await set(theirMetaRef, {
-      id: convId,
-      userId: currentUser.id,
-      username: currentUser.username,
-      lastMessage: lastMsgText,
-      updatedAt: payload.timestamp,
-      unreadCount: theirUnread
-    });
-
-    // Send notification
-    await addNotification(withUserId, {
-      type: 'message',
+    const payload = {
+      id: msgId,
+      convId,
+      text,
       from: currentUser.username,
       fromId: currentUser.id,
-      messagePreview: text ? text.substring(0, 50) + (text.length > 50 ? '...' : '') : lastMsgText,
-      timestamp: payload.timestamp
-    });
+      toId: withUserId,
+      timestamp: new Date().toISOString(),
+      textDirection: dmTextDirection
+    };
 
-    // Clear input
-    textEl.value = '';
-    textEl.style.height = '20px';
+    // Handle media
+    if (selectedImage) {
+      try {
+        if (selectedImage.type === 'image/gif' || selectedImage.type === 'image/link') {
+          payload.imageUrl = selectedImage.url;
+          payload.fileType = selectedImage.type;
+        } else {
+          showSyncStatus('🔄 جاري رفع الوسائط...', 3000);
+          const uploaded = await uploadFileToCloudinary(selectedImage.file);
+          payload.imageUrl = uploaded.url;
+          payload.fileType = selectedImage.type;
+        }
 
-  // ✅ Update button state after sending
-  updateSendButtonState();
-    showSyncStatus('✅ تم إرسال الرسالة', 1500);
+        const preview = modal.querySelector('#dmImageUploadPreview');
+        preview.style.display = 'none';
+        modal.querySelector('#dmImagePreview').innerHTML = '';
+        delete preview.dataset.gifUrl;
+        modal.querySelector('#dmImageInput').value = '';
+        selectedImage = null;
 
-    // Refresh conversations list
-    await loadDMConversations();
-    renderDMList();
+      } catch (error) {
+        console.error('Media upload error:', error);
+        showAlert('❌ فشل رفع الوسائط');
 
-    // Clear typing indicator
-    await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+        setTimeout(() => {
+          isSending = false;
+          sendBtn.disabled = false;
+          sendBtn.style.opacity = '1';
+          sendBtn.style.cursor = 'pointer';
+          sendBtn.textContent = originalText;
+        }, 1000);
+        return;
+      }
+    }
 
-    // Scroll to bottom
+    // Handle reply
+    if (replyingToMessage) {
+      payload.replyTo = replyingToMessage.id;
+      replyingToMessage = null;
+      document.getElementById('dmReplyingIndicator')?.remove();
+    }
+
+    // Send to Firebase
+    try {
+      await set(ref(database, `dm_messages/${convId}/${msgId}`), payload);
+
+      const lastMsgText = text || (
+        payload.fileType === 'image/gif' ? '🎭 GIF' :
+        payload.fileType?.startsWith('video/') ? '🎥 فيديو' :
+        payload.fileType?.startsWith('audio/') ? '🎵 صوت' :
+        payload.imageUrl ? '📷 صورة' : ''
+      );
+
+      // ✅ Update conversation metadata with VALIDATED username
+      await set(ref(database, `dm_conversations/${currentUser.id}/${convId}`), {
+        id: convId,
+        userId: withUserId,
+        username: recipientUser.username, // ✅ Use validated user
+        lastMessage: lastMsgText,
+        updatedAt: payload.timestamp,
+        unreadCount: 0
+      });
+
+      const theirMetaRef = ref(database, `dm_conversations/${withUserId}/${convId}`);
+      const theirMetaSnap = await get(theirMetaRef);
+      const theirUnread = theirMetaSnap.exists() && theirMetaSnap.val().unreadCount ? (theirMetaSnap.val().unreadCount + 1) : 1;
+
+      await set(theirMetaRef, {
+        id: convId,
+        userId: currentUser.id,
+        username: currentUser.username,
+        lastMessage: lastMsgText,
+        updatedAt: payload.timestamp,
+        unreadCount: theirUnread
+      });
+
+      // Send notification
+      await addNotification(withUserId, {
+        type: 'message',
+        from: currentUser.username,
+        fromId: currentUser.id,
+        messagePreview: text ? text.substring(0, 50) + (text.length > 50 ? '...' : '') : lastMsgText,
+        timestamp: payload.timestamp
+      });
+
+      // Clear input
+      textEl.value = '';
+      textEl.style.height = '20px';
+
+      updateSendButtonState();
+      showSyncStatus('✅ تم إرسال الرسالة', 1500);
+
+      // ✅ Refresh conversations list
+      await loadDMConversations();
+
+      // Clear typing indicator
+      await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
+
+      // Scroll to bottom
+      setTimeout(() => {
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+      }, 100);
+
+    } catch (error) {
+      console.error('Send error:', error);
+      showAlert('❌ فشل إرسال الرسالة');
+    }
+
+    // Re-enable button
     setTimeout(() => {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }, 100);
+      isSending = false;
+      sendBtn.disabled = false;
+      sendBtn.style.opacity = '1';
+      sendBtn.style.cursor = 'pointer';
+      sendBtn.textContent = originalText;
+    }, 1000);
+  };
+    // ✅ ADD THIS AT THE VERY END (after all the setup)
 
-  } catch (error) {
-    console.error('Send error:', error);
-    showAlert('❌ فشل إرسال الرسالة');
-  }
-
-  // Re-enable button
-  setTimeout(() => {
-    isSending = false;
-    sendBtn.disabled = false;
-    sendBtn.style.opacity = '1';
-    sendBtn.style.cursor = 'pointer';
-    sendBtn.textContent = originalText;
-  }, 1000);
-};
-  }
-
+  // Refresh conversation list to show this conversation
+  setTimeout(async () => {
+    await loadDMConversations();
+  }, 500);
+}
 
   toggleBtn.addEventListener('click', () => {
     sidebar.classList.toggle('show');
@@ -5879,47 +6084,62 @@ modal.querySelector('#dmEmojiBtn').addEventListener('click', (e) => {
       await set(ref(database, `dm_typing/${convId}/${currentUser.id}`), null);
     }, 3000);
   });
- modal.querySelector('#dmStartNew').addEventListener('click', () => {
-    const q = (modal.querySelector('#dmSearch').value || '').trim().toLowerCase();
-    const candidates = allUsers.filter(u => u.id !== currentUser.id && u.username.toLowerCase().includes(q));
-    listEl.innerHTML = '';
-    if (candidates.length === 0) {
-      listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا يوجد مستخدم بهذا الاسم</div>';
-      return;
-    }
-    candidates.forEach(user => {
-      const item = document.createElement('div');
-      item.className = 'dm-list-item';
-      item.innerHTML = `
-        <img src="${user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`}" class="avatar-small" />
-        <div style="flex:1">
-          <div style="font-weight:700;color:var(--accent)">${escapeHtml(user.username)}</div>
-          <div class="muted" style="font-size:12px">ابدأ محادثة</div>
-        </div>
-      `;
-      item.onclick = () => {
-        loadConversation(user.id);
-        sidebar.classList.remove('show');
-      };
-listEl.appendChild(item);
-      });
+modal.querySelector('#dmStartNew').addEventListener('click', () => {
+  const q = (modal.querySelector('#dmSearch').value || '').trim().toLowerCase();
 
-      // Update online indicators for search results - ADD THIS
-      candidates.forEach(user => {
-        isUserOnline(user.id, (online) => {
-          const indicator = document.querySelector('.dm-list-indicator-' + user.id);
-          if (indicator) {
-            if (online) {
-              indicator.classList.remove('offline');
-            } else {
-              indicator.classList.add('offline');
-            }
-          }
-        });
-      });
-      // END OF ADDITION
+  // ✅ Filter out current user and deleted users
+  const candidates = allUsers.filter(u =>
+    u.id !== currentUser.id &&
+    u.username.toLowerCase().includes(q)
+  );
+
+  listEl.innerHTML = '';
+
+  if (candidates.length === 0) {
+    listEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">لا يوجد مستخدم بهذا الاسم</div>';
+    return;
+  }
+
+  candidates.forEach(user => {
+    const item = document.createElement('div');
+    item.className = 'dm-list-item';
+    const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=32`;
+
+    item.innerHTML = `
+      <div class="avatar-container">
+        <img src="${avatarUrl}" class="avatar-small" alt="${user.username}">
+        <span class="online-indicator dm-list-indicator-${user.id}"></span>
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:700;color:var(--accent)">${escapeHtml(user.username)}</div>
+        <div class="muted" style="font-size:12px">ابدأ محادثة</div>
+      </div>
+    `;
+
+    item.onclick = async () => { // ✅ Make it async
+      await loadConversation(user.id);
+
+      // ✅ Refresh the conversation list immediately
+      await loadDMConversations();
+
+      sidebar.classList.remove('show');
+    };
+
+    listEl.appendChild(item);
+
+    // Update online indicator
+    isUserOnline(user.id, (online) => {
+      const indicator = document.querySelector('.dm-list-indicator-' + user.id);
+      if (indicator) {
+        if (online) {
+          indicator.classList.remove('offline');
+        } else {
+          indicator.classList.add('offline');
+        }
+      }
     });
-
+  });
+});
 
   const closeMessageActions = function(e) {
     if (!e.target.closest('.dm-message')) {
@@ -5950,17 +6170,18 @@ modal.addEventListener('click', e => {
 });
 
 await loadDMConversations();
-  renderDMList();
-  if (targetUser) {
-    loadConversation(targetUserId);
-  } else if (dmConversations.length > 0) {
-    // Open the most recent conversation
-    const mostRecent = dmConversations.sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0))[0];
-    if (mostRecent && mostRecent.userId) {
-      loadConversation(mostRecent.userId);
-    }
-  }
+renderDMList();
 
+if (targetUser) {
+  await loadConversation(targetUserId);
+  // ✅ Refresh list after loading conversation
+  await loadDMConversations();
+} else if (dmConversations.length > 0) {
+  const mostRecent = dmConversations.sort((a,b)=> new Date(b.updatedAt||0)-new Date(a.updatedAt||0))[0];
+  if (mostRecent && mostRecent.userId) {
+    await loadConversation(mostRecent.userId);
+  }
+}
   modal.addEventListener('click', e => {
   // Clicked on overlay (outside inner content)
   if (e.target === modal) {
@@ -8276,8 +8497,7 @@ function initSortable() {
     }
   });
 
-  console.log('✅ Sortable initialized');
-}
+ }
     document.getElementById('btnDownload').addEventListener('click', () => {
       const a = document.createElement('a');
       const blob = new Blob([JSON.stringify(poems, null, 2)], {type: 'application/json'});
@@ -8360,258 +8580,574 @@ document.getElementById('btnMyProfile').addEventListener('click', async () => { 
       }
     });
 */
-    async function openUserProfile(userId) {
-      const user = allUsers.find(u => u.id === userId);
-      if (!user) return;
+window.openUserProfile = async function(userId) {
+  const user = allUsers.find(u => u.id === userId);
+  if (!user) return;
 
-      const modal = document.createElement('div');
-      modal.className = 'modal';
+  const isOwnProfile = user.id === currentUser.id;
+  const convId = getConversationId(currentUser.id, userId);
 
-      const isOwnProfile = user.id === currentUser.id;
-      const isFollowingUser = isFollowing(user.id);
+  // ✅ Check if DM is currently open with this user
+  const isDMOpen = document.querySelector('.dm-modal') &&
+                   document.querySelector('#dmHeader')?.textContent?.includes(user.username);
 
-      const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=120`;
+  const avatarUrl = user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=8b5e3c&color=fff&size=120`;
 
-     const followBtn = !isOwnProfile ? `
-  <div class="follow-buttons-container">
-    <button class="follow-btn ${isFollowingUser ? 'following' : 'not-following'}" id="followBtn" data-following="${isFollowingUser}">
-      ${isFollowingUser ? '✓ متابَع' : '+ متابعة'}
-    </button>
-    <button id="chatBtn">💬 محادثة</button>
-  </div>` : '';
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.display = 'flex';
 
-      modal.innerHTML = `
-        <div class="modal-inner user-profile-modal">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-            <h3 style="margin:0">👤 الملف الشخصي</h3>
-            <button class="btn small" id="closeProfileModal">✖️ إغلاق</button>
+  // Count user's poems
+  const userPoems = poems.filter(p => p.userId === user.id && !isPoemHidden(p.id));
+
+  // ✅ Get accurate follower count from Firebase
+  let userFollowers = 0;
+  try {
+    const followingSnapshot = await get(ref(database, 'following'));
+    if (followingSnapshot.exists()) {
+      const allFollowing = followingSnapshot.val();
+      for (const uid in allFollowing) {
+        if (allFollowing[uid] && allFollowing[uid].includes(user.id)) {
+          userFollowers++;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error loading followers:', error);
+  }
+
+  // Get user's following count
+  let userFollowingCount = 0;
+  try {
+    const userFollowingSnapshot = await get(ref(database, `following/${user.id}`));
+    if (userFollowingSnapshot.exists()) {
+      userFollowingCount = userFollowingSnapshot.val().length || 0;
+    }
+  } catch (error) {
+    console.error('Error loading following:', error);
+  }
+
+  const isFollowingUser = isFollowing(user.id);
+
+  modal.innerHTML = `
+    <div class="modal-inner" style="max-width:600px;background:var(--card)">
+
+      <!-- ✅ Header: Title on LEFT, Close button on RIGHT (reversed) -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 15px;border-bottom:2px solid var(--border);background:linear-gradient(90deg, rgba(139,94,60,0.05), transparent)">
+        <h3 style="margin:0;color:var(--accent);font-size:20px;display:flex;align-items:center;gap:8px">
+          <span>👤</span>
+          <span>الملف الشخصي</span>
+        </h3>
+        <button class="icon-btn" id="closeProfileBtn" title="إغلاق" style="background:transparent;color:var(--text);border:1px solid var(--border);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px;transition:all 0.3s">✖️</button>
+      </div>
+
+      <!-- ✅ Profile Header: Centered layout with avatar at top (reduced padding) -->
+      <div style="padding:25px 15px 15px;background:linear-gradient(180deg, rgba(139,94,60,0.03), transparent);text-align:center">
+
+        <!-- Avatar (TOP, centered) -->
+        <div style="margin-bottom:15px;display:flex;justify-content:center">
+          <div class="avatar-container" style="position:relative;display:inline-block">
+            ${isOwnProfile ? '<label for="avatarInput" style="cursor:pointer;display:block">' : ''}
+              <img src="${avatarUrl}" id="profileAvatar" style="width:160px;height:160px;border-radius:50%;border:6px solid var(--brown);object-fit:cover;box-shadow:0 12px 32px var(--shadow-lg)" alt="${user.username}">
+              <span class="online-indicator" id="profileOnlineIndicator" style="width:32px;height:32px;bottom:10px;right:10px;border:6px solid var(--card)"></span>
+            ${isOwnProfile ? '</label>' : ''}
+            ${isOwnProfile ? '<input type="file" id="avatarInput" accept="image/*" style="display:none">' : ''}
           </div>
-
-          <div class="profile-header" style="display:flex;gap:20px;align-items:flex-start;margin-bottom:20px;padding:20px;background:rgba(139,94,60,0.05);border-radius:12px">
-            <div class="profile-avatar-container">
-              <label for="avatarInput" style="cursor:pointer">
-                <img src="${avatarUrl} "loading="lazy"  class="profile-avatar" alt="${user.username}" style="width:120px;height:120px;border-radius:50%;object-fit:cover;border:4px solid var(--brown)">
-              </label>
-              ${isOwnProfile ? '<input type="file" id="avatarInput" accept="image/*" style="display:none">' : ''}
-            </div>
-            <div class="profile-info" style="flex:1">
-              <div class="profile-name" style="font-size:24px;font-weight:700;color:var(--accent);margin-bottom:5px">${escapeHtml(user.username)}</div>
-
-
-              ${user.email ? '<div class="profile-username" style="font-size:14px;color:var(--muted);margin-bottom:10px">📧 ' + escapeHtml(user.email) + '</div>' : ''}
-<div style="position:relative">
-  ${isOwnProfile ? '<button class="btn small" id="editBioBtn" style="position:absolute;top:0;left:0;padding:4px 8px;font-size:12px">✏️ تعديل</button>' : ''}
-  <div id="bioDisplay" class="profile-bio" style="font-size:14px;line-height:1.6;color:var(--text);margin-bottom:15px;padding:10px;background:rgba(139,94,60,0.03);border-radius:6px;${isOwnProfile ? 'padding-top:35px' : ''}">${user.bio ? escapeHtml(user.bio) : '<span class="muted">لا توجد نبذة</span>'}</div>
-  <div id="bioEdit" style="display:none">
-    <textarea id="bioInput" style="width:100%;min-height:100px;margin-bottom:10px;font-size:14px;padding:10px;border-radius:6px;border:1.5px solid var(--border)">${escapeHtml(user.bio || '')}</textarea>
-    <div style="display:flex;gap:8px">
-      <button class="btn small" id="saveBioBtn">💾 حفظ</button>
-      <button class="btn small" id="cancelBioBtn">❌ إلغاء</button>
-    </div>
-  </div>
-</div>
-${followBtn}
-
-
-            </div>
-          </div>
-
-
-      <div style="margin-top:20px">
-  <h4 style="margin-bottom:15px;color:var(--accent);font-size:20px">🪶 القصائد</h4>
-  <div class="grid" style="margin-top:0"></div>
-</div>
         </div>
-      `;
 
-      document.body.appendChild(modal);
+        <!-- Username (centered below avatar) -->
+        <div style="margin-bottom:8px">
+          <h2 id="profileUsername" style="margin:0;color:var(--accent);font-size:32px;font-weight:700;display:inline-block">${escapeHtml(user.username)}</h2>
+          ${isOwnProfile ? '<button class="btn small" id="editUsernameBtn" style="margin-right:12px;padding:6px 12px;font-size:13px;vertical-align:middle">✏️ تعديل</button>' : ''}
+        </div>
 
-// In openUserProfile, after bio editing section
-if (isOwnProfile) {
-  const editBioBtn = modal.querySelector('#editBioBtn');
-  const usernameDisplay = modal.querySelector('.profile-name');
+        <!-- Special Badge (like "The King") -->
+        ${user.badge ? `<div style="color:var(--accent);font-size:16px;margin-bottom:12px">👑 ${escapeHtml(user.badge)}</div>` : ''}
 
-  if (editBioBtn) {
-    editBioBtn.addEventListener('click', async () => {
-      const newUsername = prompt('أدخل اسم المستخدم الجديد:', currentUser.username);
-      if (!newUsername || newUsername.trim() === '') return;
+        <!-- Bio (centered) -->
+        ${user.bio || isOwnProfile ? `
+        <div style="margin-top:15px;max-width:500px;margin-left:auto;margin-right:auto">
+          ${isOwnProfile ? '<button class="btn small" id="editBioBtn" style="margin-bottom:8px;padding:6px 12px;font-size:13px">✏️ تعديل النبذة</button>' : ''}
+          <div id="bioDisplay" style="color:var(--text);line-height:1.8;padding:12px 16px;background:rgba(139,94,60,0.08);border-radius:12px;min-height:50px;text-align:center;border:2px solid rgba(139,94,60,0.2)">
+            ${user.bio ? escapeHtml(user.bio) : '<span style="opacity:0.5;font-style:italic">انقر لإضافة نبذة</span>'}
+          </div>
+          <div id="bioEdit" style="display:none;margin-top:8px">
+            <textarea id="bioInput" style="width:100%;min-height:90px;margin-bottom:8px;font-size:14px;padding:12px;border-radius:10px;border:2px solid var(--border);text-align:right;resize:vertical">${escapeHtml(user.bio || '')}</textarea>
+            <div style="display:flex;gap:8px;justify-content:center">
+              <button class="btn small" id="cancelBioBtn" style="padding:6px 14px">❌ إلغاء</button>
+              <button class="btn btn-primary small" id="saveBioBtn" style="padding:6px 14px">💾 حفظ</button>
+            </div>
+          </div>
+        </div>
+        ` : ''}
+      </div>
 
-      const trimmedUsername = newUsername.trim();
+      <!-- Stats (clickable) - centered with smaller padding -->
+      <div class="profile-stats" style="margin:15px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div class="stat-item" id="poemsBtn" style="cursor:pointer;background:rgba(139,94,60,0.05);padding:15px;border-radius:12px;transition:all 0.2s;border:2px solid transparent" title="عرض القصائد">
+          <div class="stat-number" style="font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px">${userPoems.length}</div>
+          <div class="stat-label" style="font-size:14px;color:var(--muted)">📜 قصيدة</div>
+        </div>
+        <div class="stat-item" id="followersBtn" style="cursor:pointer;background:rgba(139,94,60,0.05);padding:15px;border-radius:12px;transition:all 0.2s;border:2px solid transparent" title="عرض المتابعين">
+          <div class="stat-number" style="font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px">${userFollowers}</div>
+          <div class="stat-label" style="font-size:14px;color:var(--muted)">👥 متابع</div>
+        </div>
+        <div class="stat-item" id="followingBtn" style="cursor:pointer;background:rgba(139,94,60,0.05);padding:15px;border-radius:12px;transition:all 0.2s;border:2px solid transparent" title="عرض المتابَعين">
+          <div class="stat-number" style="font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px">${userFollowingCount}</div>
+          <div class="stat-label" style="font-size:14px;color:var(--muted)">➕ يتابع</div>
+        </div>
+      </div>
 
-      // Check if same as current
-      if (trimmedUsername === currentUser.username) {
-        showAlert('ℹ️ هذا هو اسم المستخدم الحالي');
-        return;
-      }
+      <!-- Action buttons (centered) - reduced padding -->
+      ${!isOwnProfile ? `
+        <div style="padding:0 15px 15px">
+          <div class="follow-buttons-container" style="display:flex;gap:12px;justify-content:center;max-width:400px;margin:0 auto">
+            <button class="follow-btn ${isFollowingUser ? 'following' : 'not-following'}" id="followBtn-${userId}" style="flex:1;padding:10px 20px;font-size:15px;border-radius:10px;cursor:pointer;transition:all 0.3s;font-weight:600;border:2px solid var(--brown);background:${isFollowingUser ? 'var(--brown)' : 'transparent'};color:${isFollowingUser ? 'white' : 'var(--brown)'}">
+              <span>${isFollowingUser ? '✓ متابَع' : '+ متابعة'}</span>
+            </button>
+            ${!isDMOpen ? `<button class="btn" id="chatBtn" style="flex:1;padding:10px 20px;font-size:15px;border-radius:10px;background:var(--brown);color:white;border:2px solid var(--brown);cursor:pointer;transition:all 0.3s;font-weight:600">💬 محادثة</button>` : ''}
+          </div>
+        </div>
+      ` : ''}
 
-      // Check if already exists (case-insensitive)
-      if (allUsers.some(u => u.id !== currentUser.id && u.username.toLowerCase() === trimmedUsername.toLowerCase())) {
-        showAlert('⚠️ اسم المستخدم موجود بالفعل! يرجى اختيار اسم آخر.');
-        return;
-      }
+      <!-- Content Area -->
+      <div id="contentArea">
+        <div style="padding:15px;border-top:2px solid var(--border)">
+          <h4 style="margin-bottom:15px;color:var(--accent);font-size:20px;text-align:center">🪶 القصائد</h4>
+          <div class="grid" id="poemsGrid" style="margin-top:0"></div>
+        </div>
+      </div>
+    </div>
+  `;
 
-      try {
-        // Update in allUsers
-        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-        if (userIndex > -1) {
-          allUsers[userIndex].username = trimmedUsername;
+  document.body.appendChild(modal);
+
+  // ✅ Close modal when clicking outside (on the backdrop)
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.remove();
+    }
+  });
+
+  // Prevent clicks inside modal-inner from closing the modal
+  const modalInner = modal.querySelector('.modal-inner');
+  modalInner.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+
+  // ✅ Close button with brown hover effect
+  const closeBtn = modal.querySelector('#closeProfileBtn');
+  closeBtn.addEventListener('mouseenter', function() {
+    this.style.background = 'var(--brown)';
+    this.style.color = 'white';
+    this.style.borderColor = 'var(--brown)';
+  });
+  closeBtn.addEventListener('mouseleave', function() {
+    this.style.background = 'transparent';
+    this.style.color = 'var(--text)';
+    this.style.borderColor = 'var(--border)';
+  });
+  closeBtn.addEventListener('click', () => modal.remove());
+
+  // ✅ Add hover effects to stat items
+  const statItems = modal.querySelectorAll('.stat-item');
+  statItems.forEach(item => {
+    item.addEventListener('mouseenter', function() {
+      this.style.background = 'rgba(139,94,60,0.12)';
+      this.style.borderColor = 'var(--brown)';
+      this.style.transform = 'translateY(-2px)';
+    });
+    item.addEventListener('mouseleave', function() {
+      this.style.background = 'rgba(139,94,60,0.05)';
+      this.style.borderColor = 'transparent';
+      this.style.transform = 'translateY(0)';
+    });
+  });
+
+  // ✅ Avatar upload with cropping (only for own profile)
+  if (isOwnProfile) {
+    const avatarInput = modal.querySelector('#avatarInput');
+    if (avatarInput) {
+      avatarInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file || !file.type.startsWith('image/')) {
+          showAlert('⚠️ يرجى اختيار صورة');
+          return;
         }
 
-        // Update currentUser
-        currentUser.username = trimmedUsername;
+        openImageCropModal(file, async (croppedBlob) => {
+          try {
+            const croppedFile = new File([croppedBlob], file.name, { type: file.type });
+            const uploaded = await uploadFileToCloudinary(croppedFile);
 
-        // Save to localStorage and Firebase
-        saveAllUsers();
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-        await saveUserToFirebase();
+            currentUser.avatar = uploaded.url;
+            const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+            if (userIndex > -1) {
+              allUsers[userIndex].avatar = uploaded.url;
+            }
+            saveAllUsers();
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            await saveUserToFirebase();
 
-        // Update display
-        usernameDisplay.textContent = trimmedUsername;
-        document.getElementById('currentUserName').textContent = trimmedUsername;
+            modal.querySelector('#profileAvatar').src = uploaded.url;
+            showSyncStatus('✅ تم رفع الصورة بنجاح', 2000);
+          } catch (error) {
+            showAlert('❌ فشل رفع الصورة: ' + error.message);
+          }
+        });
 
-        showSyncStatus('✅ تم تحديث اسم المستخدم بنجاح', 2000);
-      } catch (error) {
-        showAlert('❌ فشل تحديث اسم المستخدم: ' + error.message);
-      }
-    });
-  }
-}
-      if (!isOwnProfile) {
- modal.querySelector('#followBtn').addEventListener('click', async function() {
-  await toggleFollow(user.id);
-
-  const btn = this;
-  const nowFollowing = isFollowing(user.id);
-  btn.textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
-  btn.className = 'follow-btn ' + (nowFollowing ? 'following' : 'not-following');
-});
-
-const chatBtn = modal.querySelector('#chatBtn');
-if (chatBtn) {
-  chatBtn.addEventListener('click', () => {
-    modal.remove();
-    setTimeout(() => {
-      openDMWindow(user.id);
-    }, 200);
-  });
-}}
-
-      if (isOwnProfile) {
-        const avatarInput = modal.querySelector('#avatarInput');
-   if (avatarInput) {
-  avatarInput.addEventListener('change', async function(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      showAlert('⚠️ يرجى اختيار صورة');
-      return;
+        this.value = '';
+      });
     }
 
-    // ✅ Open crop modal instead of uploading directly
-    openImageCropModal(file, async (croppedBlob) => {
-      try {
-        // Convert blob to file
-        const croppedFile = new File([croppedBlob], file.name, { type: file.type });
+    // ✅ Username editing
+    const editUsernameBtn = modal.querySelector('#editUsernameBtn');
+    if (editUsernameBtn) {
+      editUsernameBtn.addEventListener('click', async () => {
+        const newUsername = prompt('أدخل اسم المستخدم الجديد:', currentUser.username);
+        if (!newUsername || newUsername.trim() === '') return;
 
-        // Upload cropped image
-        const uploaded = await uploadFileToCloudinary(croppedFile);
+        const trimmedUsername = newUsername.trim();
 
-        // Update user avatar
-        currentUser.avatar = uploaded.url;
-        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-        if (userIndex > -1) {
-          allUsers[userIndex].avatar = uploaded.url;
-        }
-        saveAllUsers();
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-        await saveUserToFirebase();
-
-        // Update UI
-        modal.querySelector('.profile-avatar').src = uploaded.url;
-        showSyncStatus('✅ تم رفع الصورة بنجاح', 2000);
-      } catch (error) {
-        showAlert('❌ فشل رفع الصورة: ' + error.message);
-      }
-    });
-
-    // Reset input
-    this.value = '';
-  });
-}
-        const editBioBtn = modal.querySelector('#editBioBtn');
-  const bioDisplay = modal.querySelector('#bioDisplay');
-  const bioEdit = modal.querySelector('#bioEdit');
-  const bioInput = modal.querySelector('#bioInput');
-  const saveBioBtn = modal.querySelector('#saveBioBtn');
-  const cancelBioBtn = modal.querySelector('#cancelBioBtn');
-
-  if (editBioBtn) {
-    editBioBtn.addEventListener('click', () => {
-      bioDisplay.style.display = 'none';
-      bioEdit.style.display = 'block';
-      bioInput.focus();
-    });
-
-    cancelBioBtn.addEventListener('click', () => {
-      bioEdit.style.display = 'none';
-      bioDisplay.style.display = 'block';
-      bioInput.value = user.bio || '';
-    });
-
-    saveBioBtn.addEventListener('click', async () => {
-      const newBio = bioInput.value.trim();
-      try {
-        currentUser.bio = newBio;
-        user.bio = newBio;
-
-        const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
-        if (userIndex > -1) {
-          allUsers[userIndex].bio = newBio;
+        if (trimmedUsername === currentUser.username) {
+          showAlert('ℹ️ هذا هو اسم المستخدم الحالي');
+          return;
         }
 
-        saveAllUsers();
-        localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-        await saveUserToFirebase();
+        if (allUsers.some(u => u.id !== currentUser.id && u.username.toLowerCase() === trimmedUsername.toLowerCase())) {
+          showAlert('⚠️ اسم المستخدم موجود بالفعل! يرجى اختيار اسم آخر.');
+          return;
+        }
 
-        bioDisplay.innerHTML = newBio ? escapeHtml(newBio) : '<span class="muted">لا توجد نبذة</span>';
+        try {
+          const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+          if (userIndex > -1) {
+            allUsers[userIndex].username = trimmedUsername;
+          }
+
+          currentUser.username = trimmedUsername;
+          saveAllUsers();
+          localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+          await saveUserToFirebase();
+
+          modal.querySelector('#profileUsername').textContent = trimmedUsername;
+          document.getElementById('currentUserName').textContent = trimmedUsername;
+
+          showSyncStatus('✅ تم تحديث اسم المستخدم بنجاح', 2000);
+        } catch (error) {
+          showAlert('❌ فشل تحديث اسم المستخدم: ' + error.message);
+        }
+      });
+    }
+
+    // ✅ Bio editing
+    const editBioBtn = modal.querySelector('#editBioBtn');
+    const bioDisplay = modal.querySelector('#bioDisplay');
+    const bioEdit = modal.querySelector('#bioEdit');
+    const bioInput = modal.querySelector('#bioInput');
+    const saveBioBtn = modal.querySelector('#saveBioBtn');
+    const cancelBioBtn = modal.querySelector('#cancelBioBtn');
+
+    if (editBioBtn) {
+      editBioBtn.addEventListener('click', () => {
+        bioDisplay.style.display = 'none';
+        bioEdit.style.display = 'block';
+        bioInput.focus();
+      });
+
+      cancelBioBtn.addEventListener('click', () => {
         bioEdit.style.display = 'none';
         bioDisplay.style.display = 'block';
+        bioInput.value = user.bio || '';
+      });
 
-        showSyncStatus('✅ تم تحديث النبذة بنجاح', 2000);
-      } catch (error) {
-        showAlert('❌ فشل تحديث النبذة: ' + error.message);
-      }
-    });
+      saveBioBtn.addEventListener('click', async () => {
+        const newBio = bioInput.value.trim();
+        try {
+          currentUser.bio = newBio;
+          user.bio = newBio;
+
+          const userIndex = allUsers.findIndex(u => u.id === currentUser.id);
+          if (userIndex > -1) {
+            allUsers[userIndex].bio = newBio;
+          }
+
+          saveAllUsers();
+          localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+          await saveUserToFirebase();
+
+          bioDisplay.innerHTML = newBio ? escapeHtml(newBio) : '<span style="opacity:0.5;font-style:italic">انقر لإضافة نبذة</span>';
+          bioEdit.style.display = 'none';
+          bioDisplay.style.display = 'block';
+
+          showSyncStatus('✅ تم تحديث النبذة بنجاح', 2000);
+        } catch (error) {
+          showAlert('❌ فشل تحديث النبذة: ' + error.message);
+        }
+      });
+    }
   }
-}
 
+  // Monitor online status
+  const statusRef = ref(database, `user_status/${userId}`);
+  onValue(statusRef, (snapshot) => {
+    const indicator = modal.querySelector('#profileOnlineIndicator');
+    if (!indicator) return;
 
-      modal.querySelector('#closeProfileModal').addEventListener('click', () => modal.remove());
-      modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    if (snapshot.exists()) {
+      const status = snapshot.val();
+      const lastChanged = new Date(status.last_changed);
+      const now = new Date();
+      const diffMinutes = (now - lastChanged) / 1000 / 60;
+      const isOnline = status.state === 'online' && diffMinutes < 2;
 
-      get(ref(database, 'poems')).then(snapshot => {
-        const allPoems = Object.values(snapshot.val() || {});
-        const userPoems = allPoems.filter(p => p.userId === userId);
-        const poemsGrid = modal.querySelector('.grid');
-        if (userPoems.length === 0) {
-          poemsGrid.innerHTML = '<div class="empty-state"><div class="empty-icon">📜</div><div>لا توجد قصائد</div></div>';
+      indicator.classList.toggle('offline', !isOnline);
+    } else {
+      indicator.classList.add('offline');
+    }
+  });
+
+  // ✅ Follow button with hover effects
+  if (!isOwnProfile) {
+    const followBtn = modal.querySelector(`#followBtn-${userId}`);
+    if (followBtn) {
+      // Add hover effect
+      followBtn.addEventListener('mouseenter', function() {
+        if (isFollowing(userId)) {
+          // If following, show "unfollow" style on hover
+          this.style.background = 'transparent';
+          this.style.color = 'var(--brown)';
+          this.querySelector('span').textContent = '✖ إلغاء المتابعة';
         } else {
-          userPoems.forEach(poem => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-              <h3>${escapeHtml(poem.title)}</h3>
-              <div class="excerpt">${escapeHtml(poem.excerpt || poem.text.substring(0, 100) + '...')}</div>
-            `;
-            card.onclick = () => { modal.remove(); openModal(poem); };
-            poemsGrid.appendChild(card);
-          });
+          // If not following, darken on hover
+          this.style.background = 'var(--brown)';
+          this.style.color = 'white';
         }
       });
 
+      followBtn.addEventListener('mouseleave', function() {
+        const nowFollowing = isFollowing(userId);
+        this.style.background = nowFollowing ? 'var(--brown)' : 'transparent';
+        this.style.color = nowFollowing ? 'white' : 'var(--brown)';
+        this.querySelector('span').textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
+      });
 
+      // Click handler
+      followBtn.addEventListener('click', async function() {
+        await toggleFollow(userId);
+        const nowFollowing = isFollowing(userId);
+
+        // Update button state
+        this.style.background = nowFollowing ? 'var(--brown)' : 'transparent';
+        this.style.color = nowFollowing ? 'white' : 'var(--brown)';
+        this.querySelector('span').textContent = nowFollowing ? '✓ متابَع' : '+ متابعة';
+
+        // Update follower count
+        const followersBtn = modal.querySelector('#followersBtn .stat-number');
+        if (followersBtn) {
+          const currentCount = parseInt(followersBtn.textContent);
+          followersBtn.textContent = nowFollowing ? currentCount + 1 : currentCount - 1;
+        }
+      });
     }
+
+    // ✅ Chat button (only if not in active DM)
+    const chatBtn = modal.querySelector('#chatBtn');
+    if (chatBtn) {
+      chatBtn.addEventListener('mouseenter', function() {
+        this.style.background = 'transparent';
+        this.style.color = 'var(--brown)';
+      });
+
+      chatBtn.addEventListener('mouseleave', function() {
+        this.style.background = 'var(--brown)';
+        this.style.color = 'white';
+      });
+
+      chatBtn.addEventListener('click', () => {
+        modal.remove();
+        openDMWindow(userId);
+      });
+    }
+  }
+
+  // ✅ Render poems by default
+  renderUserPoems();
+
+  // ✅ Poems stat - click to go back to poems view
+  modal.querySelector('#poemsBtn').addEventListener('click', () => {
+    renderUserPoems();
+  });
+
+  // ✅ Followers panel
+  modal.querySelector('#followersBtn').addEventListener('click', async () => {
+    await showFollowersPanel();
+  });
+
+  // ✅ Following panel
+  modal.querySelector('#followingBtn').addEventListener('click', async () => {
+    await showFollowingPanel();
+  });
+
+  async function showFollowersPanel() {
+    const contentArea = modal.querySelector('#contentArea');
+    contentArea.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">جاري التحميل...</div>';
+
+    try {
+      const followingSnapshot = await get(ref(database, 'following'));
+      const followersList = [];
+
+      if (followingSnapshot.exists()) {
+        const allFollowing = followingSnapshot.val();
+        for (const uid in allFollowing) {
+          if (allFollowing[uid] && allFollowing[uid].includes(user.id)) {
+            const follower = allUsers.find(u => u.id === uid);
+            if (follower) followersList.push(follower);
+          }
+        }
+      }
+
+      contentArea.innerHTML = `
+        <div style="padding:15px;border-top:2px solid var(--border)">
+          <h4 style="margin:0 0 15px 0;color:var(--accent);font-size:20px;text-align:center">👥 المتابعون (${followersList.length})</h4>
+          <div id="followersList"></div>
+        </div>
+      `;
+
+      const list = contentArea.querySelector('#followersList');
+
+      if (followersList.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">لا يوجد متابعون بعد</div>';
+      } else {
+        followersList.forEach(follower => {
+          const item = document.createElement('div');
+          item.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;background:rgba(139,94,60,0.05);border-radius:12px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;border:2px solid transparent';
+          item.innerHTML = `
+            <div style="text-align:right">
+              <div style="font-weight:700;color:var(--accent);font-size:16px;margin-bottom:3px">${escapeHtml(follower.username)}</div>
+              ${follower.bio ? `<div style="font-size:13px;color:var(--muted);line-height:1.4">${escapeHtml(follower.bio.substring(0, 60))}${follower.bio.length > 60 ? '...' : ''}</div>` : ''}
+            </div>
+            <img src="${follower.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(follower.username)}&background=8b5e3c&color=fff&size=56`}" style="width:56px;height:56px;border-radius:50%;border:3px solid var(--brown);object-fit:cover">
+          `;
+          item.onclick = () => {
+            modal.remove();
+            openUserProfile(follower.id);
+          };
+          item.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(139,94,60,0.12)';
+            this.style.borderColor = 'var(--brown)';
+            this.style.transform = 'translateX(-4px)';
+          });
+          item.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(139,94,60,0.05)';
+            this.style.borderColor = 'transparent';
+            this.style.transform = 'translateX(0)';
+          });
+          list.appendChild(item);
+        });
+      }
+
+    } catch (error) {
+      console.error('Error loading followers:', error);
+      contentArea.innerHTML = '<div style="text-align:center;padding:30px;color:var(--danger)">فشل تحميل المتابعين</div>';
+    }
+  }
+
+  async function showFollowingPanel() {
+    const contentArea = modal.querySelector('#contentArea');
+    contentArea.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">جاري التحميل...</div>';
+
+    try {
+      const userFollowingSnapshot = await get(ref(database, `following/${user.id}`));
+      const followingIds = userFollowingSnapshot.exists() ? userFollowingSnapshot.val() : [];
+
+      contentArea.innerHTML = `
+        <div style="padding:15px;border-top:2px solid var(--border)">
+          <h4 style="margin:0 0 15px 0;color:var(--accent);font-size:20px;text-align:center">➕ يتابع (${followingIds.length})</h4>
+          <div id="followingList"></div>
+        </div>
+      `;
+
+      const list = contentArea.querySelector('#followingList');
+
+      if (followingIds.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">لا يتابع أحداً بعد</div>';
+      } else {
+        followingIds.forEach(followingId => {
+          const followingUser = allUsers.find(u => u.id === followingId);
+          if (!followingUser) return;
+
+          const item = document.createElement('div');
+          item.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;background:rgba(139,94,60,0.05);border-radius:12px;cursor:pointer;transition:all 0.2s;margin-bottom:10px;border:2px solid transparent';
+          item.innerHTML = `
+            <div style="text-align:right">
+              <div style="font-weight:700;color:var(--accent);font-size:16px;margin-bottom:3px">${escapeHtml(followingUser.username)}</div>
+              ${followingUser.bio ? `<div style="font-size:13px;color:var(--muted);line-height:1.4">${escapeHtml(followingUser.bio.substring(0, 60))}${followingUser.bio.length > 60 ? '...' : ''}</div>` : ''}
+            </div>
+            <img src="${followingUser.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(followingUser.username)}&background=8b5e3c&color=fff&size=56`}" style="width:56px;height:56px;border-radius:50%;border:3px solid var(--brown);object-fit:cover">
+          `;
+          item.onclick = () => {
+            modal.remove();
+            openUserProfile(followingId);
+          };
+          item.addEventListener('mouseenter', function() {
+            this.style.background = 'rgba(139,94,60,0.12)';
+            this.style.borderColor = 'var(--brown)';
+            this.style.transform = 'translateX(-4px)';
+          });
+          item.addEventListener('mouseleave', function() {
+            this.style.background = 'rgba(139,94,60,0.05)';
+            this.style.borderColor = 'transparent';
+            this.style.transform = 'translateX(0)';
+          });
+          list.appendChild(item);
+        });
+      }
+
+    } catch (error) {
+      console.error('Error loading following:', error);
+      contentArea.innerHTML = '<div style="text-align:center;padding:30px;color:var(--danger)">فشل تحميل المتابَعين</div>';
+    }
+  }
+
+  function renderUserPoems() {
+    const contentArea = modal.querySelector('#contentArea');
+    contentArea.innerHTML = `
+      <div style="padding:15px;border-top:2px solid var(--border)">
+        <h4 style="margin-bottom:15px;color:var(--accent);font-size:20px;text-align:center">🪶 القصائد</h4>
+        <div class="grid" id="poemsGrid" style="margin-top:0"></div>
+      </div>
+    `;
+
+    const grid = contentArea.querySelector('#poemsGrid');
+
+    if (userPoems.length === 0) {
+      grid.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">لا توجد قصائد بعد</div>';
+      return;
+    }
+
+    userPoems.forEach(poem => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.style.cursor = 'pointer';
+      card.innerHTML = `
+        <h3>${escapeHtml(poem.title)}</h3>
+        <div class="excerpt">${escapeHtml(poem.excerpt || poem.text?.substring(0, 100) || '')}</div>
+        <div class="card-footer">
+          <div class="card-indicators">
+            ${poem.audios && poem.audios.length > 0 ? '<span>🎵</span>' : ''}
+            ${poem.images && poem.images.length > 0 ? '<span>🖼️</span>' : ''}
+          </div>
+        </div>
+      `;
+      card.onclick = () => {
+        modal.remove();
+        openModal(poem);
+      };
+      grid.appendChild(card);
+    });
+  }
+};
     window.openUserProfile = openUserProfile;
 
 document.getElementById('btnFavorites').addEventListener('click', async () => {
@@ -9173,33 +9709,32 @@ async function init() {
   updateOnlineStatus();
 
   const hasPermission = await requestNotificationPermission();
-  if (hasPermission) {
-    console.log('✅ Notification permission granted');
-  } else {
-    console.log('⚠️ Notification permission denied or not supported');
-  }
 
   loadHiddenPoems();
-    loadFavorites();
+  loadFavorites();
   loadFollowing();
 
-// ✅ Load following from Firebase
-try {
-  const followingSnapshot = await get(ref(database, `following/${currentUser.id}`));
-  if (followingSnapshot.exists()) {
-    following = followingSnapshot.val() || [];
-    saveFollowing(); // Sync to localStorage
+  // Load following from Firebase
+  try {
+    const followingSnapshot = await get(ref(database, `following/${currentUser.id}`));
+    if (followingSnapshot.exists()) {
+      following = followingSnapshot.val() || [];
+      saveFollowing();
+    }
+  } catch (error) {
+    console.error('Error loading following from Firebase:', error);
   }
-} catch (error) {
-  console.error('Error loading following from Firebase:', error);
-}
+
   // Load poems FIRST (critical)
   await loadPoemsFromFirebase();
   await loadAllMetadata();
-  ensurePoemsOrder(); // ✅ Fix any missing orders
+  ensurePoemsOrder();
 
   renderPoems();
   initSortable();
+
+  // ✅ Repair conversations instead of deleting
+  await repairConversations();
 
   // Load these in background (non-critical)
   setTimeout(async () => {
@@ -9208,6 +9743,8 @@ try {
   }, 500);
 
   setupFirebaseListener();
+
+
 
   // Setup notification listener inline
   const notifRef = ref(database, `notifications/${currentUser.id}`);
