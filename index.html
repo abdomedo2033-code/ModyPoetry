@@ -2,10 +2,36 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,user-scalable=yes">
   <title>Mody Poetry</title>
 
- <script>
+ <script>(function() {
+  // Prevent iOS scroll bounce during drag
+  let lastY = 0;
+  document.addEventListener('touchstart', function(e) {
+    lastY = e.touches[0].clientY;
+  }, { passive: false });
+
+  document.addEventListener('touchmove', function(e) {
+    if (isDragging) {
+      const currentY = e.touches[0].clientY;
+      const deltaY = currentY - lastY;
+
+      // Prevent pull-to-refresh
+      if (deltaY > 0 && window.scrollY === 0) {
+        e.preventDefault();
+      }
+
+      lastY = currentY;
+    }
+  }, { passive: false });
+
+  // Fix 300ms click delay on iOS
+  document.addEventListener('touchend', function() {
+    // Touch ended
+  }, { passive: true });
+})();
+
   (function() {
     const savedTheme = localStorage.getItem('mody_theme') || 'dark';
     document.documentElement.setAttribute('data-theme', savedTheme);
@@ -204,7 +230,11 @@ top:calc(100% + 8px);left:0;
     .tag-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:rgba(139,94,60,0.1);border:1px solid var(--brown);border-radius:8px;font-size:13px;color:var(--brown);font-weight:600}
     .tag-badge button{background:none;border:none;color:var(--brown);cursor:pointer;font-size:16px;padding:0;line-height:1;transition:transform 0.2s}
     .tag-badge button:hover{transform:scale(1.3)}
-   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:20px;padding-bottom:40px}
+   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:20px;padding-bottom:40px;  direction: rtl; /* ✅ CRITICAL FIX: Force LTR for grid layout */
+}
+.grid .card {
+  direction: rtl; /* ✅ Keep card content RTL */
+}
 .card{background:var(--card);border-radius:12px;padding:16px;box-shadow:0 4px 16px var(--shadow);border:2px solid var(--border);transition:all .22s;position:relative;min-height:180px}
 .card:hover{transform:translateY(-4px);box-shadow:0 12px 28px var(--shadow-lg);border-color:var(--brown)}
     .card-author{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer;transition:opacity 0.2s}
@@ -2450,7 +2480,89 @@ but dont alter the code of messge date
 /* ═══════════════════════════════════════════════════════════
    END OF PROFESSIONAL COMMENTS SECTION CSS
    ═══════════════════════════════════════════════════════════ */
+/* ✅ ULTRA-SMOOTH TOUCH DRAGGING */
 
+.sortable-fallback {
+  opacity: 0.9 !important;
+  background: var(--card) !important;
+  border: 3px solid var(--brown) !important;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.6) !important;
+  transform: scale(1.1) rotate(3deg) !important;
+  z-index: 100000 !important;
+  cursor: grabbing !important;
+  /* ✅ INSTANT movement - no delay */
+  transition: none !important;
+  pointer-events: none;
+}
+
+.sortable-ghost {
+  opacity: 0.15 !important;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(139,94,60,0.05),
+    rgba(139,94,60,0.05) 10px,
+    rgba(139,94,60,0.1) 10px,
+    rgba(139,94,60,0.1) 20px
+  ) !important;
+  border: 3px dashed var(--brown) !important;
+  transform: scale(0.95);
+}
+
+.sortable-chosen {
+  background: rgba(139,94,60,0.08) !important;
+  border: 3px solid var(--brown) !important;
+}
+
+.sortable-drag {
+  opacity: 0 !important; /* Hide original while dragging fallback */
+}
+
+/* ✅ BIGGER, MORE ACCESSIBLE HANDLE */
+
+
+.drag-handle:hover {
+  background: var(--brown);
+  color: #fff;
+  transform: scale(1.2);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+}
+
+.drag-handle:active {
+  transform: scale(1.05);
+  cursor: grabbing;
+}
+
+/* ✅ Cards: Smooth transitions when NOT dragging */
+.card {
+  transition: transform 0.15s ease,
+              box-shadow 0.15s ease,
+              border 0.15s ease,
+              opacity 0.15s ease;
+}
+
+/* ✅ PREVENT bouncing during drag */
+body.dragging {
+  overflow: hidden !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  touch-action: none !important;
+  -webkit-overflow-scrolling: auto !important;
+}
+
+body.dragging * {
+  cursor: grabbing !important;
+}
+
+/* ✅ MOBILE: Even bigger handle */
+@media (max-width: 768px) {
+  .drag-handle {
+    width: 56px;
+    height: 56px;
+    font-size: 24px;
+    top: 8px;
+    left: 8px;
+  }
+}
   </style>
 
 
@@ -6617,8 +6729,35 @@ document.getElementById('searchInput').addEventListener('keydown', (e) => {
 let hasMore = false;
 const INITIAL_LOAD = 15;
 let displayedPoems = poems.slice(0, INITIAL_LOAD);
-// Show "Load More" button for rest
+// ✅ PROFESSIONAL: Initialize all poems with proper order
+function ensurePoemsOrder() {
+  let changed = false;
 
+  // Get all poems that are currently visible/active
+  const visiblePoems = poems.filter(p => !isPoemHidden(p.id));
+
+  visiblePoems.forEach((poem, index) => {
+    if (poem.manualOrder === undefined || poem.manualOrder === null) {
+      poem.manualOrder = index;
+      changed = true;
+    }
+  });
+
+  // Hidden poems go to the end
+  poems.forEach((poem, globalIndex) => {
+    if (isPoemHidden(poem.id)) {
+      if (poem.manualOrder === undefined || poem.manualOrder === null) {
+        poem.manualOrder = 10000 + globalIndex; // Way at the end
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) {
+    console.log('🔧 Initialized manualOrder for all poems');
+    savePoemsToFirebase();
+  }
+}
     async function renderPoems() {
       if (isRendering) return;
       isRendering = true;
@@ -6711,20 +6850,18 @@ let displayedPoems = poems.slice(0, INITIAL_LOAD);
 
 // Sort: manually ordered poems keep their position, new poems (no manualOrder) go to top
 
+// ✅ PROFESSIONAL SORT: Simply sort by manualOrder
 filtered.sort((a, b) => {
-  const aHasOrder = a.manualOrder !== undefined;
-  const bHasOrder = b.manualOrder !== undefined;
+  const aOrder = a.manualOrder !== undefined ? a.manualOrder : 999999;
+  const bOrder = b.manualOrder !== undefined ? b.manualOrder : 999999;
 
-  if (aHasOrder && bHasOrder) {
-    return a.manualOrder - b.manualOrder;
+  if (aOrder === bOrder) {
+    // Same order? Sort by date (newest first)
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
   }
 
-  if (aHasOrder && !bHasOrder) return 1;
-  if (!aHasOrder && bHasOrder) return -1;
-
-  return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+  return aOrder - bOrder;
 });
-
 
 // ✅ Store filtered results globally and reset pagination
 currentFilteredPoems = filtered;
@@ -6740,46 +6877,56 @@ if (currentFilteredPoems.length === 0) {
   emptyState.style.display = 'none';
 
   // عرض القصائد الحالية
-displayedPoems.forEach(poem => {
-const card = document.createElement('div');
-    card.className = 'card';
-    card.dataset.id = poem.id;
+displayedPoems.forEach((poem, visualIndex) => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.id = poem.id;
 
-    const drag = document.createElement('div');
-    drag.className = 'drag-handle';
-    drag.title = 'اسحب لإعادة الترتيب';
-    drag.textContent = '☰';
-    card.appendChild(drag);
+  // ✅ CRITICAL: Store order as data attribute for debugging
+  card.dataset.order = poem.manualOrder !== undefined ? poem.manualOrder : 'none';
 
-    const hasAudio = poem.audios && poem.audios.length > 0;
-    const hasImages = poem.images && poem.images.length > 0;
-    const indicators = [];
-    if (hasAudio) indicators.push('<span>🎵 صوت</span>');
-    if (hasImages) indicators.push('<span>🖼️ صور</span>');
-    const indicatorsHtml = indicators.length > 0 ? `<div class="card-indicators">${indicators.join('')}</div>` : '';
+  const drag = document.createElement('div');
+  drag.className = 'drag-handle';
+  drag.title = 'اسحب لإعادة الترتيب';
+  drag.innerHTML = '☰';
+  card.appendChild(drag);
 
-    const tagsHtml = (poem.tags && poem.tags.length > 0)
-      ? `<div class="card-tags" style="margin-top:10px">${poem.tags.map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('')}</div>`
-      : '';
+  const hasAudio = poem.audios && poem.audios.length > 0;
+  const hasImages = poem.images && poem.images.length > 0;
+  const indicators = [];
+  if (hasAudio) indicators.push('<span>🎵 صوت</span>');
+  if (hasImages) indicators.push('<span>🖼️ صور</span>');
+  const indicatorsHtml = indicators.length > 0 ? `<div class="card-indicators">${indicators.join('')}</div>` : '';
 
-    const title = poem.title || 'بدون عنوان';
-    const excerpt = poem.excerpt || (poem.text ? poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '') : '');
+  const tagsHtml = (poem.tags && poem.tags.length > 0)
+    ? `<div class="card-tags" style="margin-top:10px">${poem.tags.map(t => '<span class="card-tag">' + escapeHtml(t) + '</span>').join('')}</div>`
+    : '';
 
-    const contentWrap = document.createElement('div');
-    contentWrap.style.cursor = 'pointer';
-     contentWrap.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
-        <h3>${escapeHtml(title)}</h3>
-      </div>
-      <div class="excerpt">${escapeHtml(excerpt)}</div>
-      ${tagsHtml}
-      <div class="card-footer">${indicatorsHtml}</div>
-    `;
-    contentWrap.addEventListener('click', () => openModal(poem));
-    card.appendChild(contentWrap);
+  const title = poem.title || 'بدون عنوان';
+  const excerpt = poem.excerpt || (poem.text ? poem.text.slice(0, 120) + (poem.text.length > 120 ? '...' : '') : '');
 
-poemGrid.appendChild(card);
-  });
+  const contentWrap = document.createElement('div');
+  contentWrap.style.cssText = 'cursor:pointer;flex:1;display:flex;flex-direction:column;';
+  contentWrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+      <h3>${escapeHtml(title)}</h3>
+    </div>
+    <div class="excerpt">${escapeHtml(excerpt)}</div>
+    ${tagsHtml}
+    <div class="card-footer">${indicatorsHtml}</div>
+  `;
+  contentWrap.addEventListener('click', () => openModal(poem));
+  card.appendChild(contentWrap);
+
+  poemGrid.appendChild(card);
+});
+
+// ✅ CRITICAL: Initialize sortable AFTER all cards are rendered
+setTimeout(() => {
+  if (!isDragging) {
+    initSortable();
+  }
+}, 100);
 
   // ✅ الزر الجديد للتحميل التدريجي - SIMPLIFIED
   if (hasMore) {
@@ -6859,6 +7006,10 @@ loadMoreBtn.onclick = function loadMore() {
 };
 
     poemGrid.appendChild(loadMoreBtn);
+      // ✅ Re-initialize sortable after adding button
+  setTimeout(() => {
+    if (!isDragging) initSortable();
+  }, 100);
   }
 }
 
@@ -7973,48 +8124,160 @@ document.addEventListener('keydown', function escHandler(e) {
 
     // Sortable with handle only
     let sortableInstance = null;
-  function initSortable() {
+// ✅ ULTIMATE TOUCH-PERFECT DRAG SYSTEM
+function initSortable() {
   const poemGrid = document.getElementById('poemGrid');
   if (!poemGrid) return;
+
   if (sortableInstance && typeof sortableInstance.destroy === 'function') {
     try { sortableInstance.destroy(); } catch(e){}
   }
 
   sortableInstance = new Sortable(poemGrid, {
-    animation: 200,
+    animation: 0, // ✅ ZERO animation for instant response
     handle: '.drag-handle',
     draggable: '.card',
-    dataIdAttr: 'data-id',
-    touchStartThreshold: 10,
-    onStart: () => {
-      isDragging = true;
-    },
-    onEnd: async () => {
-      const ids = Array.from(poemGrid.children)
-        .map(c => c.dataset.id)
-        .filter(Boolean);
 
-      const newOrder = [];
-      ids.forEach((id, index) => {
-        const found = poems.find(p => p.id === id);
-        if (found) {
-          found.manualOrder = index;
-          newOrder.push(found);
+    // ✅ CRITICAL: Use FALLBACK mode for better touch control
+    forceFallback: true,
+    fallbackClass: 'sortable-fallback',
+    fallbackOnBody: false, // Keep in grid
+    fallbackTolerance: 0,
+
+    // ✅ PERFECT TOUCH SETTINGS
+    touchStartThreshold: 0,
+    delay: 0,
+
+    // ✅ SMOOTH SWAPPING
+    swap: false, // Disable swap for cleaner movement
+    direction: 'horizontal', // Grid layout
+    swapThreshold: 1,
+    invertSwap: false,
+
+    // ✅ VISUAL FEEDBACK
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    dragClass: 'sortable-drag',
+
+    // ✅ SCROLL WHILE DRAGGING
+    scroll: true,
+    scrollSensitivity: 30,
+    scrollSpeed: 15,
+    bubbleScroll: true,
+
+    // ✅ PREVENT CONFLICTS
+    preventOnFilter: false,
+
+    onStart: function(evt) {
+      isDragging = true;
+      console.log('���� Started:', evt.item.dataset.id);
+
+      const draggedCard = evt.item;
+
+      // ✅ STRONG visual feedback
+      draggedCard.style.opacity = '0.95';
+      draggedCard.style.transform = 'scale(1.08) rotate(2deg)';
+      draggedCard.style.zIndex = '10000';
+      draggedCard.style.boxShadow = '0 30px 60px rgba(0,0,0,0.5)';
+      draggedCard.style.transition = 'none'; // Instant response
+
+      // ✅ Vibration
+      if ('vibrate' in navigator) {
+        navigator.vibrate(40);
+      }
+
+      // ✅ Prevent page scroll
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      document.body.classList.add('dragging');
+    },
+
+    onMove: function(evt, originalEvent) {
+      // ✅ VISUAL: Show drop position clearly
+      const related = evt.related;
+      if (related && related.classList.contains('card')) {
+        related.style.transform = 'translateX(10px)';
+        related.style.transition = 'transform 0.15s ease';
+
+        setTimeout(() => {
+          related.style.transform = '';
+        }, 200);
+      }
+
+      // ✅ LOG touch position for debugging
+      if (originalEvent.touches) {
+        const touch = originalEvent.touches[0];
+        console.log('👆 Touch:', Math.round(touch.clientX), Math.round(touch.clientY));
+      }
+
+      return true;
+    },
+
+    onChange: function(evt) {
+      // ✅ Haptic feedback when position changes
+      if ('vibrate' in navigator) {
+        navigator.vibrate(20);
+      }
+      console.log('🔄 Changed to position:', evt.newIndex);
+    },
+
+    onEnd: async function(evt) {
+      console.log('🏁 Drop at position:', evt.newIndex);
+
+      const draggedCard = evt.item;
+
+      // ✅ Reset styles
+      draggedCard.style.opacity = '';
+      draggedCard.style.transform = '';
+      draggedCard.style.zIndex = '';
+      draggedCard.style.boxShadow = '';
+      draggedCard.style.transition = '';
+
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+      document.body.classList.remove('dragging');
+
+      // ✅ Strong success feedback
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 30, 50]);
+      }
+
+      // ✅ Get REAL order from DOM
+      const allCards = poemGrid.querySelectorAll('.card[data-id]');
+      const orderedIds = Array.from(allCards).map(c => c.dataset.id);
+
+      console.log('📋 New order:', orderedIds.slice(0, 5));
+
+      // ✅ Rebuild poems array in DOM order
+      const reordered = [];
+      orderedIds.forEach((id, idx) => {
+        const poem = poems.find(p => p.id === id);
+        if (poem) {
+          poem.manualOrder = idx;
+          reordered.push(poem);
         }
       });
 
-      const missing = poems.filter(p => !ids.includes(p.id));
-      poems = newOrder.concat(missing);
+      // Add missing poems (filtered/hidden)
+      poems.forEach(p => {
+        if (!reordered.find(x => x.id === p.id)) {
+          p.manualOrder = reordered.length + 1000;
+          reordered.push(p);
+        }
+      });
 
+      poems = reordered;
+
+      // ✅ Save
       await savePoemsToFirebase();
+      showSyncStatus('✅ تم الحفظ', 1000);
 
-      setTimeout(() => {
-        isDragging = false;
-      }, 300);
+      isDragging = false;
     }
   });
-}
 
+  console.log('✅ Sortable initialized');
+}
     document.getElementById('btnDownload').addEventListener('click', () => {
       const a = document.createElement('a');
       const blob = new Blob([JSON.stringify(poems, null, 2)], {type: 'application/json'});
@@ -8933,6 +9196,8 @@ try {
   // Load poems FIRST (critical)
   await loadPoemsFromFirebase();
   await loadAllMetadata();
+  ensurePoemsOrder(); // ✅ Fix any missing orders
+
   renderPoems();
   initSortable();
 
