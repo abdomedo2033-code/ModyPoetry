@@ -2625,6 +2625,8 @@ body.dragging * {
           <button class="menu-item" id="btnFavorites">⭐ القصائد المفضلة</button>
           <button class="menu-item" id="btnFollowing">👥 المتابَعون</button>
           <div class="menu-divider"></div>
+          <button class="menu-item" id="btnTestNotification">🔔 اختبار الإشعارات</button>
+          <div class="menu-divider"></div>
           <button class="menu-item" id="btnDownload">💾 تحميل القصائد</button>
           <button class="menu-item" id="btnImportJSON">📥 استيراد JSON</button>
           <div class="menu-divider"></div>
@@ -3815,69 +3817,107 @@ function showBrowserNotification(title, body, data = {}) {
   setTimeout(() => notification.close(), 8000);
 }
 
-// ✅ NEW: Register Service Worker for Push Notifications
+// ✅ IMPROVED: Register Service Worker with better mobile support
 async function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
-    console.log('Service Workers not supported');
+    console.log('❌ Service Workers not supported on this browser');
     return null;
   }
 
+  // Check if we're on HTTPS or localhost
+  const isSecureContext = window.isSecureContext;
+  if (!isSecureContext) {
+    console.warn('⚠️ Service Workers require HTTPS. Notifications may not work properly.');
+  }
+
   try {
+    // Unregister any existing service workers first (clean slate)
+    const existingRegistrations = await navigator.serviceWorker.getRegistrations();
+    for (let registration of existingRegistrations) {
+      if (registration.active && registration.active.scriptURL.includes('sw.js')) {
+        console.log('🔄 Updating existing service worker');
+        await registration.update();
+      }
+    }
+
     // Register the service worker
     const registration = await navigator.serviceWorker.register('/sw.js', {
-      scope: '/'
+      scope: '/',
+      updateViaCache: 'none' // Always fetch fresh SW
     });
     
-    console.log('Service Worker registered successfully:', registration);
+    console.log('✅ Service Worker registered successfully');
 
-    // Wait for service worker to be ready
+    // Wait for it to be ready
     await navigator.serviceWorker.ready;
-    console.log('Service Worker is ready');
+    console.log('✅ Service Worker is ready and active');
+
+    // Handle updates
+    registration.addEventListener('updatefound', () => {
+      console.log('🔄 Service Worker update found');
+      const newWorker = registration.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'activated') {
+          console.log('✅ Service Worker updated and activated');
+        }
+      });
+    });
 
     return registration;
   } catch (error) {
-    console.error('Service Worker registration failed:', error);
+    console.error('❌ Service Worker registration failed:', error);
+    console.error('Notifications will use fallback method');
     return null;
   }
 }
 
-// ✅ NEW: Improved browser notification that uses service worker
-function showBrowserNotificationWithSW(title, body, data = {}) {
+// ✅ IMPROVED: Mobile-friendly notification function with better reliability
+async function showBrowserNotificationWithSW(title, body, data = {}) {
   // Check if notifications are supported and permitted
   if (!('Notification' in window)) {
-    console.log('Notifications not supported');
+    console.log('❌ Notifications not supported');
     return;
   }
 
   if (Notification.permission !== 'granted') {
-    console.log('Notification permission not granted');
+    console.log('❌ Notification permission not granted, current permission:', Notification.permission);
     return;
   }
 
-  // If service worker is available, use it for better mobile support
-  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({
-      type: 'SHOW_NOTIFICATION',
-      title: title,
-      body: body,
-      icon: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
-      data: data
-    });
-  } else {
-    // Fallback to regular notification
-    const options = {
-      body: body,
-      icon: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
-      badge: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
-      tag: data.id || 'mody-poetry',
-      requireInteraction: false,
-      silent: false,
-      vibrate: [200, 100, 200],
-      data: data,
-      dir: 'rtl',
-      lang: 'ar'
-    };
+  console.log('🔔 Attempting to show notification:', title);
 
+  const options = {
+    body: body,
+    icon: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
+    badge: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
+    tag: data.id || 'mody-poetry-' + Date.now(),
+    requireInteraction: false,
+    silent: false,
+    vibrate: [200, 100, 200],
+    data: data,
+    dir: 'rtl',
+    lang: 'ar',
+    renotify: true // Allow replacing existing notification with same tag
+  };
+
+  try {
+    // Try using service worker first (best for mobile)
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      
+      if (registration && registration.active) {
+        console.log('✅ Using Service Worker for notification');
+        await registration.showNotification(title, options);
+        return;
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Service Worker notification failed, using fallback:', error);
+  }
+
+  // Fallback to regular Notification API
+  try {
+    console.log('📱 Using regular Notification API');
     const notification = new Notification(title, options);
 
     notification.onclick = function(event) {
@@ -3897,7 +3937,22 @@ function showBrowserNotificationWithSW(title, body, data = {}) {
       }
     };
 
-    setTimeout(() => notification.close(), 8000);
+    notification.onerror = function(error) {
+      console.error('❌ Notification error:', error);
+    };
+
+    // Auto-close after 10 seconds
+    setTimeout(() => {
+      try {
+        notification.close();
+      } catch (e) {
+        // Notification might already be closed
+      }
+    }, 10000);
+
+    console.log('✅ Notification shown successfully');
+  } catch (error) {
+    console.error('❌ Failed to show notification:', error);
   }
 }
 
@@ -8710,6 +8765,40 @@ function initSortable() {
       input.click();
     });
 document.getElementById('btnMyProfile').addEventListener('click', async () => { openUserProfile(currentUser.id); });
+
+// Test notification button
+document.getElementById('btnTestNotification').addEventListener('click', async () => {
+  console.log('🧪 Test notification button clicked');
+  
+  // Check permission first
+  if (!('Notification' in window)) {
+    showAlert('❌ المتصفح لا يدعم الإشعارات');
+    return;
+  }
+  
+  if (Notification.permission === 'denied') {
+    showAlert('❌ تم رفض صلاحية الإشعارات\n\nيرجى تفعيل الإشعارات من إعدادات المتصفح ثم إعادة تحميل الصفحة');
+    return;
+  }
+  
+  if (Notification.permission !== 'granted') {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      showAlert('❌ يجب السماح بالإشعارات لاختبارها');
+      return;
+    }
+  }
+  
+  // Test notification
+  console.log('📤 Sending test notification...');
+  await showBrowserNotificationWithSW(
+    '🧪 اختبار الإشعار',
+    'إذا ظهر هذا الإشعار، فالإشعارات تعمل بشكل صحيح! ✅',
+    { type: 'test', id: 'test-' + Date.now() }
+  );
+  
+  showAlert('✅ تم إرسال إشعار تجريبي\n\nإذا لم يظهر الإشعار:\n• تأكد من تفعيل الإشعارات في إعدادات الجهاز\n• تأكد من عدم وضع الهاتف في وضع "عدم الإزعاج"\n• جرب إغلاق المتصفح وإعادة فتحه');
+});
 
   /*
   // Enable browser notifications
