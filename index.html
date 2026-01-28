@@ -3366,7 +3366,7 @@ window.onlineStatusSystem = window.onlineStatusSystem || {
   activeListeners: new Set(),
   isRunning: false
 };
-
+window.onlineStatusCheckers = window.onlineStatusCheckers || new Map();
 function updateOnlineStatus() {
   if (!currentUser || !auth.currentUser) {
     console.log('⚠️ Cannot update status - user not logged in');
@@ -3405,8 +3405,7 @@ function updateOnlineStatus() {
     try {
       await set(userStatusRef, isOnlineForDatabase);
       consecutiveFailures = 0;
-      console.log('✅ Status updated:', new Date().toLocaleTimeString());
-    } catch (err) {
+     } catch (err) {
       consecutiveFailures++;
       console.error(`❌ Failed (${consecutiveFailures}/${maxFailures}):`, err.message);
 
@@ -3423,19 +3422,25 @@ function updateOnlineStatus() {
   // Initial update
   setStatusWithRetry();
 
-  // Monitor Firebase connection
+if (window.onlineStatusSystem.connectionListener) {
+    try {
+      window.onlineStatusSystem.connectionListener();
+    } catch (e) {}
+  }
+
   const connectedRef = ref(database, '.info/connected');
-  const connectionListener = onValue(connectedRef, (snapshot) => {
+  const connectionListener = onValue(connectedRef, async (snapshot) => {
     if (snapshot.val() === true && currentUser && auth.currentUser) {
       console.log('🔌 Connected - setting up handlers');
 
-      import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js')
-        .then(({ onDisconnect }) => {
-          const onDisconnectRef = ref(database, `user_status/${currentUser.id}`);
-          onDisconnect(onDisconnectRef).set(isOfflineForDatabase)
-            .then(() => console.log('✅ Disconnect handler set'))
-            .catch(err => console.error('❌ Disconnect failed:', err));
-        });
+      try {
+        const { onDisconnect } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+        const onDisconnectRef = ref(database, `user_status/${currentUser.id}`);
+        await onDisconnect(onDisconnectRef).set(isOfflineForDatabase);
+        console.log('✅ Disconnect handler set');
+      } catch (err) {
+        console.error('❌ Disconnect setup failed:', err);
+      }
 
       setStatusWithRetry();
     } else {
@@ -3453,15 +3458,13 @@ function updateOnlineStatus() {
   window.onlineStatusSystem.heartbeatInterval = setInterval(() => {
     if (currentUser && auth.currentUser) {
       if (document.visibilityState === 'visible') {
-        console.log('💓 Heartbeat');
-        setStatusWithRetry();
+         setStatusWithRetry();
       }
     } else {
       cleanupOnlineStatus();
     }
-  }, 25000); // Every 25 seconds
+  }, 2); // Every 25 seconds
 
-  console.log('✅ Heartbeat started:', window.onlineStatusSystem.heartbeatInterval);
 
   // Visibility handler
   const visibilityHandler = () => {
@@ -3506,15 +3509,13 @@ function updateOnlineStatus() {
         updateOnlineStatus();
       }
     } else {
-      console.log('✅ WATCHDOG: OK');
-    }
-  }, 60000); // Check every minute
+     }
+  }, 1); // Check every minute
 
   window.onlineStatusSystem.watchdogInterval = watchdogInterval;
 
   console.log('✅ Online status fully initialized');
 }
-
 function cleanupOnlineStatus() {
   console.log('🧹 Cleaning up...');
 
@@ -3538,6 +3539,21 @@ function cleanupOnlineStatus() {
     window.onlineStatusSystem.beforeUnloadListener = null;
   }
 
+  if (window.onlineStatusSystem.connectionListener) {
+    try {
+      window.onlineStatusSystem.connectionListener();
+    } catch (e) {}
+    window.onlineStatusSystem.connectionListener = null;
+  }
+
+  if (window.onlineStatusCheckers) {
+    window.onlineStatusCheckers.forEach((checker, userId) => {
+      if (checker.unsubscribe) checker.unsubscribe();
+      if (checker.timer) clearInterval(checker.timer);
+    });
+    window.onlineStatusCheckers.clear();
+  }
+
   window.onlineStatusSystem.activeListeners.forEach(unsubscribe => {
     try { unsubscribe(); } catch (e) {}
   });
@@ -3548,25 +3564,56 @@ function cleanupOnlineStatus() {
 }
 
 function isUserOnline(userId, callback) {
+  if (window.onlineStatusCheckers.has(userId)) {
+    const existing = window.onlineStatusCheckers.get(userId);
+    if (existing.unsubscribe) existing.unsubscribe();
+    if (existing.timer) clearInterval(existing.timer);
+  }
+
   const statusRef = ref(database, `user_status/${userId}`);
+  let latestStatus = null;
+
+  const checkOnlineStatus = () => {
+    if (!latestStatus) {
+      callback(false);
+      return;
+    }
+
+    const lastChanged = new Date(latestStatus.last_changed);
+    const now = new Date();
+    const diffMinutes = (now - lastChanged) / 1000 / 60;
+    const isOnline = latestStatus.state === 'online' && diffMinutes < 2;
+
+    callback(isOnline);
+  };
 
   const unsubscribe = onValue(statusRef, (snapshot) => {
     if (snapshot.exists()) {
-      const status = snapshot.val();
-      const lastChanged = new Date(status.last_changed);
-      const now = new Date();
-      const diffMinutes = (now - lastChanged) / 1000 / 60;
-      const isOnline = status.state === 'online' && diffMinutes < 2;
-      callback(isOnline);
+      latestStatus = snapshot.val();
+      checkOnlineStatus();
     } else {
+      latestStatus = null;
       callback(false);
     }
   });
 
-  window.onlineStatusSystem.activeListeners.add(unsubscribe);
-  return unsubscribe;
-}
+  const timer = setInterval(() => {
+    checkOnlineStatus();
+  }, 1);
 
+  window.onlineStatusCheckers.set(userId, { unsubscribe, timer });
+  window.onlineStatusSystem.activeListeners.add(() => {
+    unsubscribe();
+    clearInterval(timer);
+    window.onlineStatusCheckers.delete(userId);
+  });
+
+  return () => {
+    unsubscribe();
+    clearInterval(timer);
+    window.onlineStatusCheckers.delete(userId);
+  };
+}
 
 
 
