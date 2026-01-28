@@ -1559,6 +1559,21 @@ but dont alter the code of messge date
   50% { transform: scaleY(1.5); }
 }
 
+@keyframes slideInAndHighlight {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .voice-cancel-btn {
   background: transparent;
   border: 1px solid var(--danger);
@@ -3350,10 +3365,31 @@ function updateOnlineStatus() {
         last_changed: new Date().toISOString(),
       };
 
-      // Ensure we have permission by catching errors
-      set(userStatusRef, isOnlineForDatabase).catch(err => {
-        console.log("Waiting for auth to sync status...");
-      });
+      // ✅ Retry logic for weak connections
+      let retryCount = 0;
+      const maxRetries = 3;
+      const retryDelay = 2000; // Start with 2 seconds
+
+      async function setStatusWithRetry() {
+        try {
+          await set(userStatusRef, isOnlineForDatabase);
+          retryCount = 0; // Reset on success
+        } catch (err) {
+          console.log(`Failed to update status (attempt ${retryCount + 1}/${maxRetries}):`, err.message);
+          
+          if (retryCount < maxRetries) {
+            retryCount++;
+            const delay = retryDelay * Math.pow(2, retryCount - 1); // Exponential backoff
+            setTimeout(setStatusWithRetry, delay);
+          } else {
+            console.log("Max retries reached. Will try again on next heartbeat.");
+            retryCount = 0; // Reset for next heartbeat cycle
+          }
+        }
+      }
+
+      // Initial status set
+      setStatusWithRetry();
 
       const connectedRef = ref(database, '.info/connected');
       onValue(connectedRef, (snapshot) => {
@@ -3361,21 +3397,26 @@ function updateOnlineStatus() {
           import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js')
             .then(({ onDisconnect }) => {
               const onDisconnectRef = ref(database, `user_status/${currentUser.id}`);
-              onDisconnect(onDisconnectRef).set(isOfflineForDatabase);
+              onDisconnect(onDisconnectRef).set(isOfflineForDatabase)
+                .catch(err => console.log('OnDisconnect setup failed, will retry:', err));
             });
-          set(userStatusRef, isOnlineForDatabase);
+          setStatusWithRetry();
         }
       });
 
-      // Heartbeat
+      // ✅ Improved Heartbeat with retry logic
       setInterval(() => {
-        if (currentUser && auth.currentUser) {
-          set(userStatusRef, {
-            state: 'online',
-            last_changed: new Date().toISOString(),
-          }).catch(() => {});
+        if (currentUser && auth.currentUser && document.visibilityState === 'visible') {
+          setStatusWithRetry();
         }
       }, 30000);
+
+      // ✅ Update status when page becomes visible again
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && currentUser && auth.currentUser) {
+          setStatusWithRetry();
+        }
+      });
     }
     function isUserOnline(userId, callback) {
       const statusRef = ref(database, `user_status/${userId}`);
@@ -3774,8 +3815,107 @@ function showBrowserNotification(title, body, data = {}) {
   setTimeout(() => notification.close(), 8000);
 }
 
+// ✅ NEW: Register Service Worker for Push Notifications
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    console.log('Service Workers not supported');
+    return null;
+  }
+
+  try {
+    // Register the service worker
+    const registration = await navigator.serviceWorker.register('/sw.js', {
+      scope: '/'
+    });
+    
+    console.log('Service Worker registered successfully:', registration);
+
+    // Wait for service worker to be ready
+    await navigator.serviceWorker.ready;
+    console.log('Service Worker is ready');
+
+    return registration;
+  } catch (error) {
+    console.error('Service Worker registration failed:', error);
+    return null;
+  }
+}
+
+// ✅ NEW: Improved browser notification that uses service worker
+function showBrowserNotificationWithSW(title, body, data = {}) {
+  // Check if notifications are supported and permitted
+  if (!('Notification' in window)) {
+    console.log('Notifications not supported');
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    console.log('Notification permission not granted');
+    return;
+  }
+
+  // If service worker is available, use it for better mobile support
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SHOW_NOTIFICATION',
+      title: title,
+      body: body,
+      icon: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
+      data: data
+    });
+  } else {
+    // Fallback to regular notification
+    const options = {
+      body: body,
+      icon: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
+      badge: 'https://res.cloudinary.com/dho1iqxul/image/upload/v1769434961/ba01a9e5-e8aa-4373-8a4a-035e1505c91d_c6kvxg.png',
+      tag: data.id || 'mody-poetry',
+      requireInteraction: false,
+      silent: false,
+      vibrate: [200, 100, 200],
+      data: data,
+      dir: 'rtl',
+      lang: 'ar'
+    };
+
+    const notification = new Notification(title, options);
+
+    notification.onclick = function(event) {
+      event.preventDefault();
+      window.focus();
+      notification.close();
+
+      if (data.poemId) {
+        const poem = poems.find(p => p.id === data.poemId);
+        if (poem) openModal(poem);
+      } else if (data.fromId) {
+        if (data.type === 'message') {
+          openDMWindow(data.fromId);
+        } else if (data.type === 'follow') {
+          openUserProfile(data.fromId);
+        }
+      }
+    };
+
+    setTimeout(() => notification.close(), 8000);
+  }
+}
+
+
     async function addNotification(userId, notification)   {
   try {
+    // ✅ Skip message notifications if user is actively viewing this conversation
+    if (notification.type === 'message' && notification.fromId) {
+      const isChatOpen = isDMWindowOpen && 
+                         activeChatUserId === notification.fromId && 
+                         document.hasFocus();
+      
+      if (isChatOpen) {
+        console.log('Skipping notification - user is actively in chat');
+        return; // Don't create notification
+      }
+    }
+
     const notifId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
 
@@ -3878,49 +4018,18 @@ async function markDMNotificationsAsRead(fromUserId) {
       try {
         const snapshot = await get(ref(database, `notifications/${currentUser.id}`));
         if (snapshot.exists()) {
-          const newNotifications = Object.values(snapshot.val());
-
-          // Check for new unread notifications and show browser notifications
-          if (notifications.length > 0) {
-            newNotifications.forEach(notif => {
-              const existing = notifications.find(n => n.id === notif.id);
-              if (!existing || (!existing.read && notif.read === false)) {
-                // This is a new notification or still unread
-                let title = 'Mody Poetry';
-                let body = '';
-
-                if (notif.type === 'like') {
-                  title = 'إعجاب جديد ❤️';
-                  body = `${notif.from} أعجب بقصيدتك "${notif.poemTitle}"`;
-                } else if (notif.type === 'comment') {
-                  title = 'تعليق جديد 💬';
-                  body = `${notif.from} علق على قصيدتك "${notif.poemTitle}"`;
-                } else if (notif.type === 'follow') {
-                  title = 'متابع جديد 👥';
-                  body = `${notif.from} بدأ بمتابعتك`;
-                } else if (notif.type === 'mention') {
-                  title = 'ذكرك في تعليق 📢';
-                  body = `${notif.from} ذكرك في تعليق`;
-                } else if (notif.type === 'message') {
-                  title = 'رسالة جديدة 💌';
-                  body = `${notif.from}: ${notif.messagePreview}`;
-                } else if (notif.type === 'new_poem') {
-                  title = 'قصيدة جديدة 🪶';
-                  body = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`;
-                }
-
-                if (!existing && !notif.read) {
-                  showBrowserNotification(title, body, notif);
-                }
-              }
-            });
-          }
-
-          notifications = newNotifications;
+          // ✅ Just load the data - the onValue listener will handle showing new notifications
+          notifications = Object.values(snapshot.val());
+          renderNotifications();
+          updateNotificationBadge();
+        } else {
+          notifications = [];
           renderNotifications();
           updateNotificationBadge();
         }
-      } catch (error) { console.error('Error loading notifications:', error); }
+      } catch (error) { 
+        console.error('Error loading notifications:', error); 
+      }
     }
   function renderNotifications() {
   const container = document.getElementById('notificationsList');
@@ -4021,6 +4130,10 @@ async function markDMNotificationsAsRead(fromUserId) {
     let dmConversations = [];
     let editingMessageId = null;
     let replyingToMessage = null;
+    // ✅ Global tracking for active conversation (to prevent notifications)
+    let activeConversationId = null;
+    let activeChatUserId = null;
+    let isDMWindowOpen = false;
 // Real-time unsubscribe for current conversation messages
 let dmMessagesUnsubscribe = null;
 
@@ -5376,6 +5489,11 @@ function performDMClose() {
   document.removeEventListener('click', closeMessageActions);
   if (modal && modal.parentNode) modal.remove();
   isDMOpen = false;
+  // ✅ Clear global tracking when DM closes
+  activeConversationId = null;
+  activeChatUserId = null;
+  isDMWindowOpen = false;
+  console.log('🔔 Chat closed - global state reset:', {isDMWindowOpen, activeChatUserId, activeConversationId});
 }
 modal.querySelector('#dmToggleDir').addEventListener('click', function() {
   const textarea = modal.querySelector('#dmText');
@@ -5514,6 +5632,35 @@ async function loadConversation(withUserId) {
     const withUser = allUsers.find(u => u.id === withUserId);
     const convId = getConversationId(currentUser.id, withUserId);
     currentConversationId = convId;
+    // ✅ Update global tracking
+    activeConversationId = convId;
+    activeChatUserId = withUser.id;
+    isDMWindowOpen = true;
+    
+    console.log('🔔 Chat opened with:', withUser?.username, '| User ID:', withUserId);
+    console.log('🔔 Global state - isDMWindowOpen:', isDMWindowOpen, '| activeChatUserId:', activeChatUserId);
+
+    // ✅ Immediately mark message notifications from this user as read
+    const messageNotifications = notifications.filter(n => 
+      n.type === 'message' && 
+      n.fromId === withUserId && 
+      !n.read
+    );
+    
+    if (messageNotifications.length > 0) {
+      console.log('🔔 Marking', messageNotifications.length, 'message notifications as read');
+      await Promise.all(
+        messageNotifications.map(notif => 
+          set(ref(database, `notifications/${currentUser.id}/${notif.id}/read`), true)
+        )
+      ).catch(err => console.error('Error marking notifications as read:', err));
+      
+      // Update local state
+      messageNotifications.forEach(notif => notif.read = true);
+      renderNotifications();
+      updateNotificationBadge();
+    }
+
 // ✅ Mark DM notifications from this user as read
     await markDMNotificationsAsRead(withUserId);
   // ✅ Update notification badge immediately
@@ -5603,11 +5750,28 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
 
   const newMessages = Object.values(msgsSnap.val()).sort((a,b)=> new Date(a.timestamp)-new Date(b.timestamp));
 
-  // Mark unread as read (non-blocking)
+  // ✅ Mark unread as read - improved to handle when user is actively viewing
   const unread = newMessages.filter(m => m.fromId !== currentUser.id && !m.read);
   if (unread.length > 0) {
-    Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
-      .catch(err => console.error('Error marking messages as read:', err));
+    // Mark as read immediately if window is focused and conversation is active
+    const shouldMarkImmediately = document.hasFocus() && currentConversationId === convId;
+    
+    if (shouldMarkImmediately) {
+      Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
+        .then(() => {
+          // Update notification count immediately
+          if (window.updateNotificationBadge) {
+            window.updateNotificationBadge();
+          }
+        })
+        .catch(err => console.error('Error marking messages as read:', err));
+    } else {
+      // Delayed marking if window is not focused
+      setTimeout(() => {
+        Promise.all(unread.map(m => set(ref(database, `dm_messages/${convId}/${m.id}/read`), true)))
+          .catch(err => console.error('Error marking messages as read:', err));
+      }, 500);
+    }
   }
 
   // First load: render everything
@@ -5638,6 +5802,16 @@ dmMessagesUnsubscribe = onValue(messagesRef, async (msgsSnap) => {
         allDMMessages.push(newMsg);
         const div = buildMessageElement(newMsg, convId, withUser, allDMMessages);
         messagesEl.appendChild(div);
+
+        // ✅ Add visual notification effect for new messages from other user
+        if (newMsg.fromId !== currentUser.id) {
+          div.style.animation = 'slideInAndHighlight 0.5s ease-out';
+          div.style.backgroundColor = 'rgba(139, 94, 60, 0.1)';
+          setTimeout(() => {
+            div.style.animation = '';
+            div.style.backgroundColor = '';
+          }, 2000);
+        }
 
         // Scroll to bottom for new messages
     // Scroll to bottom for new messages
@@ -6666,14 +6840,17 @@ document.addEventListener('click', function(e) {
 // ✅ Enter key handler for tag input (desktop + mobile)
 const tagInput = document.getElementById('inputTagField');
 
+// ✅ Improved Enter key handling for both desktop and mobile
 tagInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' || e.keyCode === 13) {
     e.preventDefault();
+    e.stopPropagation();
     addTag();
+    return false;
   }
 });
 
-// ✅ Mobile support: also listen for input event
+// ✅ Mobile support: handle input event with newlines
 tagInput.addEventListener('input', function(e) {
   const value = this.value;
 
@@ -6687,6 +6864,15 @@ tagInput.addEventListener('input', function(e) {
     } else {
       this.value = '';
     }
+    return false;
+  }
+});
+
+// ✅ Additional mobile fix: prevent form submission
+tagInput.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter' || e.keyCode === 13) {
+    e.preventDefault();
+    return false;
   }
 });
     function renderAudiosInForm() {
@@ -9667,6 +9853,7 @@ async function init() {
   updateOnlineStatus();
 
   const hasPermission = await requestNotificationPermission();
+  await registerServiceWorker();
 
   loadHiddenPoems();
   loadFavorites();
@@ -9704,15 +9891,95 @@ async function init() {
 
 
 
+  // ✅ Handle window focus - mark message notifications as read if user is in that chat
+  window.addEventListener('focus', async () => {
+    if (isDMWindowOpen && activeChatUserId) {
+      const messageNotifs = notifications.filter(n => 
+        n.type === 'message' && 
+        n.fromId === activeChatUserId && 
+        !n.read
+      );
+      
+      if (messageNotifs.length > 0) {
+        console.log('User focused window while in chat - marking notifications as read');
+        await Promise.all(
+          messageNotifs.map(notif => 
+            set(ref(database, `notifications/${currentUser.id}/${notif.id}/read`), true)
+          )
+        ).catch(err => console.error('Error marking notifications as read on focus:', err));
+      }
+    }
+  });
+
   // Setup notification listener inline
   const notifRef = ref(database, `notifications/${currentUser.id}`);
-  onValue(notifRef, (snapshot) => {
+  onValue(notifRef, async (snapshot) => {
     if (snapshot.exists()) {
       const newNotifications = Object.values(snapshot.val());
-
+      
+      // ✅ Track which notifications are truly new (for browser notifications)
+      const existingIds = new Set(notifications.map(n => n.id));
+      
+      // ✅ CRITICAL FIX: Immediately mark message notifications as read if user is in that chat
+      const autoReadPromises = [];
       newNotifications.forEach(notif => {
-        const existing = notifications.find(n => n.id === notif.id);
-        if (!existing && !notif.read) {
+        const isNew = !existingIds.has(notif.id);
+        
+        if (isNew && notif.type === 'message' && notif.fromId && !notif.read) {
+          const isChatOpen = isDMWindowOpen && 
+                             activeChatUserId === notif.fromId && 
+                             document.hasFocus();
+          
+          console.log('🔔 New message notification from:', notif.from, 
+                      '| Chat open with this user?:', isChatOpen,
+                      '| isDMWindowOpen:', isDMWindowOpen,
+                      '| activeChatUserId:', activeChatUserId,
+                      '| notif.fromId:', notif.fromId,
+                      '| hasFocus:', document.hasFocus());
+          
+          if (isChatOpen) {
+            console.log('✅ Auto-marking message as read - user is in active chat');
+            // Immediately mark as read in Firebase
+            autoReadPromises.push(
+              set(ref(database, `notifications/${currentUser.id}/${notif.id}/read`), true)
+            );
+            // Also mark locally
+            notif.read = true;
+          }
+        }
+      });
+      
+      // Wait for auto-read operations to complete
+      if (autoReadPromises.length > 0) {
+        await Promise.all(autoReadPromises).catch(err => 
+          console.error('Error auto-marking notifications as read:', err)
+        );
+      }
+      
+      // ✅ Update the entire notifications array (this ensures real-time sync)
+      notifications = newNotifications;
+      
+      // ✅ Always render UI to show updates (read/unread status changes)
+      renderNotifications();
+      updateNotificationBadge();
+
+      // ✅ Then show browser notifications only for truly NEW unread notifications
+      newNotifications.forEach(notif => {
+        const isNew = !existingIds.has(notif.id);
+        
+        if (isNew && !notif.read) {
+          // Skip showing browser notification if user is actively in chat with this person
+          if (notif.type === 'message' && notif.fromId) {
+            const isChatOpen = isDMWindowOpen && 
+                               activeChatUserId === notif.fromId && 
+                               document.hasFocus();
+            
+            if (isChatOpen) {
+              console.log('Skipping browser notification - user is actively in chat');
+              return;
+            }
+          }
+
           let title = 'Mody Poetry';
           let body = '';
 
@@ -9736,11 +10003,12 @@ async function init() {
             body = `${notif.from} نشر قصيدة جديدة "${notif.poemTitle}"`;
           }
 
-          showBrowserNotification(title, body, notif);
+          showBrowserNotificationWithSW(title, body, notif);
         }
       });
-
-      notifications = newNotifications;
+    } else {
+      // ✅ Handle case when all notifications are deleted
+      notifications = [];
       renderNotifications();
       updateNotificationBadge();
     }
